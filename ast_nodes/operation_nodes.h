@@ -24,9 +24,10 @@ public:
 class UnaryOperationNode final : public Node {
 public:
     Token operator_token;
-    Node* node;
+    shared_ptr<Node> node;
 
-    explicit UnaryOperationNode(const Token &op, Node* n) : operator_token(op), node(n) {}
+    explicit UnaryOperationNode(const Token &op, shared_ptr<Node> n)
+        : operator_token(op), node(std::move(n)) {}
 
     std::string to_string() const override {
         return "(" + operator_token.to_string() + ", " + node->to_string() + ")";
@@ -35,12 +36,12 @@ public:
 
 class BinaryOperationNode final : public Node {
 public:
-    Node* left_node;
+    shared_ptr<Node> left_node;
     Token operator_token;
-    Node* right_node;
+    shared_ptr<Node> right_node;
 
-    explicit BinaryOperationNode(Node* left, const Token &op, Node* right)
-        : left_node(left), operator_token(op), right_node(right) {}
+    explicit BinaryOperationNode(shared_ptr<Node> left, const Token &op, shared_ptr<Node> right)
+        : left_node(std::move(left)), operator_token(op), right_node(std::move(right)) {}
 
     std::string to_string() const override {
         return "(" + left_node->to_string() + ", " + operator_token.to_string() + ", " + right_node->to_string() + ")";
