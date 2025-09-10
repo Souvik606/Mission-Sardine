@@ -1,13 +1,26 @@
 #include <bits/stdc++.h>
+#include "error.h"
 #include "lexer.h"
+#include "ast_nodes/operation_nodes.h"
+#include "ast_results/parse_result.h"
+#include "parser.h"
 
 using namespace std;
 
-pair<vector<Token>, optional<Error>> run(const string& filename, const string& text) {
+pair<shared_ptr<Node>, optional<Error>> run(const string& filename, const string& text) {
     Lexer lexer(filename, text);
-    auto result = lexer.enumerate_tokens();
-    return result;
+    auto [tokens, lexer_error] = lexer.enumerate_tokens();
+
+    if (lexer_error) {
+        return {nullptr, lexer_error};
+    }
+
+    Parser parser(std::move(tokens));
+    ParseResult ast = parser.parse();
+
+    return {ast.node, ast.error};
 }
+
 
 int main() {
     while (true) {
@@ -18,17 +31,11 @@ int main() {
             break;
         }
 
-        if (auto [tokens, error] = run("<stdin>", text); error.has_value()) {
+        if (auto [ast, error] = run("<stdin>", text); error) {
             cout << error->to_string() << endl;
-        } else {
-            cout << "[";
-            for (size_t i = 0; i < tokens.size(); ++i) {
-                cout << tokens[i].to_string();
-                if (i < tokens.size() - 1) {
-                    cout << ", ";
-                }
-            }
-            cout << "]" << endl;
+        }
+        else if (ast) {
+            cout << ast->to_string() << endl;
         }
     }
 
