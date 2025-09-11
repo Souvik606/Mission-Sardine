@@ -3,19 +3,9 @@
 #include <bits/stdc++.h>
 #include "error.h"
 #include "position.h"
+#include "constants.h"
 
 using namespace std;
-
-const string DIGITS = "0123456789";
-const string T_INT = "INT";
-const string T_FLOAT = "FLOAT";
-const string T_PLUS = "PLUS";
-const string T_MINUS = "MINUS";
-const string T_MUL = "MUL";
-const string T_DIVIDE = "DIVIDE";
-const string T_LPAREN = "LPAREN";
-const string T_RPAREN = "RPAREN";
-const string T_EOF = "EOF";
 
 class Token {
 public:
@@ -24,7 +14,8 @@ public:
     optional<Position> pos_start;
     optional<Position> pos_end;
 
-    explicit Token(string type, any value = {}, optional<Position> pos_start = nullopt, optional<Position> pos_end = nullopt) {
+    explicit Token(string type, any value = {}, optional<Position> pos_start = nullopt,
+                   optional<Position> pos_end = nullopt) {
         this->type = std::move(type);
         this->value = std::move(value);
 
@@ -49,8 +40,8 @@ public:
                 ss << any_cast<double>(value);
             } else if (value.type() == typeid(string)) {
                 ss << any_cast<string>(value);
-            } else if (value.type() == typeid(const char*)) {
-                ss << any_cast<const char*>(value);
+            } else if (value.type() == typeid(const char *)) {
+                ss << any_cast<const char *>(value);
             } else {
                 ss << "[unprintable value]";
             }
@@ -68,7 +59,7 @@ public:
     Position pos;
     optional<char> current_char;
 
-    Lexer(const string& filename, const string& text)
+    Lexer(const string &filename, const string &text)
         : filename(filename),
           text(text),
           pos(Position(-1, 0, -1, filename, text)),
@@ -111,7 +102,7 @@ public:
         }
     }
 
-    pair<vector<Token>, optional<Error>> enumerate_tokens() {
+    pair<vector<Token>, optional<Error> > enumerate_tokens() {
         vector<Token> tokens;
 
         while (current_char.has_value()) {

@@ -1,13 +1,13 @@
 #pragma once
 
 #include <bits/stdc++.h>
-
 #include "context.h"
-#include "ast_results/runtime_result.h"
-#include "ast_nodes/operation_nodes.h"
-#include "data_types/number_type.h"
+#include "../ast_results/runtime_result.h"
+#include "../ast_nodes/operation_nodes.h"
+#include "../data_types/number_type.h"
 #include "error.h"
 #include "lexer.h"
+#include "constants.h"
 
 using namespace std;
 
@@ -15,12 +15,14 @@ class Interpreter {
 public:
     Interpreter() {
         visit_methods[typeid(NumberNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
-            return this->visit_NumberNode(static_pointer_cast<NumberNode>(node), context);
+            return Interpreter::visit_NumberNode(static_pointer_cast<NumberNode>(node), context);
         };
-        visit_methods[typeid(BinaryOperationNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
+        visit_methods[typeid(BinaryOperationNode)] = [this](const shared_ptr<Node> &node,
+                                                            const shared_ptr<Context> &context) {
             return this->visit_BinaryOperationNode(static_pointer_cast<BinaryOperationNode>(node), context);
         };
-        visit_methods[typeid(UnaryOperationNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
+        visit_methods[typeid(UnaryOperationNode)] = [this](const shared_ptr<Node> &node,
+                                                           const shared_ptr<Context> &context) {
             return this->visit_UnaryOperationNode(static_pointer_cast<UnaryOperationNode>(node), context);
         };
     }
@@ -47,7 +49,7 @@ private:
         auto token_value = node->token.value;
         shared_ptr<Number> number;
 
-        if(token_value.type() == typeid(long long)) {
+        if (token_value.type() == typeid(long long)) {
             number = make_shared<Number>(any_cast<long long>(token_value));
         } else if (token_value.type() == typeid(double)) {
             number = make_shared<Number>(any_cast<double>(token_value));
@@ -63,7 +65,8 @@ private:
         return res.success(number);
     }
 
-    RunTimeResult visit_BinaryOperationNode(const shared_ptr<BinaryOperationNode> &node, const shared_ptr<Context> &context) {
+    RunTimeResult visit_BinaryOperationNode(const shared_ptr<BinaryOperationNode> &node,
+                                            const shared_ptr<Context> &context) {
         RunTimeResult res;
         const shared_ptr<DataType> left = res.register_result(visit(node->left_node, context));
         if (res.error) return res;
@@ -100,7 +103,8 @@ private:
         }
     }
 
-    RunTimeResult visit_UnaryOperationNode(const shared_ptr<UnaryOperationNode> &node, const shared_ptr<Context> &context) {
+    RunTimeResult visit_UnaryOperationNode(const shared_ptr<UnaryOperationNode> &node,
+                                           const shared_ptr<Context> &context) {
         RunTimeResult res;
         const shared_ptr<DataType> number_val = res.register_result(visit(node->node, context));
         if (res.error) return res;
@@ -113,10 +117,10 @@ private:
                 tie(result, error) = number->multiply(make_shared<Number>(-1LL));
             }
         } else {
-             return res.failure(RunTimeError(
-                 node->pos_start.value_or(Position()),
-                 node->pos_end.value_or(Position()),
-                 "Unary operand must be a number", context
+            return res.failure(RunTimeError(
+                node->pos_start.value_or(Position()),
+                node->pos_end.value_or(Position()),
+                "Unary operand must be a number", context
             ));
         }
 
@@ -128,4 +132,3 @@ private:
         }
     }
 };
-

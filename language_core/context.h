@@ -1,10 +1,11 @@
 #pragma once
+
 #include <bits/stdc++.h>
 #include "position.h"
 
 using namespace std;
 
-class  Context {
+class Context {
 public:
     string display_name;
     shared_ptr<Context> parent;
@@ -17,6 +18,6 @@ public:
     )
         : display_name(std::move(display_name)),
           parent(std::move(parent)),
-          parent_entry_pos(std::move(parent_entry_pos))
-    {}
+          parent_entry_pos(std::move(parent_entry_pos)) {
+    }
 };
