@@ -1,22 +1,34 @@
 #pragma once
+
 #include <bits/stdc++.h>
-#include "../lexer.h"
+#include "../language_core/lexer.h"
+#include "../language_core/position.h"
 
 using namespace std;
 
 class Node {
 public:
-    virtual ~Node() {}
-    virtual std::string to_string() const { return ""; }
+    optional<Position> pos_start;
+    optional<Position> pos_end;
+
+    Node(optional<Position> start, optional<Position> end)
+        : pos_start(std::move(start)), pos_end(std::move(end)) {
+    }
+
+    virtual ~Node() = default;
+
+    [[nodiscard]] virtual std::string to_string() const { return ""; }
 };
 
 class NumberNode final : public Node {
 public:
     Token token;
 
-    explicit NumberNode(const Token &token) : token(token) {}
+    explicit NumberNode(Token token)
+        : Node(token.pos_start, token.pos_end), token(std::move(token)) {
+    }
 
-    std::string to_string() const override {
+    [[nodiscard]] std::string to_string() const override {
         return token.to_string();
     }
 };
@@ -26,10 +38,13 @@ public:
     Token operator_token;
     shared_ptr<Node> node;
 
-    explicit UnaryOperationNode(const Token &op, shared_ptr<Node> n)
-        : operator_token(op), node(std::move(n)) {}
+    explicit UnaryOperationNode(Token op, shared_ptr<Node> n)
+        : Node(op.pos_start, n->pos_end),
+          operator_token(std::move(op)),
+          node(std::move(n)) {
+    }
 
-    std::string to_string() const override {
+    [[nodiscard]] std::string to_string() const override {
         return "(" + operator_token.to_string() + ", " + node->to_string() + ")";
     }
 };
@@ -40,10 +55,14 @@ public:
     Token operator_token;
     shared_ptr<Node> right_node;
 
-    explicit BinaryOperationNode(shared_ptr<Node> left, const Token &op, shared_ptr<Node> right)
-        : left_node(std::move(left)), operator_token(op), right_node(std::move(right)) {}
+    explicit BinaryOperationNode(shared_ptr<Node> left, Token op, shared_ptr<Node> right)
+        : Node(left->pos_start, right->pos_end),
+          left_node(std::move(left)),
+          operator_token(std::move(op)),
+          right_node(std::move(right)) {
+    }
 
-    std::string to_string() const override {
+    [[nodiscard]] std::string to_string() const override {
         return "(" + left_node->to_string() + ", " + operator_token.to_string() + ", " + right_node->to_string() + ")";
     }
 };

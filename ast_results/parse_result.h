@@ -1,6 +1,6 @@
 #pragma once
+
 #include <bits/stdc++.h>
-#include "../lexer.h"
 #include "../ast_nodes/operation_nodes.h"
 
 using namespace std;
@@ -10,9 +10,10 @@ public:
     optional<Error> error;
     shared_ptr<Node> node;
 
-    ParseResult() : error(nullopt), node(nullptr) {}
+    ParseResult() : error(nullopt), node(nullptr) {
+    }
 
-    shared_ptr<Node> register_node(const ParseResult& res) {
+    shared_ptr<Node> register_node(const ParseResult &res) {
         if (res.error) {
             this->error = res.error;
         }
@@ -23,12 +24,12 @@ public:
         return res_node;
     }
 
-    ParseResult& success(shared_ptr<Node> success_node) {
+    ParseResult &success(shared_ptr<Node> success_node) {
         this->node = std::move(success_node);
         return *this;
     }
 
-    ParseResult& failure(const Error& failure_error) {
+    ParseResult &failure(const Error &failure_error) {
         this->error = failure_error;
         return *this;
     }

@@ -1,9 +1,10 @@
 #pragma once
 #include <bits/stdc++.h>
 #include "lexer.h"
-#include "ast_results/parse_result.h"
-#include "ast_nodes/operation_nodes.h"
+#include "../ast_results/parse_result.h"
+#include "../ast_nodes/operation_nodes.h"
 #include "error.h"
+#include "constants.h"
 
 using namespace std;
 
@@ -92,12 +93,10 @@ private:
                 return res;
             }
             return res.success(make_shared<UnaryOperationNode>(token, factor_node));
-        }
-        else if (token.type == T_INT || token.type == T_FLOAT) {
+        } else if (token.type == T_INT || token.type == T_FLOAT) {
             advance();
             return res.success(make_shared<NumberNode>(token));
-        }
-        else if (token.type == T_LPAREN) {
+        } else if (token.type == T_LPAREN) {
             advance();
             auto expr_node = res.register_node(expression());
             if (res.error) {
