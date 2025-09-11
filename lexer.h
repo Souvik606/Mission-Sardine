@@ -2,6 +2,7 @@
 
 #include <bits/stdc++.h>
 #include "error.h"
+#include "position.h"
 
 using namespace std;
 
@@ -106,7 +107,7 @@ public:
         if (is_float) {
             return Token(T_FLOAT, stod(number_str), pos_start, pos);
         } else {
-            return Token(T_INT, stoi(number_str), pos_start, pos);
+            return Token(T_INT, stoll(number_str), pos_start, pos);
         }
     }
 

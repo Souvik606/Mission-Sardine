@@ -1,6 +1,5 @@
 #pragma once
 #include <bits/stdc++.h>
-#include "../lexer.h"
 #include "../ast_nodes/operation_nodes.h"
 
 using namespace std;
