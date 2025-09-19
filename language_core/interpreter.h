@@ -1,9 +1,11 @@
 #pragma once
 
 #include <bits/stdc++.h>
+
 #include "context.h"
 #include "../ast_results/runtime_result.h"
 #include "../ast_nodes/operation_nodes.h"
+#include "../ast_nodes/variable_nodes.h"
 #include "../data_types/number_type.h"
 #include "error.h"
 #include "lexer.h"
@@ -14,21 +16,25 @@ using namespace std;
 class Interpreter {
 public:
     Interpreter() {
-        visit_methods[typeid(NumberNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
-            return Interpreter::visit_NumberNode(static_pointer_cast<NumberNode>(node), context);
+        visit_methods[typeid(NumberNode)] = [](const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
+            return visit_NumberNode(static_pointer_cast<NumberNode>(node), context);
         };
-        visit_methods[typeid(BinaryOperationNode)] = [this](const shared_ptr<Node> &node,
-                                                            const shared_ptr<Context> &context) {
+        visit_methods[typeid(BinaryOperationNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
             return this->visit_BinaryOperationNode(static_pointer_cast<BinaryOperationNode>(node), context);
         };
-        visit_methods[typeid(UnaryOperationNode)] = [this](const shared_ptr<Node> &node,
-                                                           const shared_ptr<Context> &context) {
+        visit_methods[typeid(UnaryOperationNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
             return this->visit_UnaryOperationNode(static_pointer_cast<UnaryOperationNode>(node), context);
+        };
+        visit_methods[typeid(VariableUseNode)] = [](const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
+            return visit_VariableUseNode(static_pointer_cast<VariableUseNode>(node), context);
+        };
+        visit_methods[typeid(VariableAssignNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
+            return this->visit_VariableAssignNode(static_pointer_cast<VariableAssignNode>(node), context);
         };
     }
 
     RunTimeResult visit(const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
-        const std::type_index type_idx = typeid(*node);
+        const std::type_index type_idx = typeid(*node.get());
 
         if (const auto it = visit_methods.find(type_idx); it != visit_methods.end()) {
             return it->second(node, context);
@@ -41,7 +47,36 @@ private:
     std::unordered_map<std::type_index, VisitFunction> visit_methods;
 
     static RunTimeResult no_visit_method(const shared_ptr<Node> &node) {
-        throw std::runtime_error("No visit method defined for node type: " + string(typeid(*node).name()));
+        throw std::runtime_error("No visit method defined for node type: " + string(typeid(*node.get()).name()));
+    }
+
+    static RunTimeResult visit_VariableUseNode(const shared_ptr<VariableUseNode>& node, const shared_ptr<Context>& context) {
+        RunTimeResult res;
+        const auto var_name = any_cast<string>(node->var_name_tok.value);
+        const shared_ptr<DataType> value = context->symbol_table->get(var_name);
+
+        if (!value) {
+            return res.failure(RunTimeError(
+                node->pos_start.value_or(Position()),
+                node->pos_end.value_or(Position()),
+                "'" + var_name + "' is not defined",
+                context
+            ));
+        }
+        return res.success(value);
+    }
+
+    RunTimeResult visit_VariableAssignNode(const shared_ptr<VariableAssignNode>& node, const shared_ptr<Context>& context) {
+        RunTimeResult res;
+        const auto var_name = any_cast<string>(node->var_name_tok.value);
+        const shared_ptr<DataType> value = res.register_result(visit(node->value_node, context));
+
+        if (res.error) {
+            return res;
+        }
+
+        context->symbol_table->set(var_name, value);
+        return res.success(value);
     }
 
     static RunTimeResult visit_NumberNode(const shared_ptr<NumberNode> &node, const shared_ptr<Context> &context) {
@@ -132,3 +167,4 @@ private:
         }
     }
 };
+

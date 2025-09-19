@@ -34,8 +34,8 @@ public:
         stringstream ss;
         if (value.has_value()) {
             ss << type << ": ";
-            if (value.type() == typeid(int)) {
-                ss << any_cast<int>(value);
+            if (value.type() == typeid(long long)) {
+                ss << any_cast<long long>(value);
             } else if (value.type() == typeid(double)) {
                 ss << any_cast<double>(value);
             } else if (value.type() == typeid(string)) {
@@ -76,17 +76,36 @@ public:
         }
     }
 
+    Token make_identifier() {
+        string id_str;
+        Position pos_start = pos.copy();
+        const string valid_chars = LETTERS_DIGITS + "_";
+
+        while (current_char.has_value() && valid_chars.find(current_char.value()) != string::npos) {
+            id_str += current_char.value();
+            advance();
+        }
+
+        string token_type = T_IDENTIFIER;
+        for(const auto& keyword : KEYWORDS) {
+            if (id_str == keyword) {
+                token_type = T_KEYWORD;
+                break;
+            }
+        }
+
+        return Token(token_type, id_str, pos_start, pos);
+    }
+
     Token make_number() {
         string number_str;
         bool is_float = false;
         Position pos_start = pos.copy();
 
-        string valid_chars = DIGITS + ".";
+        const string valid_chars = DIGITS + ".";
         while (current_char.has_value() && valid_chars.find(current_char.value()) != string::npos) {
             if (current_char.value() == '.') {
-                if (is_float) {
-                    break;
-                }
+                if (is_float) break;
                 is_float = true;
                 number_str += '.';
             } else {
@@ -102,16 +121,16 @@ public:
         }
     }
 
-    pair<vector<Token>, optional<Error> > enumerate_tokens() {
+    pair<vector<Token>, optional<Error>> enumerate_tokens() {
         vector<Token> tokens;
 
         while (current_char.has_value()) {
-            char c = current_char.value();
-
-            if (c == ' ' || c == '\t') {
+            if (const char c = current_char.value(); c == ' ' || c == '\t') {
                 advance();
             } else if (DIGITS.find(c) != string::npos) {
                 tokens.push_back(make_number());
+            } else if (LETTERS.find(c) != string::npos) {
+                tokens.push_back(make_identifier());
             } else if (c == '+') {
                 tokens.push_back(Token(T_PLUS, {}, pos));
                 advance();
@@ -124,15 +143,19 @@ public:
             } else if (c == '/') {
                 tokens.push_back(Token(T_DIVIDE, {}, pos));
                 advance();
-            } else if (c == '(') {
+            } else if (c == '=') {
+                tokens.push_back(Token(T_EQ, {}, pos));
+                advance();
+            }
+            else if (c == '(') {
                 tokens.push_back(Token(T_LPAREN, {}, pos));
                 advance();
             } else if (c == ')') {
                 tokens.push_back(Token(T_RPAREN, {}, pos));
                 advance();
             } else {
-                Position pos_start = pos.copy();
-                char illegal_char = c;
+                const Position pos_start = pos.copy();
+                const char illegal_char = c;
                 advance();
                 string details = "\"";
                 details += illegal_char;
