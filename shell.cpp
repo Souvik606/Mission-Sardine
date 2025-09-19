@@ -7,11 +7,15 @@
 #include "ast_results/runtime_result.h"
 #include "language_core/interpreter.h"
 #include "language_core/context.h"
+#include "language_core/symbol_table.h"
+#include "data_types/data_type.h"
 #include "data_types/number_type.h"
 
 using namespace std;
 
-pair<shared_ptr<DataType>, optional<Error> > run(const string &filename, const string &text) {
+auto global_symbol_table = make_shared<SymbolTable>();
+
+pair<shared_ptr<DataType>, optional<Error>> run(const string& filename, const string& text) {
     Lexer lexer(filename, text);
     auto [tokens, lexer_error] = lexer.enumerate_tokens();
     if (lexer_error) {
@@ -26,13 +30,15 @@ pair<shared_ptr<DataType>, optional<Error> > run(const string &filename, const s
 
     Interpreter interpreter;
     auto context = make_shared<Context>("<program>");
+    context->symbol_table = global_symbol_table;
     RunTimeResult result = interpreter.visit(ast.node, context);
 
     return {result.value, result.error};
 }
 
-
 int main() {
+    global_symbol_table->set("null", make_shared<Number>(0LL));
+
     while (true) {
         cout << "code > ";
         string text;
@@ -41,9 +47,12 @@ int main() {
             break;
         }
 
-        if (auto [result, error] = run("<stdin>", text); error) {
+        auto [result, error] = run("<stdin>", text);
+
+        if (error) {
             cout << error->to_string() << endl;
-        } else if (result) {
+        }
+        else if (result) {
             cout << result->to_string() << endl;
         }
     }
