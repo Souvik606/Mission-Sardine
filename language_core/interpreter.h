@@ -35,7 +35,6 @@ public:
 
     RunTimeResult visit(const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
         const std::type_index type_idx = typeid(*node.get());
-
         if (const auto it = visit_methods.find(type_idx); it != visit_methods.end()) {
             return it->second(node, context);
         }
@@ -54,7 +53,6 @@ private:
         RunTimeResult res;
         const auto var_name = any_cast<string>(node->var_name_tok.value);
         const shared_ptr<DataType> value = context->symbol_table->get(var_name);
-
         if (!value) {
             return res.failure(RunTimeError(
                 node->pos_start.value_or(Position()),
@@ -70,11 +68,9 @@ private:
         RunTimeResult res;
         const auto var_name = any_cast<string>(node->var_name_tok.value);
         const shared_ptr<DataType> value = res.register_result(visit(node->value_node, context));
-
         if (res.error) {
             return res;
         }
-
         context->symbol_table->set(var_name, value);
         return res.success(value);
     }
@@ -83,7 +79,6 @@ private:
         RunTimeResult res;
         auto token_value = node->token.value;
         shared_ptr<Number> number;
-
         if (token_value.type() == typeid(long long)) {
             number = make_shared<Number>(any_cast<long long>(token_value));
         } else if (token_value.type() == typeid(double)) {
@@ -95,7 +90,6 @@ private:
                 "Invalid number value in token", context
             ));
         }
-
         number->set_context(context).set_pos(node->pos_start, node->pos_end);
         return res.success(number);
     }
@@ -105,7 +99,6 @@ private:
         RunTimeResult res;
         const shared_ptr<DataType> left = res.register_result(visit(node->left_node, context));
         if (res.error) return res;
-
         const shared_ptr<DataType> right = res.register_result(visit(node->right_node, context));
         if (res.error) return res;
 
@@ -121,6 +114,24 @@ private:
                 tie(result, error) = left_num->multiply(right);
             } else if (node->operator_token.type == T_DIVIDE) {
                 tie(result, error) = left_num->divide(right);
+            } else if (node->operator_token.type == T_EE) {
+                tie(result, error) = left_num->get_comparison_eq(right);
+            } else if (node->operator_token.type == T_NEQ) {
+                tie(result, error) = left_num->get_comparison_neq(right);
+            } else if (node->operator_token.type == T_LT) {
+                tie(result, error) = left_num->get_comparison_lt(right);
+            } else if (node->operator_token.type == T_GT) {
+                tie(result, error) = left_num->get_comparison_gt(right);
+            } else if (node->operator_token.type == T_LTE) {
+                tie(result, error) = left_num->get_comparison_lte(right);
+            } else if (node->operator_token.type == T_GTE) {
+                tie(result, error) = left_num->get_comparison_gte(right);
+            } else if (node->operator_token.type == T_KEYWORD) {
+                if (const auto keyword = any_cast<string>(node->operator_token.value); keyword == "and") {
+                    tie(result, error) = left_num->and_by(right);
+                } else if (keyword == "or") {
+                    tie(result, error) = left_num->or_by(right);
+                }
             }
         } else {
             return res.failure(RunTimeError(
@@ -132,10 +143,10 @@ private:
 
         if (error) {
             return res.failure(*error);
-        } else {
-            result->set_pos(node->pos_start, node->pos_end);
-            return res.success(result);
         }
+
+        result->set_pos(node->pos_start, node->pos_end);
+        return res.success(result);
     }
 
     RunTimeResult visit_UnaryOperationNode(const shared_ptr<UnaryOperationNode> &node,
@@ -150,6 +161,10 @@ private:
         if (const auto number = dynamic_pointer_cast<Number>(number_val)) {
             if (node->operator_token.type == T_MINUS) {
                 tie(result, error) = number->multiply(make_shared<Number>(-1LL));
+            } else if (node->operator_token.type == T_KEYWORD) {
+                if (const auto keyword = any_cast<string>(node->operator_token.value); keyword == "not") {
+                    tie(result, error) = number->not_by();
+                }
             }
         } else {
             return res.failure(RunTimeError(
@@ -161,10 +176,10 @@ private:
 
         if (error) {
             return res.failure(*error);
-        } else {
-            result->set_pos(node->pos_start, node->pos_end);
-            return res.success(result);
         }
+
+        result->set_pos(node->pos_start, node->pos_end);
+        return res.success(result);
     }
 };
 
