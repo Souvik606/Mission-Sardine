@@ -1,5 +1,7 @@
 #pragma once
+
 #include <bits/stdc++.h>
+
 #include "lexer.h"
 #include "../ast_results/parse_result.h"
 #include "../ast_nodes/operation_nodes.h"
@@ -17,7 +19,17 @@ public:
     }
 
     ParseResult parse() {
-        ParseResult result = statements();
+        ParseResult result = {};
+        if (current_tok.has_value()) {
+            if (current_tok->type == T_KEYWORD && any_cast<string>(current_tok->value) == "define") {
+                result = statements();
+            } else {
+                result = expression();
+            }
+        } else {
+            return result;
+        }
+
         if (!result.error && current_tok.has_value() && current_tok->type != T_EOF) {
             return result.failure(
                 InvalidSyntaxError(
@@ -45,8 +57,8 @@ private:
     }
 
     ParseResult statements() {
+        ParseResult res;
         if (current_tok.has_value() && current_tok->type == T_KEYWORD && any_cast<string>(current_tok->value) == "define") {
-            ParseResult res;
             res.register_advancement();
             advance();
 
@@ -64,32 +76,78 @@ private:
 
             res.register_advancement();
             advance();
-
             auto expr = res.register_node(expression());
             if (res.error) return res;
-
             return res.success(make_shared<VariableAssignNode>(var_name, expr));
         }
 
-        return expression();
+        return res.failure(InvalidSyntaxError(current_tok->pos_start.value_or(Position()), current_tok->pos_end.value_or(Position()), "Expected 'define'"));
     }
 
     ParseResult expression() {
         if (current_tok.has_value() && current_tok->type == T_IDENTIFIER) {
-            if (auto next_tok = peek(); next_tok.has_value() && next_tok->type == T_EQ) {
+            auto next_tok = peek();
+            if (next_tok.has_value() && next_tok->type == T_EQ) {
                 ParseResult res;
                 Token var_name = current_tok.value();
                 res.register_advancement();
                 advance();
                 res.register_advancement();
                 advance();
-
                 auto expr = res.register_node(expression());
                 if (res.error) return res;
                 return res.success(make_shared<VariableAssignNode>(var_name, expr));
             }
         }
 
+        ParseResult res;
+        auto left_node = res.register_node(comp_expression());
+        if (res.error) return res;
+
+        while (current_tok.has_value() && current_tok->type == T_KEYWORD) {
+            auto keyword = any_cast<string>(current_tok->value);
+            if (keyword == "and" || keyword == "or") {
+                Token op_token = current_tok.value();
+                res.register_advancement();
+                advance();
+                auto right_node = res.register_node(comp_expression());
+                if (res.error) return res;
+                left_node = make_shared<BinaryOperationNode>(left_node, op_token, right_node);
+            } else {
+                break;
+            }
+        }
+
+        return res.success(left_node);
+    }
+
+    ParseResult comp_expression() {
+        ParseResult res;
+        if (current_tok.has_value() && current_tok->type == T_KEYWORD && any_cast<string>(current_tok->value) == "not") {
+            Token op_token = current_tok.value();
+            res.register_advancement();
+            advance();
+            auto node = res.register_node(comp_expression());
+            if (res.error) return res;
+            return res.success(make_shared<UnaryOperationNode>(op_token, node));
+        }
+
+        auto left_node = res.register_node(arith_expression());
+        if (res.error) return res;
+
+        while (current_tok.has_value() && (current_tok->type == T_EE || current_tok->type == T_NEQ || current_tok->type == T_LT || current_tok->type == T_GT || current_tok->type == T_LTE || current_tok->type == T_GTE)) {
+            Token op_token = current_tok.value();
+            res.register_advancement();
+            advance();
+            auto right_node = res.register_node(arith_expression());
+            if (res.error) return res;
+            left_node = make_shared<BinaryOperationNode>(left_node, op_token, right_node);
+        }
+
+        return res.success(left_node);
+    }
+
+    ParseResult arith_expression() {
         ParseResult res;
         auto left_node = res.register_node(term());
         if (res.error) return res;
@@ -161,6 +219,6 @@ private:
             }
         }
 
-        return res.failure(InvalidSyntaxError(token.pos_start.value(), token.pos_end.value(), "Expected int, float, identifier, '+', '-', or '('"));
+        return res.failure(InvalidSyntaxError(token.pos_start.value(), token.pos_end.value(), "Expected int, float, identifier, '+', '-', '(', or keyword 'not'"));
     }
 };

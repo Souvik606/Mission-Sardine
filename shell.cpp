@@ -27,6 +27,7 @@ pair<shared_ptr<DataType>, optional<Error>> run(const string& filename, const st
     if (ast.error) {
         return {nullptr, ast.error};
     }
+    cout<<ast.node->to_string()<<endl;
 
     Interpreter interpreter;
     auto context = make_shared<Context>("<program>");
