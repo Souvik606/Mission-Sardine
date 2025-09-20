@@ -1,6 +1,7 @@
 #pragma once
 
 #include <bits/stdc++.h>
+
 #include "error.h"
 #include "position.h"
 #include "constants.h"
@@ -80,12 +81,10 @@ public:
         string id_str;
         Position pos_start = pos.copy();
         const string valid_chars = LETTERS_DIGITS + "_";
-
         while (current_char.has_value() && valid_chars.find(current_char.value()) != string::npos) {
             id_str += current_char.value();
             advance();
         }
-
         string token_type = T_IDENTIFIER;
         for(const auto& keyword : KEYWORDS) {
             if (id_str == keyword) {
@@ -93,15 +92,57 @@ public:
                 break;
             }
         }
-
         return Token(token_type, id_str, pos_start, pos);
+    }
+
+    Token make_equals() {
+        Position pos_start = pos.copy();
+        advance();
+        string token_type = T_EQ;
+        if (current_char.has_value() && current_char.value() == '=') {
+            advance();
+            token_type = T_EE;
+        }
+        return Token(token_type, {}, pos_start, pos);
+    }
+
+    variant<Token, Error> make_not_equals() {
+        Position pos_start = pos.copy();
+        advance();
+        if (current_char.has_value() && current_char.value() == '=') {
+            advance();
+            return Token(T_NEQ, {}, pos_start, pos);
+        }
+        advance();
+        return ExpectedCharError(pos_start, pos, "'=' (after '!')");
+    }
+
+    Token make_lesser() {
+        Position pos_start = pos.copy();
+        advance();
+        string token_type = T_LT;
+        if (current_char.has_value() && current_char.value() == '=') {
+            advance();
+            token_type = T_LTE;
+        }
+        return Token(token_type, {}, pos_start, pos);
+    }
+
+    Token make_greater() {
+        Position pos_start = pos.copy();
+        advance();
+        string token_type = T_GT;
+        if (current_char.has_value() && current_char.value() == '=') {
+            advance();
+            token_type = T_GTE;
+        }
+        return Token(token_type, {}, pos_start, pos);
     }
 
     Token make_number() {
         string number_str;
         bool is_float = false;
         Position pos_start = pos.copy();
-
         const string valid_chars = DIGITS + ".";
         while (current_char.has_value() && valid_chars.find(current_char.value()) != string::npos) {
             if (current_char.value() == '.') {
@@ -113,7 +154,6 @@ public:
             }
             advance();
         }
-
         if (is_float) {
             return Token(T_FLOAT, stod(number_str), pos_start, pos);
         } else {
@@ -123,9 +163,9 @@ public:
 
     pair<vector<Token>, optional<Error>> enumerate_tokens() {
         vector<Token> tokens;
-
         while (current_char.has_value()) {
-            if (const char c = current_char.value(); c == ' ' || c == '\t') {
+            char c = current_char.value();
+            if (c == ' ' || c == '\t') {
                 advance();
             } else if (DIGITS.find(c) != string::npos) {
                 tokens.push_back(make_number());
@@ -144,8 +184,17 @@ public:
                 tokens.push_back(Token(T_DIVIDE, {}, pos));
                 advance();
             } else if (c == '=') {
-                tokens.push_back(Token(T_EQ, {}, pos));
-                advance();
+                tokens.push_back(make_equals());
+            } else if (c == '!') {
+                auto result = make_not_equals();
+                if (std::holds_alternative<Error>(result)) {
+                    return {{}, std::get<Error>(result)};
+                }
+                tokens.push_back(std::get<Token>(result));
+            } else if (c == '<') {
+                tokens.push_back(make_lesser());
+            } else if (c == '>') {
+                tokens.push_back(make_greater());
             }
             else if (c == '(') {
                 tokens.push_back(Token(T_LPAREN, {}, pos));
@@ -163,7 +212,6 @@ public:
                 return {{}, IllegalCharError(pos_start, pos, details)};
             }
         }
-
         tokens.push_back(Token(T_EOF, {}, pos));
         return {tokens, nullopt};
     }
