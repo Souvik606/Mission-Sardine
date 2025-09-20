@@ -37,6 +37,13 @@ public:
     }
 };
 
+class ExpectedCharError final : public Error {
+public:
+    ExpectedCharError(const Position &pos_start, const Position &pos_end, const string &details = "")
+        : Error(pos_start, pos_end, "Expected Character", details) {
+    }
+};
+
 class InvalidSyntaxError final : public Error {
 public:
     InvalidSyntaxError(const Position &pos_start, const Position &pos_end, const string &details = "")
