@@ -15,18 +15,12 @@ const string T_KEYWORD = "KEYWORD";
 const string T_PLUS = "PLUS";
 const string T_MINUS = "MINUS";
 const string T_MUL = "MUL";
-const string T_DIVIDE = "DIV";
+const string T_DIVIDE = "DIVIDE";
 const string T_EQ = "EQUAL";
-const string T_NEQ = "NOTEQUAL";
-const string T_EE = "DOUBLEEQUAL";
-const string T_LT = "LESSTHAN";
-const string T_GT = "GREATERTHAN";
-const string T_LTE = "LESSERTHANEQUAL";
-const string T_GTE = "GREATERTHANEQUAL";
 const string T_LPAREN = "LPAREN";
 const string T_RPAREN = "RPAREN";
 const string T_EOF = "EOF";
 
 const vector<string> KEYWORDS = {
-    "define", "and", "or", "not"
+    "define"
 };
