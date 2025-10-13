@@ -6,6 +6,7 @@
 #include "../ast_results/runtime_result.h"
 #include "../ast_nodes/operation_nodes.h"
 #include "../ast_nodes/variable_nodes.h"
+#include "../ast_nodes/if_else_elif_nodes.h"
 #include "../data_types/number_type.h"
 #include "error.h"
 #include "lexer.h"
@@ -31,6 +32,9 @@ public:
         visit_methods[typeid(VariableAssignNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
             return this->visit_VariableAssignNode(static_pointer_cast<VariableAssignNode>(node), context);
         };
+        visit_methods[typeid(IfNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
+            return this->visit_IfNode(static_pointer_cast<IfNode>(node), context);
+        };
     }
 
     RunTimeResult visit(const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
@@ -47,6 +51,42 @@ private:
 
     static RunTimeResult no_visit_method(const shared_ptr<Node> &node) {
         throw std::runtime_error("No visit method defined for node type: " + string(typeid(*node.get()).name()));
+    }
+
+    RunTimeResult visit_IfNode(const shared_ptr<IfNode>& node, const shared_ptr<Context>& context) {
+        RunTimeResult res;
+        for (const auto& case_pair : node->cases) {
+            auto condition_node = case_pair.first;
+            auto expression_node = case_pair.second;
+
+            auto condition_value = res.register_result(visit(condition_node, context));
+            if (res.error) return res;
+
+            bool is_truthy = false;
+            if (const auto num = dynamic_pointer_cast<Number>(condition_value)) {
+                is_truthy = std::visit([](auto val){ return val != 0; }, num->value);
+            } else {
+                 return res.failure(RunTimeError(
+                    condition_node->pos_start.value_or(Position()),
+                    condition_node->pos_end.value_or(Position()),
+                    "Condition must evaluate to a number", context
+                ));
+            }
+
+            if (is_truthy) {
+                auto expr_value = res.register_result(visit(expression_node, context));
+                if (res.error) return res;
+                return res.success(expr_value);
+            }
+        }
+
+        if (node->else_case) {
+            auto else_value = res.register_result(visit(node->else_case, context));
+            if (res.error) return res;
+            return res.success(else_value);
+        }
+
+        return res.success(nullptr);
     }
 
     static RunTimeResult visit_VariableUseNode(const shared_ptr<VariableUseNode>& node, const shared_ptr<Context>& context) {
@@ -182,4 +222,3 @@ private:
         return res.success(result);
     }
 };
-

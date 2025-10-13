@@ -202,7 +202,15 @@ public:
             } else if (c == ')') {
                 tokens.push_back(Token(T_RPAREN, {}, pos));
                 advance();
-            } else {
+            }
+            else if (c == '{') {
+                tokens.push_back(Token(T_LPAREN2, {}, pos));
+                advance();
+            } else if (c == '}') {
+                tokens.push_back(Token(T_RPAREN2, {}, pos));
+                advance();
+            }
+            else {
                 const Position pos_start = pos.copy();
                 const char illegal_char = c;
                 advance();

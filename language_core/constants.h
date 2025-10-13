@@ -25,8 +25,10 @@ const string T_LTE = "LESSERTHANEQUAL";
 const string T_GTE = "GREATERTHANEQUAL";
 const string T_LPAREN = "LPAREN";
 const string T_RPAREN = "RPAREN";
+const string T_LPAREN2 = "LPAREN2";
+const string T_RPAREN2 = "RPAREN2";
 const string T_EOF = "EOF";
 
 const vector<string> KEYWORDS = {
-    "define", "and", "or", "not"
+    "define", "and", "or", "not","when","orwhen","otherwise"
 };

@@ -6,6 +6,7 @@
 #include "../ast_results/parse_result.h"
 #include "../ast_nodes/operation_nodes.h"
 #include "../ast_nodes/variable_nodes.h"
+#include "../ast_nodes/if_else_elif_nodes.h"
 #include "error.h"
 #include "constants.h"
 
@@ -19,17 +20,7 @@ public:
     }
 
     ParseResult parse() {
-        ParseResult result = {};
-        if (current_tok.has_value()) {
-            if (current_tok->type == T_KEYWORD && any_cast<string>(current_tok->value) == "define") {
-                result = statements();
-            } else {
-                result = expression();
-            }
-        } else {
-            return result;
-        }
-
+        ParseResult result = expression();
         if (!result.error && current_tok.has_value() && current_tok->type != T_EOF) {
             return result.failure(
                 InvalidSyntaxError(
@@ -56,38 +47,121 @@ private:
         return (next_index < tokens.size()) ? make_optional(tokens[next_index]) : nullopt;
     }
 
-    ParseResult statements() {
+    ParseResult if_expression() {
         ParseResult res;
-        if (current_tok.has_value() && current_tok->type == T_KEYWORD && any_cast<string>(current_tok->value) == "define") {
+        vector<pair<shared_ptr<Node>, shared_ptr<Node>>> cases;
+        shared_ptr<Node> else_case = nullptr;
+
+        if (!current_tok.has_value() || !(current_tok->type == T_KEYWORD && any_cast<string>(current_tok->value) == "when")) {
+            return res.failure(InvalidSyntaxError(current_tok->pos_start.value_or(Position()), current_tok->pos_end.value_or(Position()), "Expected 'when'"));
+        }
+        res.register_advancement();
+        advance();
+
+        auto condition = res.register_node(expression());
+        if (res.error) return res;
+
+        if (!current_tok.has_value() || current_tok->type != T_LPAREN2) {
+            return res.failure(InvalidSyntaxError(current_tok->pos_start.value_or(Position()), current_tok->pos_end.value_or(Position()), "Expected '{'"));
+        }
+        res.register_advancement();
+        advance();
+
+        shared_ptr<Node> expr;
+        if (current_tok.has_value() && current_tok->type == T_IDENTIFIER && peek().has_value() && peek()->type == T_EQ) {
+            expr = res.register_node(statements());
+        } else {
+            expr = res.register_node(expression());
+        }
+        if (res.error) return res;
+        cases.emplace_back(condition, expr);
+
+        if (!current_tok.has_value() || current_tok->type != T_RPAREN2) {
+            return res.failure(InvalidSyntaxError(current_tok->pos_start.value_or(Position()), current_tok->pos_end.value_or(Position()), "Expected '}'"));
+        }
+        res.register_advancement();
+        advance();
+
+        while (current_tok.has_value() && current_tok->type == T_KEYWORD && any_cast<string>(current_tok->value) == "orwhen") {
+            res.register_advancement();
+            advance();
+            condition = res.register_node(expression());
+            if (res.error) return res;
+
+            if (!current_tok.has_value() || current_tok->type != T_LPAREN2) {
+                return res.failure(InvalidSyntaxError(current_tok->pos_start.value_or(Position()), current_tok->pos_end.value_or(Position()), "Expected '{'"));
+            }
             res.register_advancement();
             advance();
 
+            if (current_tok.has_value() && current_tok->type == T_IDENTIFIER && peek().has_value() && peek()->type == T_EQ) {
+                expr = res.register_node(statements());
+            } else {
+                expr = res.register_node(expression());
+            }
+            if (res.error) return res;
+            cases.emplace_back(condition, expr);
+
+            if (!current_tok.has_value() || current_tok->type != T_RPAREN2) {
+                return res.failure(InvalidSyntaxError(current_tok->pos_start.value_or(Position()), current_tok->pos_end.value_or(Position()), "Expected '}'"));
+            }
+            res.register_advancement();
+            advance();
+        }
+
+        if (current_tok.has_value() && current_tok->type == T_KEYWORD && any_cast<string>(current_tok->value) == "otherwise") {
+            res.register_advancement();
+            advance();
+
+            if (!current_tok.has_value() || current_tok->type != T_LPAREN2) {
+                return res.failure(InvalidSyntaxError(current_tok->pos_start.value_or(Position()), current_tok->pos_end.value_or(Position()), "Expected '{'"));
+            }
+            res.register_advancement();
+            advance();
+
+            if (current_tok.has_value() && current_tok->type == T_IDENTIFIER && peek().has_value() && peek()->type == T_EQ) {
+                else_case = res.register_node(statements());
+            } else {
+                else_case = res.register_node(expression());
+            }
+            if (res.error) return res;
+
+            if (!current_tok.has_value() || current_tok->type != T_RPAREN2) {
+                return res.failure(InvalidSyntaxError(current_tok->pos_start.value_or(Position()), current_tok->pos_end.value_or(Position()), "Expected '}'"));
+            }
+            res.register_advancement();
+            advance();
+        }
+
+        return res.success(make_shared<IfNode>(cases, else_case));
+    }
+
+    ParseResult statements() {
+        if (current_tok.has_value() && current_tok->type == T_KEYWORD && any_cast<string>(current_tok->value) == "define") {
+            ParseResult res;
+            res.register_advancement();
+            advance();
             if (!current_tok.has_value() || current_tok->type != T_IDENTIFIER) {
                 return res.failure(InvalidSyntaxError(current_tok->pos_start.value_or(Position()), current_tok->pos_end.value_or(Position()), "Expected identifier after 'define'"));
             }
-
             Token var_name = current_tok.value();
             res.register_advancement();
             advance();
-
             if (!current_tok.has_value() || current_tok->type != T_EQ) {
                 return res.failure(InvalidSyntaxError(current_tok->pos_start.value_or(Position()), current_tok->pos_end.value_or(Position()), "Expected '=' after identifier"));
             }
-
             res.register_advancement();
             advance();
             auto expr = res.register_node(expression());
             if (res.error) return res;
             return res.success(make_shared<VariableAssignNode>(var_name, expr));
         }
-
-        return res.failure(InvalidSyntaxError(current_tok->pos_start.value_or(Position()), current_tok->pos_end.value_or(Position()), "Expected 'define'"));
+        return expression();
     }
 
     ParseResult expression() {
         if (current_tok.has_value() && current_tok->type == T_IDENTIFIER) {
-            auto next_tok = peek();
-            if (next_tok.has_value() && next_tok->type == T_EQ) {
+            if (auto next_tok = peek(); next_tok.has_value() && next_tok->type == T_EQ) {
                 ParseResult res;
                 Token var_name = current_tok.value();
                 res.register_advancement();
@@ -105,8 +179,7 @@ private:
         if (res.error) return res;
 
         while (current_tok.has_value() && current_tok->type == T_KEYWORD) {
-            auto keyword = any_cast<string>(current_tok->value);
-            if (keyword == "and" || keyword == "or") {
+            if (auto keyword = any_cast<string>(current_tok->value); keyword == "and" || keyword == "or") {
                 Token op_token = current_tok.value();
                 res.register_advancement();
                 advance();
@@ -117,7 +190,6 @@ private:
                 break;
             }
         }
-
         return res.success(left_node);
     }
 
@@ -143,7 +215,6 @@ private:
             if (res.error) return res;
             left_node = make_shared<BinaryOperationNode>(left_node, op_token, right_node);
         }
-
         return res.success(left_node);
     }
 
@@ -160,7 +231,6 @@ private:
             if (res.error) return res;
             left_node = make_shared<BinaryOperationNode>(left_node, op_token, right_node);
         }
-
         return res.success(left_node);
     }
 
@@ -177,14 +247,13 @@ private:
             if (res.error) return res;
             left_node = make_shared<BinaryOperationNode>(left_node, op_token, right_node);
         }
-
         return res.success(left_node);
     }
 
     ParseResult factor() {
         ParseResult res;
         if (!current_tok.has_value()) {
-            return res.failure(InvalidSyntaxError({}, {}, "Expected int, float, identifier, '+', '-', or '('"));
+            return res.failure(InvalidSyntaxError({}, {}, "Expected int, float, identifier, '+', '-', '(', or keyword 'when'"));
         }
         Token token = current_tok.value();
 
@@ -218,7 +287,12 @@ private:
                 return res.failure(InvalidSyntaxError(current_tok->pos_start.value_or(Position()), current_tok->pos_end.value_or(Position()), "Expected ')'"));
             }
         }
+        else if (token.type == T_KEYWORD && any_cast<string>(token.value) == "when") {
+            const auto if_expr = res.register_node(if_expression());
+            if (res.error) return res;
+            return res.success(if_expr);
+        }
 
-        return res.failure(InvalidSyntaxError(token.pos_start.value(), token.pos_end.value(), "Expected int, float, identifier, '+', '-', '(', or keyword 'not'"));
+        return res.failure(InvalidSyntaxError(token.pos_start.value(), token.pos_end.value(), "Expected int, float, identifier, '+', '-', '(', or keyword 'when'"));
     }
 };
