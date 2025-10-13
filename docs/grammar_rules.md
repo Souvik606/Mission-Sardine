@@ -8,7 +8,8 @@ arith-expression : term ((PLUS|MINUS) term)*
 
 term : factor((MUL|DIV) factor )*
 
-factor: INT|FLOAT|IDENTIFIER|(PLUS|MINUS) factor|LPAREN expression RPAREN|if-expression
+factor: INT|FLOAT|IDENTIFIER|(PLUS|MINUS) factor|LPAREN expression RPAREN| if-expression| for-expression
 
-if-expression:KEYWORD:when expression{expression|statements} 
-    (KEYWORD:orwhen {expression|statements})*(KEYWORD:otherwise{expression|statements})?
+for-expression:KEYWORD:cycle IDENTIFIER EQUAL expression COLON expression (COLON:expression)?{(expression|statements)*}
+
+if-expression:KEYWORD:when expression{(expression|statements)*} (KEYWORD:orwhen {(expression|statements)*})*(KEYWORD:otherwise{(expression|statements)*})?
