@@ -7,6 +7,7 @@
 #include "../ast_nodes/operation_nodes.h"
 #include "../ast_nodes/variable_nodes.h"
 #include "../ast_nodes/if_else_elif_nodes.h"
+#include "../ast_nodes/for_nodes.h"
 #include "../data_types/number_type.h"
 #include "error.h"
 #include "lexer.h"
@@ -35,9 +36,15 @@ public:
         visit_methods[typeid(IfNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
             return this->visit_IfNode(static_pointer_cast<IfNode>(node), context);
         };
+        visit_methods[typeid(ForNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
+            return this->visit_ForNode(static_pointer_cast<ForNode>(node), context);
+        };
     }
 
     RunTimeResult visit(const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
+        if (!node) {
+             return RunTimeResult().failure(RunTimeError({}, {}, "Internal error: Cannot visit null node", context));
+        }
         const std::type_index type_idx = typeid(*node.get());
         if (const auto it = visit_methods.find(type_idx); it != visit_methods.end()) {
             return it->second(node, context);
@@ -53,39 +60,82 @@ private:
         throw std::runtime_error("No visit method defined for node type: " + string(typeid(*node.get()).name()));
     }
 
+    RunTimeResult visit_ForNode(const shared_ptr<ForNode>& node, const shared_ptr<Context>& context) {
+        RunTimeResult res;
+
+        auto start_value_res = res.register_result(visit(node->start_value_node, context));
+        if (res.error) return res;
+        auto start_num = dynamic_pointer_cast<Number>(start_value_res);
+        if (!start_num) return res.failure(RunTimeError(node->start_value_node->pos_start.value_or(Position()), node->start_value_node->pos_end.value_or(Position()), "For loop start value must be a number", context));
+
+        auto end_value_res = res.register_result(visit(node->end_value_node, context));
+        if (res.error) return res;
+        auto end_num = dynamic_pointer_cast<Number>(end_value_res);
+        if (!end_num) return res.failure(RunTimeError(node->end_value_node->pos_start.value_or(Position()), node->end_value_node->pos_end.value_or(Position()), "For loop end value must be a number", context));
+
+        shared_ptr<Number> step_num;
+        if (node->step_value_node) {
+            auto step_value = res.register_result(visit(node->step_value_node, context));
+            if (res.error) return res;
+            step_num = dynamic_pointer_cast<Number>(step_value);
+            if (!step_num) return res.failure(RunTimeError(node->step_value_node->pos_start.value_or(Position()), node->step_value_node->pos_end.value_or(Position()), "For loop step value must be a number", context));
+        } else {
+            step_num = make_shared<Number>(1LL);
+        }
+
+        auto var_name = any_cast<string>(node->var_name_tok.value);
+
+        bool all_integers = holds_alternative<long long>(start_num->value) &&
+                            holds_alternative<long long>(end_num->value) &&
+                            holds_alternative<long long>(step_num->value);
+
+        if (all_integers) {
+            long long start = get<long long>(start_num->value);
+            long long end = get<long long>(end_num->value);
+            long long step = get<long long>(step_num->value);
+
+            for (long long i = start; (step >= 0) ? (i <= end) : (i >= end); i += step) {
+                context->symbol_table->set(var_name, make_shared<Number>(i));
+                res.register_result(visit(node->body_node, context));
+                if (res.error) return res;
+            }
+        } else {
+            double start = std::visit([](auto v){ return static_cast<double>(v); }, start_num->value);
+            double end = std::visit([](auto v){ return static_cast<double>(v); }, end_num->value);
+            double step = std::visit([](auto v){ return static_cast<double>(v); }, step_num->value);
+
+            for (double i = start; (step >= 0) ? (i <= end) : (i >= end); i += step) {
+                context->symbol_table->set(var_name, make_shared<Number>(i));
+                res.register_result(visit(node->body_node, context));
+                if (res.error) return res;
+            }
+        }
+
+        return res.success(nullptr);
+    }
+
     RunTimeResult visit_IfNode(const shared_ptr<IfNode>& node, const shared_ptr<Context>& context) {
         RunTimeResult res;
         for (const auto& case_pair : node->cases) {
-            auto condition_node = case_pair.first;
-            auto expression_node = case_pair.second;
-
-            auto condition_value = res.register_result(visit(condition_node, context));
+            auto condition_value = res.register_result(visit(case_pair.first, context));
             if (res.error) return res;
-
             bool is_truthy = false;
             if (const auto num = dynamic_pointer_cast<Number>(condition_value)) {
                 is_truthy = std::visit([](auto val){ return val != 0; }, num->value);
-            } else {
-                 return res.failure(RunTimeError(
-                    condition_node->pos_start.value_or(Position()),
-                    condition_node->pos_end.value_or(Position()),
-                    "Condition must evaluate to a number", context
-                ));
+            } else if (condition_value != nullptr) {
+                is_truthy = true;
             }
-
             if (is_truthy) {
-                auto expr_value = res.register_result(visit(expression_node, context));
+                const auto expr_value = res.register_result(visit(case_pair.second, context));
                 if (res.error) return res;
                 return res.success(expr_value);
             }
         }
-
         if (node->else_case) {
-            auto else_value = res.register_result(visit(node->else_case, context));
+            const auto else_value = res.register_result(visit(node->else_case, context));
             if (res.error) return res;
             return res.success(else_value);
         }
-
         return res.success(nullptr);
     }
 
