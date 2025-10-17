@@ -52,7 +52,7 @@ private:
     ParseResult while_expression() {
         ParseResult res;
 
-        if (!current_tok.has_value() || !(current_tok->type == T_KEYWORD && any_cast<string>(current_tok->value) == "till")) {
+        if (!current_tok.has_value() || !(current_tok->type == T_KEYWORD && any_cast<string>(current_tok->value) == "during")) {
             return res.failure(InvalidSyntaxError(current_tok->pos_start.value_or(Position()), current_tok->pos_end.value_or(Position()), "Expected 'whenever'"));
         }
         res.register_advancement();
@@ -398,7 +398,7 @@ private:
                 const auto for_expr = res.register_node(for_expression());
                 if (res.error) return res;
                 return res.success(for_expr);
-            } else if (keyword == "till") {
+            } else if (keyword == "during") {
                 const auto while_expr = res.register_node(while_expression());
                 if (res.error) return res;
                 return res.success(while_expr);
