@@ -209,8 +209,10 @@ public:
             } else if (c == '}') {
                 tokens.push_back(Token(T_RPAREN2, {}, pos));
                 advance();
-            }
-            else {
+            }else if (c == ':') {
+                tokens.push_back(Token(T_COLON, {}, pos));
+                advance();
+            }else {
                 const Position pos_start = pos.copy();
                 const char illegal_char = c;
                 advance();

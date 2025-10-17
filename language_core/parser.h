@@ -7,6 +7,7 @@
 #include "../ast_nodes/operation_nodes.h"
 #include "../ast_nodes/variable_nodes.h"
 #include "../ast_nodes/if_else_elif_nodes.h"
+#include "../ast_nodes/for_nodes.h"
 #include "error.h"
 #include "constants.h"
 
@@ -20,7 +21,7 @@ public:
     }
 
     ParseResult parse() {
-        ParseResult result = expression();
+        ParseResult result = statements();
         if (!result.error && current_tok.has_value() && current_tok->type != T_EOF) {
             return result.failure(
                 InvalidSyntaxError(
@@ -45,6 +46,71 @@ private:
     [[nodiscard]] optional<Token> peek() const {
         const int next_index = tok_index + 1;
         return (next_index < tokens.size()) ? make_optional(tokens[next_index]) : nullopt;
+    }
+
+    ParseResult for_expression() {
+        ParseResult res;
+        shared_ptr<Node> step_value = nullptr;
+
+        if (!current_tok.has_value() || !(current_tok->type == T_KEYWORD && any_cast<string>(current_tok->value) == "cycle")) {
+            return res.failure(InvalidSyntaxError(current_tok->pos_start.value_or(Position()), current_tok->pos_end.value_or(Position()), "Expected 'Cycle'"));
+        }
+        res.register_advancement();
+        advance();
+
+        if (!current_tok.has_value() || current_tok->type != T_IDENTIFIER) {
+            return res.failure(InvalidSyntaxError(current_tok->pos_start.value_or(Position()), current_tok->pos_end.value_or(Position()), "Expected identifier"));
+        }
+        Token var_name = current_tok.value();
+        res.register_advancement();
+        advance();
+
+        if (!current_tok.has_value() || current_tok->type != T_EQ) {
+            return res.failure(InvalidSyntaxError(current_tok->pos_start.value_or(Position()), current_tok->pos_end.value_or(Position()), "Expected '='"));
+        }
+        res.register_advancement();
+        advance();
+
+        auto start_value = res.register_node(expression());
+        if (res.error) return res;
+
+        if (!current_tok.has_value() || current_tok->type != T_COLON) {
+            return res.failure(InvalidSyntaxError(current_tok->pos_start.value_or(Position()), current_tok->pos_end.value_or(Position()), "Expected ':'"));
+        }
+        res.register_advancement();
+        advance();
+
+        auto end_value = res.register_node(expression());
+        if (res.error) return res;
+
+        if (current_tok.has_value() && current_tok->type == T_COLON) {
+            res.register_advancement();
+            advance();
+            step_value = res.register_node(expression());
+            if (res.error) return res;
+        }
+
+        if (!current_tok.has_value() || current_tok->type != T_LPAREN2) {
+            return res.failure(InvalidSyntaxError(current_tok->pos_start.value_or(Position()), current_tok->pos_end.value_or(Position()), "Expected '{'"));
+        }
+        res.register_advancement();
+        advance();
+
+        shared_ptr<Node> body_node;
+        if (current_tok.has_value() && current_tok->type == T_IDENTIFIER && peek().has_value() && peek()->type == T_EQ) {
+            body_node = res.register_node(statements());
+        } else {
+            body_node = res.register_node(expression());
+        }
+        if (res.error) return res;
+
+        if (!current_tok.has_value() || current_tok->type != T_RPAREN2) {
+            return res.failure(InvalidSyntaxError(current_tok->pos_start.value_or(Position()), current_tok->pos_end.value_or(Position()), "Expected '}'"));
+        }
+        res.register_advancement();
+        advance();
+
+        return res.success(make_shared<ForNode>(var_name, start_value, end_value, step_value, body_node));
     }
 
     ParseResult if_expression() {
@@ -253,7 +319,7 @@ private:
     ParseResult factor() {
         ParseResult res;
         if (!current_tok.has_value()) {
-            return res.failure(InvalidSyntaxError({}, {}, "Expected int, float, identifier, '+', '-', '(', or keyword 'when'"));
+            return res.failure(InvalidSyntaxError({}, {}, "Expected int, float, identifier, '+', '-', '(', keywords"));
         }
         Token token = current_tok.value();
 
@@ -292,7 +358,12 @@ private:
             if (res.error) return res;
             return res.success(if_expr);
         }
+        else if (token.type == T_KEYWORD && any_cast<string>(token.value) == "cycle") {
+            const auto for_expr = res.register_node(for_expression());
+            if (res.error) return res;
+            return res.success(for_expr);
+        }
 
-        return res.failure(InvalidSyntaxError(token.pos_start.value(), token.pos_end.value(), "Expected int, float, identifier, '+', '-', '(', or keyword 'when'"));
+        return res.failure(InvalidSyntaxError(token.pos_start.value(), token.pos_end.value(), "Expected int, float, identifier, '+', '-', '(', or keyword"));
     }
 };
