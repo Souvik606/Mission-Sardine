@@ -8,7 +8,9 @@ arith-expression : term ((PLUS|MINUS) term)*
 
 term : factor((MUL|DIV) factor )*
 
-factor: INT|FLOAT|IDENTIFIER|(PLUS|MINUS) factor|LPAREN expression RPAREN| if-expression| for-expression
+factor: INT|FLOAT|IDENTIFIER|(PLUS|MINUS) factor|LPAREN expression RPAREN| if-expression| for-expression| while-expression
+
+while-expression: KEYWORD:till expression{(expression|statements)*}
 
 for-expression:KEYWORD:cycle IDENTIFIER EQUAL expression COLON expression (COLON:expression)?{(expression|statements)*}
 

@@ -8,6 +8,7 @@
 #include "../ast_nodes/variable_nodes.h"
 #include "../ast_nodes/if_else_elif_nodes.h"
 #include "../ast_nodes/for_nodes.h"
+#include "../ast_nodes/while_nodes.h"
 #include "error.h"
 #include "constants.h"
 
@@ -48,12 +49,47 @@ private:
         return (next_index < tokens.size()) ? make_optional(tokens[next_index]) : nullopt;
     }
 
+    ParseResult while_expression() {
+        ParseResult res;
+
+        if (!current_tok.has_value() || !(current_tok->type == T_KEYWORD && any_cast<string>(current_tok->value) == "till")) {
+            return res.failure(InvalidSyntaxError(current_tok->pos_start.value_or(Position()), current_tok->pos_end.value_or(Position()), "Expected 'whenever'"));
+        }
+        res.register_advancement();
+        advance();
+
+        auto condition = res.register_node(expression());
+        if (res.error) return res;
+
+        if (!current_tok.has_value() || current_tok->type != T_LPAREN2) {
+            return res.failure(InvalidSyntaxError(current_tok->pos_start.value_or(Position()), current_tok->pos_end.value_or(Position()), "Expected '{'"));
+        }
+        res.register_advancement();
+        advance();
+
+        shared_ptr<Node> body_node;
+        if (current_tok.has_value() && current_tok->type == T_IDENTIFIER && peek().has_value() && peek()->type == T_EQ) {
+            body_node = res.register_node(statements());
+        } else {
+            body_node = res.register_node(expression());
+        }
+        if (res.error) return res;
+
+        if (!current_tok.has_value() || current_tok->type != T_RPAREN2) {
+            return res.failure(InvalidSyntaxError(current_tok->pos_start.value_or(Position()), current_tok->pos_end.value_or(Position()), "Expected '}'"));
+        }
+        res.register_advancement();
+        advance();
+
+        return res.success(make_shared<WhileNode>(condition, body_node));
+    }
+
     ParseResult for_expression() {
         ParseResult res;
         shared_ptr<Node> step_value = nullptr;
 
         if (!current_tok.has_value() || !(current_tok->type == T_KEYWORD && any_cast<string>(current_tok->value) == "cycle")) {
-            return res.failure(InvalidSyntaxError(current_tok->pos_start.value_or(Position()), current_tok->pos_end.value_or(Position()), "Expected 'Cycle'"));
+            return res.failure(InvalidSyntaxError(current_tok->pos_start.value_or(Position()), current_tok->pos_end.value_or(Position()), "Expected 'cycle'"));
         }
         res.register_advancement();
         advance();
@@ -319,7 +355,7 @@ private:
     ParseResult factor() {
         ParseResult res;
         if (!current_tok.has_value()) {
-            return res.failure(InvalidSyntaxError({}, {}, "Expected int, float, identifier, '+', '-', '(', keywords"));
+            return res.failure(InvalidSyntaxError({}, {}, "Expected int, float, identifier, '+', '-', '(', or keyword"));
         }
         Token token = current_tok.value();
 
@@ -353,15 +389,20 @@ private:
                 return res.failure(InvalidSyntaxError(current_tok->pos_start.value_or(Position()), current_tok->pos_end.value_or(Position()), "Expected ')'"));
             }
         }
-        else if (token.type == T_KEYWORD && any_cast<string>(token.value) == "when") {
-            const auto if_expr = res.register_node(if_expression());
-            if (res.error) return res;
-            return res.success(if_expr);
-        }
-        else if (token.type == T_KEYWORD && any_cast<string>(token.value) == "cycle") {
-            const auto for_expr = res.register_node(for_expression());
-            if (res.error) return res;
-            return res.success(for_expr);
+        else if (token.type == T_KEYWORD) {
+             if(const auto keyword = any_cast<string>(token.value); keyword == "when") {
+                const auto if_expr = res.register_node(if_expression());
+                if (res.error) return res;
+                return res.success(if_expr);
+            } else if (keyword == "cycle") {
+                const auto for_expr = res.register_node(for_expression());
+                if (res.error) return res;
+                return res.success(for_expr);
+            } else if (keyword == "till") {
+                const auto while_expr = res.register_node(while_expression());
+                if (res.error) return res;
+                return res.success(while_expr);
+            }
         }
 
         return res.failure(InvalidSyntaxError(token.pos_start.value(), token.pos_end.value(), "Expected int, float, identifier, '+', '-', '(', or keyword"));

@@ -8,6 +8,7 @@
 #include "../ast_nodes/variable_nodes.h"
 #include "../ast_nodes/if_else_elif_nodes.h"
 #include "../ast_nodes/for_nodes.h"
+#include "../ast_nodes/while_nodes.h"
 #include "../data_types/number_type.h"
 #include "error.h"
 #include "lexer.h"
@@ -39,6 +40,9 @@ public:
         visit_methods[typeid(ForNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
             return this->visit_ForNode(static_pointer_cast<ForNode>(node), context);
         };
+        visit_methods[typeid(WhileNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
+            return this->visit_WhileNode(static_pointer_cast<WhileNode>(node), context);
+        };
     }
 
     RunTimeResult visit(const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
@@ -58,6 +62,31 @@ private:
 
     static RunTimeResult no_visit_method(const shared_ptr<Node> &node) {
         throw std::runtime_error("No visit method defined for node type: " + string(typeid(*node.get()).name()));
+    }
+
+    RunTimeResult visit_WhileNode(const shared_ptr<WhileNode>& node, const shared_ptr<Context>& context) {
+        RunTimeResult res;
+
+        while (true) {
+            auto condition_value = res.register_result(visit(node->condition_node, context));
+            if (res.error) return res;
+
+            bool is_truthy = false;
+            if (const auto num = dynamic_pointer_cast<Number>(condition_value)) {
+                is_truthy = std::visit([](auto val){ return val != 0; }, num->value);
+            } else if (condition_value != nullptr) {
+                is_truthy = true;
+            }
+
+            if (!is_truthy) {
+                break;
+            }
+
+            res.register_result(visit(node->body_node, context));
+            if (res.error) return res;
+        }
+
+        return res.success(nullptr);
     }
 
     RunTimeResult visit_ForNode(const shared_ptr<ForNode>& node, const shared_ptr<Context>& context) {
@@ -119,12 +148,14 @@ private:
         for (const auto& case_pair : node->cases) {
             auto condition_value = res.register_result(visit(case_pair.first, context));
             if (res.error) return res;
+
             bool is_truthy = false;
             if (const auto num = dynamic_pointer_cast<Number>(condition_value)) {
                 is_truthy = std::visit([](auto val){ return val != 0; }, num->value);
             } else if (condition_value != nullptr) {
                 is_truthy = true;
             }
+
             if (is_truthy) {
                 const auto expr_value = res.register_result(visit(case_pair.second, context));
                 if (res.error) return res;
