@@ -31,5 +31,5 @@ const string T_COLON="COLON";
 const string T_EOF = "EOF";
 
 const vector<string> KEYWORDS = {
-    "define", "and", "or", "not","when","orwhen","otherwise","cycle"
+    "define", "and", "or", "not","when","orwhen","otherwise","cycle","during"
 };

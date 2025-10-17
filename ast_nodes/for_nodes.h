@@ -1,8 +1,5 @@
 #pragma once
-
 #include <bits/stdc++.h>
-#include <memory>
-#include <utility>
 
 #include "../language_core/lexer.h"
 #include "node.h"
