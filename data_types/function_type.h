@@ -1,0 +1,83 @@
+#pragma once
+#include <string>
+#include <vector>
+#include <memory>
+#include "data_type.h"
+#include "../ast_results/runtime_result.h"
+
+class Node;
+using namespace std;
+
+class Interpreter;
+
+inline RunTimeError illegal_op_error(const DataType* self, const DataType* other) {
+    return RunTimeError(
+        self->pos_start.value_or(Position()),
+        other->pos_end.value_or(Position()),
+        "Illegal Operation",
+        self->context
+    );
+}
+
+inline RunTimeError illegal_op_error(const DataType* self) {
+    return RunTimeError(
+        self->pos_start.value_or(Position()),
+        self->pos_end.value_or(Position()),
+        "Illegal Operation",
+        self->context
+    );
+}
+
+class Function final : public DataType {
+public:
+    string name;
+    shared_ptr<Node> body_node;
+    vector<string> arg_names;
+
+    explicit Function(string name, shared_ptr<Node> body, vector<string> args);
+
+    RunTimeResult execute(const vector<shared_ptr<DataType>>& args, Interpreter& interpreter);
+
+    [[nodiscard]] shared_ptr<DataType> copy() const override;
+    [[nodiscard]] string to_string() const override;
+
+    [[nodiscard]] OperationResult add(const shared_ptr<DataType>& other) const override {
+        return {nullptr, illegal_op_error(this, other.get())};
+    }
+    [[nodiscard]] OperationResult subtract(const shared_ptr<DataType>& other) const override {
+        return {nullptr, illegal_op_error(this, other.get())};
+    }
+    [[nodiscard]] OperationResult multiply(const shared_ptr<DataType>& other) const override {
+        return {nullptr, illegal_op_error(this, other.get())};
+    }
+    [[nodiscard]] OperationResult divide(const shared_ptr<DataType>& other) const override {
+        return {nullptr, illegal_op_error(this, other.get())};
+    }
+    [[nodiscard]] OperationResult get_comparison_eq(const shared_ptr<DataType>& other) const override {
+        return {nullptr, illegal_op_error(this, other.get())};
+    }
+    [[nodiscard]] OperationResult get_comparison_neq(const shared_ptr<DataType>& other) const override {
+        return {nullptr, illegal_op_error(this, other.get())};
+    }
+    [[nodiscard]] OperationResult get_comparison_lt(const shared_ptr<DataType>& other) const override {
+        return {nullptr, illegal_op_error(this, other.get())};
+    }
+    [[nodiscard]] OperationResult get_comparison_gt(const shared_ptr<DataType>& other) const override {
+        return {nullptr, illegal_op_error(this, other.get())};
+    }
+    [[nodiscard]] OperationResult get_comparison_lte(const shared_ptr<DataType>& other) const override {
+        return {nullptr, illegal_op_error(this, other.get())};
+    }
+    [[nodiscard]] OperationResult get_comparison_gte(const shared_ptr<DataType>& other) const override {
+        return {nullptr, illegal_op_error(this, other.get())};
+    }
+    [[nodiscard]] OperationResult and_by(const shared_ptr<DataType>& other) const override {
+        return {nullptr, illegal_op_error(this, other.get())};
+    }
+    [[nodiscard]] OperationResult or_by(const shared_ptr<DataType>& other) const override {
+        return {nullptr, illegal_op_error(this, other.get())};
+    }
+    [[nodiscard]] OperationResult not_by() const override {
+        return {nullptr, illegal_op_error(this)};
+    }
+};

@@ -12,7 +12,7 @@ private:
     unordered_map<string, shared_ptr<DataType>> symbols;
 
 public:
-    SymbolTable() : parent(nullptr) {}
+    explicit SymbolTable(shared_ptr<SymbolTable> p = nullptr) : parent(std::move(p)) {}
 
     [[nodiscard]] shared_ptr<DataType> get(const string& name) const {
         if (const auto it = symbols.find(name); it != symbols.end()) {

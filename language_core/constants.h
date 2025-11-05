@@ -28,8 +28,10 @@ const string T_RPAREN = "RPAREN";
 const string T_LPAREN2 = "LPAREN2";
 const string T_RPAREN2 = "RPAREN2";
 const string T_COLON="COLON";
+const string T_COMMA="COMMA";
 const string T_EOF = "EOF";
 
 const vector<string> KEYWORDS = {
-    "define", "and", "or", "not","when","orwhen","otherwise","cycle","during"
+    "define", "and", "or", "not","when","orwhen","otherwise","cycle",
+    "during","method"
 };
