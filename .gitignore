@@ -1,2 +1,12 @@
+# JetBrains/CLion user-specific files
+.idea/
+
+# CMake build directories
+cmake-build-debug/
+cmake-build-release/
+
+# Compiled executables and build artifacts
 *.exe
-*.idea
+*.o
+*.a
+*.so
