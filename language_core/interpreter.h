@@ -11,6 +11,8 @@
 #include "../ast_nodes/while_nodes.h"
 #include "../ast_nodes/function_nodes.h"
 #include "../ast_nodes/string_nodes.h"
+#include "../ast_nodes/list_nodes.h"
+#include "../data_types/list_type.h"
 #include "../data_types/number_type.h"
 #include "../data_types/string_type.h"
 #include "../data_types/function_type.h"
@@ -28,6 +30,9 @@ public:
         };
         visit_methods[typeid(StringNode)] = [](const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
             return visit_StringNode(static_pointer_cast<StringNode>(node), context);
+        };
+        visit_methods[typeid(ListNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
+            return this->visit_ListNode(static_pointer_cast<ListNode>(node), context);
         };
         visit_methods[typeid(BinaryOperationNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
             return this->visit_BinaryOperationNode(static_pointer_cast<BinaryOperationNode>(node), context);
@@ -77,7 +82,21 @@ private:
         throw std::runtime_error("No visit method defined for node type: " + string(typeid(*node.get()).name()));
     }
 
-    RunTimeResult visit_FunctionDefinitionNode(const shared_ptr<FunctionDefinitionNode>& node, const shared_ptr<Context>& context) {
+    RunTimeResult visit_ListNode(const shared_ptr<ListNode>& node, const shared_ptr<Context>& context) {
+        RunTimeResult res;
+        vector<shared_ptr<DataType>> elements;
+
+        for (const auto& element_node : node->element_nodes) {
+            elements.push_back(res.register_result(visit(element_node, context)));
+            if (res.error) return res;
+        }
+
+        auto list_value = make_shared<List>(elements);
+        list_value->set_context(context).set_pos(node->pos_start, node->pos_end);
+        return res.success(list_value);
+    }
+
+    static RunTimeResult visit_FunctionDefinitionNode(const shared_ptr<FunctionDefinitionNode>& node, const shared_ptr<Context>& context) {
         RunTimeResult res;
         string func_name = node->var_name_tok.has_value() ? any_cast<string>(node->var_name_tok->value) : "";
         auto body_node = node->body_node;
@@ -122,6 +141,7 @@ private:
 
     RunTimeResult visit_WhileNode(const shared_ptr<WhileNode>& node, const shared_ptr<Context>& context) {
         RunTimeResult res;
+
         while (true) {
             auto condition_value = res.register_result(visit(node->condition_node, context));
             if (res.error) return res;
@@ -138,14 +158,17 @@ private:
 
     RunTimeResult visit_ForNode(const shared_ptr<ForNode>& node, const shared_ptr<Context>& context) {
         RunTimeResult res;
+
         auto start_value_res = res.register_result(visit(node->start_value_node, context));
         if (res.error) return res;
         auto start_num = dynamic_pointer_cast<Number>(start_value_res);
         if (!start_num) return res.failure(RunTimeError(node->start_value_node->pos_start.value_or(Position()), node->start_value_node->pos_end.value_or(Position()), "For loop start value must be a number", context));
+
         auto end_value_res = res.register_result(visit(node->end_value_node, context));
         if (res.error) return res;
         auto end_num = dynamic_pointer_cast<Number>(end_value_res);
         if (!end_num) return res.failure(RunTimeError(node->end_value_node->pos_start.value_or(Position()), node->end_value_node->pos_end.value_or(Position()), "For loop end value must be a number", context));
+
         shared_ptr<Number> step_num;
         if (node->step_value_node) {
             auto step_value = res.register_result(visit(node->step_value_node, context));
@@ -155,11 +178,14 @@ private:
         } else {
             step_num = make_shared<Number>(1LL);
         }
+
         auto var_name = any_cast<string>(node->var_name_tok.value);
+
         if (bool all_integers = holds_alternative<long long>(start_num->value) && holds_alternative<long long>(end_num->value) && holds_alternative<long long>(step_num->value)) {
             long long start = get<long long>(start_num->value);
             long long end = get<long long>(end_num->value);
             long long step = get<long long>(step_num->value);
+
             for (long long i = start; (step >= 0) ? (i <= end) : (i >= end); i += step) {
                 context->symbol_table->set(var_name, make_shared<Number>(i));
                 res.register_result(visit(node->body_node, context));
@@ -169,12 +195,14 @@ private:
             double start = std::visit([](auto v){ return static_cast<double>(v); }, start_num->value);
             double end = std::visit([](auto v){ return static_cast<double>(v); }, end_num->value);
             double step = std::visit([](auto v){ return static_cast<double>(v); }, step_num->value);
+
             for (double i = start; (step >= 0) ? (i <= end) : (i >= end); i += step) {
                 context->symbol_table->set(var_name, make_shared<Number>(i));
                 res.register_result(visit(node->body_node, context));
                 if (res.error) return res;
             }
         }
+
         return res.success(nullptr);
     }
 
@@ -203,7 +231,7 @@ private:
         return res.success(nullptr);
     }
 
-    RunTimeResult visit_VariableUseNode(const shared_ptr<VariableUseNode>& node, const shared_ptr<Context>& context) {
+    static RunTimeResult visit_VariableUseNode(const shared_ptr<VariableUseNode>& node, const shared_ptr<Context>& context) {
         RunTimeResult res;
         const auto var_name = any_cast<string>(node->var_name_tok.value);
         const shared_ptr<DataType> value = context->symbol_table->get(var_name);
@@ -305,15 +333,33 @@ private:
                 tie(result, error) = left_str->multiply(right);
             }
         }
+        else if (const auto left_list = dynamic_pointer_cast<List>(left)) {
+            if (node->operator_token.type == T_PLUS) {
+                tie(result, error) = left_list->add(right);
+            } else if (node->operator_token.type == T_MINUS) {
+                tie(result, error) = left_list->subtract(right);
+            } else if (node->operator_token.type == T_MUL) {
+                tie(result, error) = left_list->multiply(right);
+            }
+        }
         else {
             return res.failure(RunTimeError(
                 node->pos_start.value_or(Position()),
                 node->pos_end.value_or(Position()),
-                "Left operand must be a number or string", context
+                // You can update the error message now if you want
+                "Left operand for binary operation is not a supported type (Number, String, List)", context
             ));
         }
 
         if (error) return res.failure(*error);
+
+        if (result == nullptr) {
+             return res.failure(RunTimeError(
+                node->pos_start.value_or(Position()),
+                node->pos_end.value_or(Position()),
+                "Unsupported binary operation for the given types", context
+            ));
+        }
 
         result->set_pos(node->pos_start, node->pos_end);
         return res.success(result);
@@ -345,6 +391,14 @@ private:
         }
 
         if (error) return res.failure(*error);
+
+        if (result == nullptr) {
+             return res.failure(RunTimeError(
+                node->pos_start.value_or(Position()),
+                node->pos_end.value_or(Position()),
+                "Unsupported unary operation", context
+            ));
+        }
 
         result->set_pos(node->pos_start, node->pos_end);
         return res.success(result);

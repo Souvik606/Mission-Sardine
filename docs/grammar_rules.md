@@ -10,7 +10,9 @@ term : factor((MUL|DIV) factor )*|function-call
 
 function-call: IDENTIFIER LPAREN (expression(COMMA expression)*)? RPAREN
 
-factor: INT|FLOAT|IDENTIFIER|STRING|(PLUS|MINUS) factor|LPAREN expression RPAREN| if-expression| for-expression| while-expression| function-definition
+factor: INT|FLOAT|IDENTIFIER|STRING|(PLUS|MINUS) factor|LPAREN expression RPAREN| if-expression| for-expression| while-expression| function-definition| list-expression
+
+list-expression:LPAREN3 (expression(COMMA expression)*)? RPAREN RPAREN3
 
 while-expression: KEYWORD:during expression{(expression|statements)*}
 
