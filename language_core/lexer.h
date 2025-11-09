@@ -40,9 +40,9 @@ public:
             } else if (value.type() == typeid(double)) {
                 ss << any_cast<double>(value);
             } else if (value.type() == typeid(string)) {
-                ss << any_cast<string>(value);
+                ss << "\"" << any_cast<string>(value) << "\"";
             } else if (value.type() == typeid(const char *)) {
-                ss << any_cast<const char *>(value);
+                ss << "\"" << any_cast<const char *>(value) << "\"";
             } else {
                 ss << "[unprintable value]";
             }
@@ -75,6 +75,40 @@ public:
         } else {
             current_char = nullopt;
         }
+    }
+
+    Token make_string() {
+        string str;
+        Position pos_start = pos.copy();
+        bool escape_character = false;
+        advance();
+
+        map<char, char> escape_characters = {
+            {'n', '\n'},
+            {'t', '\t'}
+        };
+
+        while (current_char.has_value() && (current_char.value() != '"' || escape_character)) {
+            if (escape_character) {
+                char escaped_char = current_char.value();
+                if (escape_characters.count(escaped_char)) {
+                    str += escape_characters[escaped_char];
+                } else {
+                    str += escaped_char;
+                }
+                escape_character = false;
+            } else {
+                if (current_char.value() == '\\') {
+                    escape_character = true;
+                } else {
+                    str += current_char.value();
+                }
+            }
+            advance();
+        }
+
+        advance();
+        return Token(T_STRING, str, pos_start, pos);
     }
 
     Token make_identifier() {
@@ -171,7 +205,10 @@ public:
                 tokens.push_back(make_number());
             } else if (LETTERS.find(c) != string::npos) {
                 tokens.push_back(make_identifier());
-            } else if (c == '+') {
+            } else if (c == '"') {
+                tokens.push_back(make_string());
+            }
+            else if (c == '+') {
                 tokens.push_back(Token(T_PLUS, {}, pos));
                 advance();
             } else if (c == '-') {

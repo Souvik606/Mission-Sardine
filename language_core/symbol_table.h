@@ -1,8 +1,8 @@
 #pragma once
 #include <bits/stdc++.h>
-#include "../data_types/data_type.h"
 
 using namespace std;
+class DataType;
 
 class SymbolTable {
 public:

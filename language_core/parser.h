@@ -9,6 +9,7 @@
 #include "../ast_nodes/if_else_elif_nodes.h"
 #include "../ast_nodes/for_nodes.h"
 #include "../ast_nodes/while_nodes.h"
+#include "../ast_nodes/string_nodes.h"
 #include "../ast_nodes/function_nodes.h"
 #include "error.h"
 #include "constants.h"
@@ -412,6 +413,10 @@ private:
             res.register_advancement();
             advance();
             return res.success(make_shared<NumberNode>(token));
+        }else if (token.type == T_STRING) {
+            res.register_advancement();
+            advance();
+            return res.success(make_shared<StringNode>(token));
         }
         else if (token.type == T_IDENTIFIER) {
             res.register_advancement();

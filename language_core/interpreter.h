@@ -10,7 +10,9 @@
 #include "../ast_nodes/for_nodes.h"
 #include "../ast_nodes/while_nodes.h"
 #include "../ast_nodes/function_nodes.h"
+#include "../ast_nodes/string_nodes.h"
 #include "../data_types/number_type.h"
+#include "../data_types/string_type.h"
 #include "../data_types/function_type.h"
 #include "error.h"
 #include "lexer.h"
@@ -24,6 +26,9 @@ public:
         visit_methods[typeid(NumberNode)] = [](const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
             return visit_NumberNode(static_pointer_cast<NumberNode>(node), context);
         };
+        visit_methods[typeid(StringNode)] = [](const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
+            return visit_StringNode(static_pointer_cast<StringNode>(node), context);
+        };
         visit_methods[typeid(BinaryOperationNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
             return this->visit_BinaryOperationNode(static_pointer_cast<BinaryOperationNode>(node), context);
         };
@@ -31,7 +36,7 @@ public:
             return this->visit_UnaryOperationNode(static_pointer_cast<UnaryOperationNode>(node), context);
         };
         visit_methods[typeid(VariableUseNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
-            return Interpreter::visit_VariableUseNode(static_pointer_cast<VariableUseNode>(node), context);
+            return this->visit_VariableUseNode(static_pointer_cast<VariableUseNode>(node), context);
         };
         visit_methods[typeid(VariableAssignNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
             return this->visit_VariableAssignNode(static_pointer_cast<VariableAssignNode>(node), context);
@@ -46,7 +51,7 @@ public:
             return this->visit_WhileNode(static_pointer_cast<WhileNode>(node), context);
         };
         visit_methods[typeid(FunctionDefinitionNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
-            return Interpreter::visit_FunctionDefinitionNode(static_pointer_cast<FunctionDefinitionNode>(node), context);
+            return this->visit_FunctionDefinitionNode(static_pointer_cast<FunctionDefinitionNode>(node), context);
         };
         visit_methods[typeid(FunctionCallNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context) {
             return this->visit_FunctionCallNode(static_pointer_cast<FunctionCallNode>(node), context);
@@ -72,7 +77,7 @@ private:
         throw std::runtime_error("No visit method defined for node type: " + string(typeid(*node.get()).name()));
     }
 
-    static RunTimeResult visit_FunctionDefinitionNode(const shared_ptr<FunctionDefinitionNode>& node, const shared_ptr<Context>& context) {
+    RunTimeResult visit_FunctionDefinitionNode(const shared_ptr<FunctionDefinitionNode>& node, const shared_ptr<Context>& context) {
         RunTimeResult res;
         string func_name = node->var_name_tok.has_value() ? any_cast<string>(node->var_name_tok->value) : "";
         auto body_node = node->body_node;
@@ -120,13 +125,11 @@ private:
         while (true) {
             auto condition_value = res.register_result(visit(node->condition_node, context));
             if (res.error) return res;
-            bool is_truthy = false;
-            if (const auto num = dynamic_pointer_cast<Number>(condition_value)) {
-                is_truthy = std::visit([](auto val){ return val != 0; }, num->value);
-            } else if (condition_value != nullptr) {
-                is_truthy = true;
+
+            if (condition_value == nullptr || !condition_value->is_truthy()) {
+                break;
             }
-            if (!is_truthy) break;
+
             res.register_result(visit(node->body_node, context));
             if (res.error) return res;
         }
@@ -180,12 +183,12 @@ private:
         for (const auto& case_pair : node->cases) {
             auto condition_value = res.register_result(visit(case_pair.first, context));
             if (res.error) return res;
+
             bool is_truthy = false;
-            if (const auto num = dynamic_pointer_cast<Number>(condition_value)) {
-                is_truthy = std::visit([](auto val){ return val != 0; }, num->value);
-            } else if (condition_value != nullptr) {
-                is_truthy = true;
+            if (condition_value != nullptr) {
+                is_truthy = condition_value->is_truthy();
             }
+
             if (is_truthy) {
                 const auto expr_value = res.register_result(visit(case_pair.second, context));
                 if (res.error) return res;
@@ -200,7 +203,7 @@ private:
         return res.success(nullptr);
     }
 
-    static RunTimeResult visit_VariableUseNode(const shared_ptr<VariableUseNode>& node, const shared_ptr<Context>& context) {
+    RunTimeResult visit_VariableUseNode(const shared_ptr<VariableUseNode>& node, const shared_ptr<Context>& context) {
         RunTimeResult res;
         const auto var_name = any_cast<string>(node->var_name_tok.value);
         const shared_ptr<DataType> value = context->symbol_table->get(var_name);
@@ -219,6 +222,25 @@ private:
         if (res.error) return res;
         context->symbol_table->set(var_name, value);
         return res.success(value);
+    }
+
+    static RunTimeResult visit_StringNode(const shared_ptr<StringNode> &node, const shared_ptr<Context> &context) {
+        RunTimeResult res;
+        auto token_value = node->token.value;
+        shared_ptr<String> str;
+
+        if (token_value.type() == typeid(string)) {
+            str = make_shared<String>(any_cast<string>(token_value));
+        } else {
+            return res.failure(RunTimeError(
+                node->pos_start.value_or(Position()),
+                node->pos_end.value_or(Position()),
+                "Invalid value in string token", context
+            ));
+        }
+
+        str->set_context(context).set_pos(node->pos_start, node->pos_end);
+        return res.success(str);
     }
 
     static RunTimeResult visit_NumberNode(const shared_ptr<NumberNode> &node, const shared_ptr<Context> &context) {
@@ -244,7 +266,7 @@ private:
         const shared_ptr<DataType> right = res.register_result(visit(node->right_node, context));
         if (res.error) return res;
 
-        shared_ptr<Number> result = nullptr;
+        shared_ptr<DataType> result = nullptr;
         optional<RunTimeError> error = nullopt;
 
         if (const auto left_num = dynamic_pointer_cast<Number>(left)) {
@@ -275,8 +297,20 @@ private:
                     tie(result, error) = left_num->or_by(right);
                 }
             }
-        } else {
-            return res.failure(RunTimeError(node->pos_start.value_or(Position()), node->pos_end.value_or(Position()), "Left operand must be a number", context));
+        }
+        else if (const auto left_str = dynamic_pointer_cast<String>(left)) {
+            if (node->operator_token.type == T_PLUS) {
+                tie(result, error) = left_str->add(right);
+            } else if (node->operator_token.type == T_MUL) {
+                tie(result, error) = left_str->multiply(right);
+            }
+        }
+        else {
+            return res.failure(RunTimeError(
+                node->pos_start.value_or(Position()),
+                node->pos_end.value_or(Position()),
+                "Left operand must be a number or string", context
+            ));
         }
 
         if (error) return res.failure(*error);
@@ -292,7 +326,7 @@ private:
         if (res.error) return res;
 
         optional<RunTimeError> error = nullopt;
-        shared_ptr<Number> result = nullptr;
+        shared_ptr<DataType> result = nullptr;
 
         if (const auto number = dynamic_pointer_cast<Number>(number_val)) {
             if (node->operator_token.type == T_MINUS) {
@@ -303,7 +337,11 @@ private:
                 }
             }
         } else {
-            return res.failure(RunTimeError(node->pos_start.value_or(Position()), node->pos_end.value_or(Position()), "Unary operand must be a number", context));
+            return res.failure(RunTimeError(
+                node->pos_start.value_or(Position()),
+                node->pos_end.value_or(Position()),
+                "Unary operand must be a number", context
+            ));
         }
 
         if (error) return res.failure(*error);
