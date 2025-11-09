@@ -246,6 +246,12 @@ public:
             } else if (c == '}') {
                 tokens.push_back(Token(T_RPAREN2, {}, pos));
                 advance();
+            }else if (c == '[') {
+                tokens.push_back(Token(T_LPAREN3, {}, pos));
+                advance();
+            }else if (c == ']') {
+                tokens.push_back(Token(T_RPAREN3, {}, pos));
+                advance();
             }else if (c == ':') {
                 tokens.push_back(Token(T_COLON, {}, pos));
                 advance();
