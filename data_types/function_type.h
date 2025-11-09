@@ -38,6 +38,10 @@ public:
 
     RunTimeResult execute(const vector<shared_ptr<DataType>>& args, Interpreter& interpreter);
 
+    [[nodiscard]] bool is_truthy() const override {
+        return true;
+    }
+
     [[nodiscard]] shared_ptr<DataType> copy() const override;
     [[nodiscard]] string to_string() const override;
 

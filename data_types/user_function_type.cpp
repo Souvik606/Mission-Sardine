@@ -45,7 +45,7 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>>& args, Interp
 
     const shared_ptr<DataType> value = res.register_result(interpreter.visit(this->body_node, new_context));
     if (res.error) return res;
-    
+
     return res.success(value);
 }
 

@@ -1,6 +1,9 @@
 #pragma once
 #include <bits/stdc++.h>
 #include "data_type.h"
+#include "../language_core/error.h"
+#include "../language_core/context.h"
+#include "../language_core/position.h"
 
 using namespace std;
 
@@ -10,6 +13,21 @@ public:
 
     explicit Number(long long val) : value(val) {}
     explicit Number(double val) : value(val) {}
+
+    DataType& set_pos(const optional<Position>& start, const optional<Position>& end) override {
+        this->pos_start = start;
+        this->pos_end = end;
+        return *this;
+    }
+
+    DataType& set_context(const shared_ptr<Context>& ctx) override {
+        this->context = ctx;
+        return *this;
+    }
+
+    [[nodiscard]] bool is_truthy() const override {
+        return std::visit([](auto val){ return val != 0; }, this->value);
+    }
 
     [[nodiscard]] shared_ptr<DataType> copy() const override {
         auto new_num = std::visit([](auto val){ return make_shared<Number>(val); }, this->value);
@@ -21,53 +39,71 @@ public:
     [[nodiscard]] OperationResult add(const shared_ptr<DataType>& operand) const override {
         if (const auto other = dynamic_cast<const Number*>(operand.get())) {
             auto new_value = std::visit([](auto left, auto right) -> variant<long long, double> {
-                if constexpr (is_integral_v<decltype(left)> && is_integral_v<decltype(right)>) return left + right;
+                if constexpr (is_integral_v<decltype(left)> && is_integral_v<decltype(right)>) {
+                    return left + right;
+                }
                 return static_cast<double>(left) + static_cast<double>(right);
             }, this->value, other->value);
+
             auto result = std::visit([](auto val) { return make_shared<Number>(val); }, new_value);
             result->set_context(this->context);
             return {result, nullopt};
         }
-        return {nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Operand must be a number", context)};
+        return {nullptr, RunTimeError({}, {}, "Operand must be a number", this->context)};
     }
 
     [[nodiscard]] OperationResult subtract(const shared_ptr<DataType>& operand) const override {
         if (const auto other = dynamic_cast<const Number*>(operand.get())) {
             auto new_value = std::visit([](auto left, auto right) -> variant<long long, double> {
-                if constexpr (is_integral_v<decltype(left)> && is_integral_v<decltype(right)>) return left - right;
+                if constexpr (is_integral_v<decltype(left)> && is_integral_v<decltype(right)>) {
+                    return left - right;
+                }
                 return static_cast<double>(left) - static_cast<double>(right);
             }, this->value, other->value);
+
             auto result = std::visit([](auto val) { return make_shared<Number>(val); }, new_value);
             result->set_context(this->context);
             return {result, nullopt};
         }
-        return {nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Operand must be a number", context)};
+        return {nullptr, RunTimeError({}, {}, "Operand must be a number", this->context)};
     }
 
     [[nodiscard]] OperationResult multiply(const shared_ptr<DataType>& operand) const override {
         if (const auto other = dynamic_cast<const Number*>(operand.get())) {
             auto new_value = std::visit([](auto left, auto right) -> variant<long long, double> {
-                if constexpr (is_integral_v<decltype(left)> && is_integral_v<decltype(right)>) return left * right;
+                if constexpr (is_integral_v<decltype(left)> && is_integral_v<decltype(right)>) {
+                    return left * right;
+                }
                 return static_cast<double>(left) * static_cast<double>(right);
             }, this->value, other->value);
+
             auto result = std::visit([](auto val) { return make_shared<Number>(val); }, new_value);
             result->set_context(this->context);
             return {result, nullopt};
         }
-        return {nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Operand must be a number", context)};
+        return {nullptr, RunTimeError({}, {}, "Operand must be a number", this->context)};
     }
 
     [[nodiscard]] OperationResult divide(const shared_ptr<DataType>& operand) const override {
         if (const auto other = dynamic_cast<const Number*>(operand.get())) {
             if (std::visit([](auto val) { return val == 0; }, other->value)) {
-                return {nullptr, RunTimeError(other->pos_start.value_or(Position()), other->pos_end.value_or(Position()), "Division by zero", this->context)};
+                return {
+                    nullptr, RunTimeError(
+                        other->pos_start.value_or(Position()),
+                        other->pos_end.value_or(Position()),
+                        "Division by zero",
+                        this->context
+                    )
+                };
             }
-            double new_value = std::visit([](auto left, auto right) { return static_cast<double>(left) / static_cast<double>(right); }, this->value, other->value);
+            double new_value = std::visit([](auto left, auto right) {
+                return static_cast<double>(left) / static_cast<double>(right);
+            }, this->value, other->value);
             auto result = make_shared<Number>(new_value);
             result->set_context(this->context);
             return {result, nullopt};
         }
-        return {nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Operand must be a number", context)};
+        return {nullptr, RunTimeError({}, {}, "Operand must be a number", this->context)};
     }
 
     [[nodiscard]] OperationResult get_comparison_eq(const shared_ptr<DataType>& operand) const override {
@@ -75,7 +111,7 @@ public:
             const bool result = std::visit([](auto left, auto right){ return left == right; }, this->value, other->value);
             return {make_shared<Number>(static_cast<long long>(result)), nullopt};
         }
-        return {nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Operand must be a number", context)};
+        return {nullptr, RunTimeError({}, {}, "Operand must be a number", this->context)};
     }
 
     [[nodiscard]] OperationResult get_comparison_neq(const shared_ptr<DataType>& operand) const override {
@@ -83,7 +119,7 @@ public:
             const bool result = std::visit([](auto left, auto right){ return left != right; }, this->value, other->value);
             return {make_shared<Number>(static_cast<long long>(result)), nullopt};
         }
-        return {nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Operand must be a number", context)};
+        return {nullptr, RunTimeError({}, {}, "Operand must be a number", this->context)};
     }
 
     [[nodiscard]] OperationResult get_comparison_lt(const shared_ptr<DataType>& operand) const override {
@@ -91,7 +127,7 @@ public:
             const bool result = std::visit([](auto left, auto right){ return left < right; }, this->value, other->value);
             return {make_shared<Number>(static_cast<long long>(result)), nullopt};
         }
-        return {nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Operand must be a number", context)};
+        return {nullptr, RunTimeError({}, {}, "Operand must be a number", this->context)};
     }
 
     [[nodiscard]] OperationResult get_comparison_gt(const shared_ptr<DataType>& operand) const override {
@@ -99,7 +135,7 @@ public:
             const bool result = std::visit([](auto left, auto right){ return left > right; }, this->value, other->value);
             return {make_shared<Number>(static_cast<long long>(result)), nullopt};
         }
-        return {nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Operand must be a number", context)};
+        return {nullptr, RunTimeError({}, {}, "Operand must be a number", this->context)};
     }
 
     [[nodiscard]] OperationResult get_comparison_lte(const shared_ptr<DataType>& operand) const override {
@@ -107,7 +143,7 @@ public:
             const bool result = std::visit([](auto left, auto right){ return left <= right; }, this->value, other->value);
             return {make_shared<Number>(static_cast<long long>(result)), nullopt};
         }
-        return {nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Operand must be a number", context)};
+        return {nullptr, RunTimeError({}, {}, "Operand must be a number", this->context)};
     }
 
     [[nodiscard]] OperationResult get_comparison_gte(const shared_ptr<DataType>& operand) const override {
@@ -115,7 +151,7 @@ public:
             const bool result = std::visit([](auto left, auto right){ return left >= right; }, this->value, other->value);
             return {make_shared<Number>(static_cast<long long>(result)), nullopt};
         }
-        return {nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Operand must be a number", context)};
+        return {nullptr, RunTimeError({}, {}, "Operand must be a number", this->context)};
     }
 
     [[nodiscard]] OperationResult and_by(const shared_ptr<DataType>& operand) const override {
@@ -124,7 +160,7 @@ public:
             const bool other_truthy = std::visit([](auto val){ return val != 0; }, other->value);
             return {make_shared<Number>(static_cast<long long>(self_truthy && other_truthy)), nullopt};
         }
-        return {nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Operand must be a number", context)};
+        return {nullptr, RunTimeError({}, {}, "Operand must be a number", this->context)};
     }
 
     [[nodiscard]] OperationResult or_by(const shared_ptr<DataType>& operand) const override {
@@ -133,7 +169,7 @@ public:
             const bool other_truthy = std::visit([](auto val){ return val != 0; }, other->value);
             return {make_shared<Number>(static_cast<long long>(self_truthy || other_truthy)), nullopt};
         }
-        return {nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Operand must be a number", context)};
+        return {nullptr, RunTimeError({}, {}, "Operand must be a number", this->context)};
     }
 
     [[nodiscard]] OperationResult not_by() const override {
@@ -142,6 +178,6 @@ public:
     }
 
     [[nodiscard]] string to_string() const override {
-        return std::visit([](auto&& val) { return std::to_string(val); }, this->value);
+        return std::visit([](auto &&val) { return std::to_string(val); }, this->value);
     }
 };

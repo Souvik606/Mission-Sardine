@@ -1,13 +1,13 @@
 #pragma once
 #include <bits/stdc++.h>
 #include "../language_core/position.h"
+#include "../language_core/context.h"
+#include "../language_core/error.h"
 
-class RunTimeError;
 using namespace std;
 
 class DataType;
 class Number;
-class Context;
 
 class DataType {
 public:
@@ -23,23 +23,22 @@ public:
         return *this;
     }
 
-    DataType& set_pos() {
-        return set_pos({}, {});
-    }
+    DataType& set_pos() { return set_pos({}, {}); }
 
     virtual DataType& set_context(const shared_ptr<Context>& ctx) {
         this->context = ctx;
         return *this;
     }
 
-    DataType& set_context() {
-        return set_context({});
-    }
+    DataType& set_context() { return set_context({}); }
 
-    using OperationResult = pair<shared_ptr<Number>, optional<RunTimeError>>;
+    using OperationResult = pair<shared_ptr<DataType>, optional<RunTimeError>>;
 
     [[nodiscard]] virtual shared_ptr<DataType> copy() const = 0;
     [[nodiscard]] virtual string to_string() const = 0;
+
+    [[nodiscard]] virtual bool is_truthy() const = 0;
+
     [[nodiscard]] virtual OperationResult add(const shared_ptr<DataType>& other) const = 0;
     [[nodiscard]] virtual OperationResult subtract(const shared_ptr<DataType>& other) const = 0;
     [[nodiscard]] virtual OperationResult multiply(const shared_ptr<DataType>& other) const = 0;

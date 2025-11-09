@@ -10,6 +10,7 @@ const string LETTERS_DIGITS = LETTERS + DIGITS;
 
 const string T_INT = "INT";
 const string T_FLOAT = "FLOAT";
+const string T_STRING= "STRING";
 const string T_IDENTIFIER = "IDENTIFIER";
 const string T_KEYWORD = "KEYWORD";
 const string T_PLUS = "PLUS";
