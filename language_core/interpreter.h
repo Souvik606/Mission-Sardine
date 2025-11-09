@@ -1,7 +1,6 @@
 #pragma once
 
 #include <bits/stdc++.h>
-
 #include "context.h"
 #include "../ast_results/runtime_result.h"
 #include "../ast_nodes/operation_nodes.h"
@@ -16,6 +15,7 @@
 #include "../data_types/number_type.h"
 #include "../data_types/string_type.h"
 #include "../data_types/function_type.h"
+#include "../data_types/builtins.h"
 #include "error.h"
 #include "lexer.h"
 #include "constants.h"
@@ -132,6 +132,11 @@ private:
 
         if (const auto func_to_call = dynamic_pointer_cast<Function>(copied_call_value)) {
             const auto return_value = res.register_result(func_to_call->execute(args, *this));
+            if (res.error) return res;
+            return res.success(return_value);
+        }
+        else if (const auto builtin_to_call = dynamic_pointer_cast<BuiltInFunction>(copied_call_value)) {
+            const auto return_value = res.register_result(builtin_to_call->execute(args));
             if (res.error) return res;
             return res.success(return_value);
         }
