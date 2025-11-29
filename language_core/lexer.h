@@ -16,7 +16,7 @@ public:
     optional<Position> pos_end;
 
     explicit Token(string type, any value = {}, optional<Position> pos_start = nullopt,
-                   optional<Position> pos_end = nullopt) {
+        optional<Position> pos_end = nullopt) {
         this->type = std::move(type);
         this->value = std::move(value);
 
@@ -37,16 +37,21 @@ public:
             ss << type << ": ";
             if (value.type() == typeid(long long)) {
                 ss << any_cast<long long>(value);
-            } else if (value.type() == typeid(double)) {
+            }
+            else if (value.type() == typeid(double)) {
                 ss << any_cast<double>(value);
-            } else if (value.type() == typeid(string)) {
+            }
+            else if (value.type() == typeid(string)) {
                 ss << "\"" << any_cast<string>(value) << "\"";
-            } else if (value.type() == typeid(const char *)) {
-                ss << "\"" << any_cast<const char *>(value) << "\"";
-            } else {
+            }
+            else if (value.type() == typeid(const char*)) {
+                ss << "\"" << any_cast<const char*>(value) << "\"";
+            }
+            else {
                 ss << "[unprintable value]";
             }
-        } else {
+        }
+        else {
             ss << type;
         }
         return ss.str();
@@ -60,11 +65,11 @@ public:
     Position pos;
     optional<char> current_char;
 
-    Lexer(const string &filename, const string &text)
+    Lexer(const string& filename, const string& text)
         : filename(filename),
-          text(text),
-          pos(Position(-1, 0, -1, filename, text)),
-          current_char(nullopt) {
+        text(text),
+        pos(Position(-1, 0, -1, filename, text)),
+        current_char(nullopt) {
         advance();
     }
 
@@ -72,7 +77,8 @@ public:
         pos.advance(current_char.value_or('\0'));
         if (pos.index < text.length()) {
             current_char = text[pos.index];
-        } else {
+        }
+        else {
             current_char = nullopt;
         }
     }
@@ -93,14 +99,17 @@ public:
                 char escaped_char = current_char.value();
                 if (escape_characters.count(escaped_char)) {
                     str += escape_characters[escaped_char];
-                } else {
+                }
+                else {
                     str += escaped_char;
                 }
                 escape_character = false;
-            } else {
+            }
+            else {
                 if (current_char.value() == '\\') {
                     escape_character = true;
-                } else {
+                }
+                else {
                     str += current_char.value();
                 }
             }
@@ -120,7 +129,7 @@ public:
             advance();
         }
         string token_type = T_IDENTIFIER;
-        for(const auto& keyword : KEYWORDS) {
+        for (const auto& keyword : KEYWORDS) {
             if (id_str == keyword) {
                 token_type = T_KEYWORD;
                 break;
@@ -183,14 +192,16 @@ public:
                 if (is_float) break;
                 is_float = true;
                 number_str += '.';
-            } else {
+            }
+            else {
                 number_str += current_char.value();
             }
             advance();
         }
         if (is_float) {
             return Token(T_FLOAT, stod(number_str), pos_start, pos);
-        } else {
+        }
+        else {
             return Token(T_INT, stoll(number_str), pos_start, pos);
         }
     }
@@ -201,74 +212,99 @@ public:
             char c = current_char.value();
             if (c == ' ' || c == '\t') {
                 advance();
-            } else if (DIGITS.find(c) != string::npos) {
+            }
+            else if (c == ';') {
+                tokens.push_back(Token(T_NEWLINE, {}, pos));
+                advance();
+            }
+            else if (c == '\n') {
+                tokens.push_back(Token(T_NEWLINE, {}, pos));
+                advance();
+            }
+            else if (DIGITS.find(c) != string::npos) {
                 tokens.push_back(make_number());
-            } else if (LETTERS.find(c) != string::npos) {
+            }
+            else if (LETTERS.find(c) != string::npos) {
                 tokens.push_back(make_identifier());
-            } else if (c == '"') {
+            }
+            else if (c == '"') {
                 tokens.push_back(make_string());
             }
             else if (c == '+') {
                 tokens.push_back(Token(T_PLUS, {}, pos));
                 advance();
-            } else if (c == '-') {
+            }
+            else if (c == '-') {
                 tokens.push_back(Token(T_MINUS, {}, pos));
                 advance();
-            } else if (c == '*') {
+            }
+            else if (c == '*') {
                 tokens.push_back(Token(T_MUL, {}, pos));
                 advance();
-            } else if (c == '/') {
+            }
+            else if (c == '/') {
                 tokens.push_back(Token(T_DIVIDE, {}, pos));
                 advance();
-            } else if (c == '=') {
+            }
+            else if (c == '=') {
                 tokens.push_back(make_equals());
-            } else if (c == '!') {
+            }
+            else if (c == '!') {
                 auto result = make_not_equals();
                 if (std::holds_alternative<Error>(result)) {
-                    return {{}, std::get<Error>(result)};
+                    return { {}, std::get<Error>(result) };
                 }
                 tokens.push_back(std::get<Token>(result));
-            } else if (c == '<') {
+            }
+            else if (c == '<') {
                 tokens.push_back(make_lesser());
-            } else if (c == '>') {
+            }
+            else if (c == '>') {
                 tokens.push_back(make_greater());
             }
             else if (c == '(') {
                 tokens.push_back(Token(T_LPAREN, {}, pos));
                 advance();
-            } else if (c == ')') {
+            }
+            else if (c == ')') {
                 tokens.push_back(Token(T_RPAREN, {}, pos));
                 advance();
             }
             else if (c == '{') {
                 tokens.push_back(Token(T_LPAREN2, {}, pos));
                 advance();
-            } else if (c == '}') {
+            }
+            else if (c == '}') {
                 tokens.push_back(Token(T_RPAREN2, {}, pos));
                 advance();
-            }else if (c == '[') {
+            }
+            else if (c == '[') {
                 tokens.push_back(Token(T_LPAREN3, {}, pos));
                 advance();
-            }else if (c == ']') {
+            }
+            else if (c == ']') {
                 tokens.push_back(Token(T_RPAREN3, {}, pos));
                 advance();
-            }else if (c == ':') {
+            }
+            else if (c == ':') {
                 tokens.push_back(Token(T_COLON, {}, pos));
                 advance();
-            }else if (c == ',') {
+            }
+            else if (c == ',') {
                 tokens.push_back(Token(T_COMMA, {}, pos));
                 advance();
-            }else {
+            }
+            else {
                 const Position pos_start = pos.copy();
                 const char illegal_char = c;
                 advance();
                 string details = "\"";
                 details += illegal_char;
                 details += "\"";
-                return {{}, IllegalCharError(pos_start, pos, details)};
+                return { {}, IllegalCharError(pos_start, pos, details) };
             }
         }
         tokens.push_back(Token(T_EOF, {}, pos));
-        return {tokens, nullopt};
+        return { tokens, nullopt };
     }
 };
