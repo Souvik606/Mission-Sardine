@@ -46,7 +46,7 @@ RunTimeResult builtin_listen(const vector<shared_ptr<DataType>>& args) {
 };
 
 RunTimeResult builtin_type(const vector<shared_ptr<DataType>>& args) {
-     if (args.size() != 1) {
+    if (args.size() != 1) {
         return RunTimeResult().failure(RunTimeError(
             Position(), Position(),
             "type() takes exactly 1 argument (got " + std::to_string(args.size()) + ")",
@@ -58,13 +58,17 @@ RunTimeResult builtin_type(const vector<shared_ptr<DataType>>& args) {
 
     if (dynamic_pointer_cast<Number>(value)) {
         type_name = "<type Number>";
-    } else if (dynamic_pointer_cast<String>(value)) {
+    }
+    else if (dynamic_pointer_cast<String>(value)) {
         type_name = "<type String>";
-    } else if (dynamic_pointer_cast<List>(value)) {
+    }
+    else if (dynamic_pointer_cast<List>(value)) {
         type_name = "<type List>";
-    } else if (dynamic_pointer_cast<Function>(value)) {
+    }
+    else if (dynamic_pointer_cast<Function>(value)) {
         type_name = "<type Function>";
-    } else if (dynamic_pointer_cast<BuiltInFunction>(value)) {
+    }
+    else if (dynamic_pointer_cast<BuiltInFunction>(value)) {
         type_name = "<type BuiltInFunction>";
     }
 
@@ -84,7 +88,7 @@ RunTimeResult builtin_integer(const vector<shared_ptr<DataType>>& args) {
     const auto& value = args[0];
 
     if (const auto num = dynamic_pointer_cast<Number>(value)) {
-        long long int_val = std::visit([](auto v){ return static_cast<long long>(v); }, num->value);
+        long long int_val = std::visit([](auto v) { return static_cast<long long>(v); }, num->value);
         return RunTimeResult().success(make_shared<Number>(int_val));
     }
 
@@ -92,7 +96,8 @@ RunTimeResult builtin_integer(const vector<shared_ptr<DataType>>& args) {
         try {
             long long int_val = stoll(str->value);
             return RunTimeResult().success(make_shared<Number>(int_val));
-        } catch (...) {
+        }
+        catch (...) {
             return RunTimeResult().failure(RunTimeError(
                 value->pos_start.value_or(Position()), value->pos_end.value_or(Position()),
                 "Cannot convert '" + str->value + "' to Integer",
@@ -122,7 +127,8 @@ RunTimeResult builtin_string(const vector<shared_ptr<DataType>>& args) {
 
     if (const auto str = dynamic_pointer_cast<String>(value)) {
         str_val = str->value;
-    } else {
+    }
+    else {
         str_val = value->to_string();
     }
 
@@ -134,13 +140,13 @@ pair<shared_ptr<DataType>, optional<Error>> run(const string& filename, const st
     Lexer lexer(filename, text);
     auto [tokens, lexer_error] = lexer.enumerate_tokens();
     if (lexer_error) {
-        return {nullptr, lexer_error};
+        return { nullptr, lexer_error };
     }
 
     Parser parser(std::move(tokens));
     ParseResult ast = parser.parse();
     if (ast.error) {
-        return {nullptr, ast.error};
+        return { nullptr, ast.error };
     }
 
     Interpreter interpreter;
@@ -148,7 +154,7 @@ pair<shared_ptr<DataType>, optional<Error>> run(const string& filename, const st
     context->symbol_table = global_symbol_table;
     RunTimeResult result = interpreter.visit(ast.node, context);
 
-    return {result.value, result.error};
+    return { result.value, result.error };
 }
 
 int main() {

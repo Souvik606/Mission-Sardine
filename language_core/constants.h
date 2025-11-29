@@ -10,7 +10,7 @@ const string LETTERS_DIGITS = LETTERS + DIGITS;
 
 const string T_INT = "INT";
 const string T_FLOAT = "FLOAT";
-const string T_STRING= "STRING";
+const string T_STRING = "STRING";
 const string T_IDENTIFIER = "IDENTIFIER";
 const string T_KEYWORD = "KEYWORD";
 const string T_PLUS = "PLUS";
@@ -30,8 +30,9 @@ const string T_LPAREN2 = "LPAREN2";
 const string T_RPAREN2 = "RPAREN2";
 const string T_LPAREN3 = "LPAREN3";
 const string T_RPAREN3 = "RPAREN3";
-const string T_COLON="COLON";
-const string T_COMMA="COMMA";
+const string T_COLON = "COLON";
+const string T_COMMA = "COMMA";
+const string T_NEWLINE = "NEWLINE";
 const string T_EOF = "EOF";
 
 const vector<string> KEYWORDS = {
