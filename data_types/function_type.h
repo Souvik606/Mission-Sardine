@@ -33,9 +33,9 @@ public:
     string name;
     shared_ptr<Node> body_node;
     vector<string> arg_names;
-    bool return_null;
+    bool auto_return;
 
-    explicit Function(string name, shared_ptr<Node> body, vector<string> args, bool return_null);
+    explicit Function(string name, shared_ptr<Node> body, vector<string> args, bool auto_return);
 
     RunTimeResult execute(const vector<shared_ptr<DataType>>& args, Interpreter& interpreter);
 

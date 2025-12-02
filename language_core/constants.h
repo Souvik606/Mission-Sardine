@@ -37,5 +37,5 @@ const string T_EOF = "EOF";
 
 const vector<string> KEYWORDS = {
     "define", "and", "or", "not","when","orwhen","otherwise","cycle",
-    "during","method"
+    "during","method","yield","proceed","escape"
 };

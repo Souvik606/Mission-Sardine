@@ -2,7 +2,6 @@
 
 #include <bits/stdc++.h>
 #include "data_type.h"
-#include "number_type.h"
 #include "../ast_results/runtime_result.h"
 
 using namespace std;

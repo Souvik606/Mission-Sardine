@@ -2,12 +2,13 @@
 #include "function_type.h"
 #include "../language_core/interpreter.h"
 #include "../language_core/symbol_table.h"
+#include "number_type.h"
 
-Function::Function(string name, shared_ptr<Node> body, vector<string> args, bool return_null)
+Function::Function(string name, shared_ptr<Node> body, vector<string> args, bool auto_return)
     : name(std::move(name)),
     body_node(std::move(body)),
     arg_names(std::move(args)),
-    return_null(return_null) {
+    auto_return(auto_return) {
     if (this->name.empty()) {
         this->name = "<anonymous>";
     }
@@ -44,20 +45,27 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>>& args, Interp
         new_context->symbol_table->set(arg_name, arg_value);
     }
 
-    const shared_ptr<DataType> value = res.register_result(interpreter.visit(this->body_node, new_context));
-    if (res.error) return res;
+    shared_ptr<DataType> value = res.register_result(interpreter.visit(this->body_node, new_context));
 
-    if (this->return_null) {
-        auto null_value = make_shared<Number>(0LL);
-        null_value->set_context(new_context).set_pos(this->pos_start, this->pos_end);
-        return res.success(null_value);
+    if (res.should_return() && res.func_return_value == nullptr) {
+        return res;
     }
 
-    return res.success(value);
+    shared_ptr<DataType> return_value;
+
+    if (res.func_return_value) {
+        return_value = res.func_return_value;
+    } else if (this->auto_return && value) {
+        return_value = value;
+    } else {
+        return_value = make_shared<Number>(0LL);
+    }
+
+    return res.success(return_value);
 }
 
 shared_ptr<DataType> Function::copy() const {
-    auto new_func = make_shared<Function>(this->name, this->body_node, this->arg_names, this->return_null);
+    auto new_func = make_shared<Function>(this->name, this->body_node, this->arg_names, this->auto_return);
     new_func->set_pos(this->pos_start, this->pos_end);
     new_func->set_context(this->context);
     return new_func;

@@ -12,13 +12,13 @@ public:
     optional<Token> var_name_tok;
     vector<Token> arg_name_toks;
     shared_ptr<Node> body_node;
-    bool return_null;
+    bool auto_return;
 
     explicit FunctionDefinitionNode(
         optional<Token> var_name,
         vector<Token> arg_names,
         shared_ptr<Node> body,
-        bool return_null
+        bool auto_return
     )
         : Node(
             [&]() {
@@ -26,12 +26,12 @@ public:
                 if (!arg_names.empty()) return arg_names.front().pos_start;
                 return body->pos_start;
             }(),
-                body->pos_end
-                ),
+            body->pos_end
+        ),
         var_name_tok(std::move(var_name)),
         arg_name_toks(std::move(arg_names)),
         body_node(std::move(body)),
-        return_null(return_null)
+        auto_return(auto_return)
     {
     }
 
