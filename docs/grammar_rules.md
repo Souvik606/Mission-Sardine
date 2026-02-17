@@ -1,19 +1,25 @@
 ```
-multiline:NEWLINE* (expression|statements) (NEWLINE* (expression|statements))* NEWLINE*
+multiline:NEWLINE* (expression|statements|jump_statements) (NEWLINE* (expression|statements|jump_statements))* NEWLINE*
+
+jump-statements:KEYWORD:yield expression|KEYWORD:proceed|KEYWORD:escape
 
 statements:(KEYWORD:define)? IDENTIFIER EQUAL expression
 
-expression: comp-expression((KEYWORD:AND|OR)comp-expression)*
+expression: jump_statements|comp-expression((KEYWORD:AND|OR)comp-expression)*
 
-comp-expression: NOT comp-expression|arith-expression((EE|NEQ|LT|GT|LTE|GTE) arith-expression)*
+comp-expression: KEYWORD:NOT comp-expression|arith-expression((EE|NEQ|LT|GT|LTE|GTE) arith-expression)*
 
 arith-expression : term ((PLUS|MINUS) term)*
 
-term : factor((MUL|DIV) factor )*|function-call
+term : unary((MUL|DIV) unary)*
+
+unary:(PLUS|MINUS) unary|power
+
+power: factor (EXP unary)*
+
+factor: INT|FLOAT|STRING|IDENTIFIER|LPAREN expression RPAREN| if-expression| for-expression| while-expression| function-definition| list-expression|function-call
 
 function-call: IDENTIFIER LPAREN (expression(COMMA expression)*)? RPAREN
-
-factor: INT|FLOAT|STRING|IDENTIFIER|(PLUS|MINUS) factor|LPAREN expression RPAREN| if-expression| for-expression| while-expression| function-definition| list-expression
 
 list-expression:LPAREN3 (expression(COMMA expression)*)? RPAREN RPAREN3
 

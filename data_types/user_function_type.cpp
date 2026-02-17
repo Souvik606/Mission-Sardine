@@ -1,4 +1,3 @@
-#pragma once
 #include "function_type.h"
 #include "../language_core/interpreter.h"
 #include "../language_core/symbol_table.h"
@@ -47,14 +46,17 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>>& args, Interp
     const shared_ptr<DataType> value = res.register_result(interpreter.visit(this->body_node, new_context));
     if (res.error) return res;
 
+    if (res.func_return_value) return res.success(res.func_return_value);
+
     if (this->return_null) {
-        auto null_value = make_shared<Number>(0LL);
-        null_value->set_context(new_context).set_pos(this->pos_start, this->pos_end);
-        return res.success(null_value);
+        auto val = make_shared<Number>(0LL);
+        val->set_context(new_context).set_pos(this->pos_start, this->pos_end);
+        return res.success(val);
     }
 
     return res.success(value);
 }
+
 
 shared_ptr<DataType> Function::copy() const {
     auto new_func = make_shared<Function>(this->name, this->body_node, this->arg_names, this->return_null);

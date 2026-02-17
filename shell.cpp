@@ -159,6 +159,8 @@ pair<shared_ptr<DataType>, optional<Error>> run(const string& filename, const st
 
 int main() {
     global_symbol_table->set("null", make_shared<Number>(0LL));
+    global_symbol_table->set("True", make_shared<Number>(1LL));
+    global_symbol_table->set("False", make_shared<Number>(0LL));
 
     global_symbol_table->set("show",
         make_shared<BuiltInFunction>("show", builtin_show)
