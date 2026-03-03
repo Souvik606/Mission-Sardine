@@ -98,7 +98,7 @@ private:
 
         for (const auto& element_node : node->element_nodes) {
             elements.push_back(res.register_result(visit(element_node, context)));
-            if (res.error) return res;
+            if (res.should_return()) return res;
         }
 
         auto list_value = make_shared<List>(elements);
@@ -190,19 +190,19 @@ private:
         RunTimeResult res;
 
         auto start_value_res = res.register_result(visit(node->start_value_node, context));
-        if (res.error) return res;
+        if (res.should_return()) return res;
         auto start_num = dynamic_pointer_cast<Number>(start_value_res);
         if (!start_num) return res.failure(RunTimeError(node->start_value_node->pos_start.value_or(Position()), node->start_value_node->pos_end.value_or(Position()), "For loop start value must be a number", context));
 
         auto end_value_res = res.register_result(visit(node->end_value_node, context));
-        if (res.error) return res;
+        if (res.should_return()) return res;
         auto end_num = dynamic_pointer_cast<Number>(end_value_res);
         if (!end_num) return res.failure(RunTimeError(node->end_value_node->pos_start.value_or(Position()), node->end_value_node->pos_end.value_or(Position()), "For loop end value must be a number", context));
 
         shared_ptr<Number> step_num;
         if (node->step_value_node) {
             auto step_value = res.register_result(visit(node->step_value_node, context));
-            if (res.error) return res;
+            if (res.should_return()) return res;
             step_num = dynamic_pointer_cast<Number>(step_value);
             if (!step_num) return res.failure(RunTimeError(node->step_value_node->pos_start.value_or(Position()), node->step_value_node->pos_end.value_or(Position()), "For loop step value must be a number", context));
         }
@@ -274,13 +274,13 @@ private:
 
             if (is_truthy) {
                 const auto expr_value = res.register_result(visit(case_pair.second, context));
-                if (res.error) return res;
+                if (res.should_return()) return res;
                 return res.success(expr_value);
             }
         }
         if (node->else_case) {
             const auto else_value = res.register_result(visit(node->else_case, context));
-            if (res.error) return res;
+            if (res.should_return()) return res;
             return res.success(else_value);
         }
         return res.success(nullptr);

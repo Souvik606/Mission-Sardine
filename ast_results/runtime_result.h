@@ -34,21 +34,25 @@ public:
     }
 
     RunTimeResult& success(shared_ptr<DataType> result_value) {
+        this->reset();
         this->value = std::move(result_value);
         return *this;
     }
 
     RunTimeResult& success_return(shared_ptr<DataType> result_value) {
+        this->reset();
         this->func_return_value = std::move(result_value);
         return *this;
     }
 
     RunTimeResult& success_continue() {
+        this->reset();
         this->loop_should_continue = true;
         return *this;
     }
 
     RunTimeResult& success_break() {
+        this->reset();
         this->loop_should_break = true;
         return *this;
     }
@@ -58,6 +62,7 @@ public:
     }
 
     RunTimeResult& failure(const RunTimeError& result_error) {
+        this->reset();
         this->error = result_error;
         return *this;
     }

@@ -143,11 +143,23 @@ pair<shared_ptr<DataType>, optional<Error>> run(const string& filename, const st
         return { nullptr, lexer_error };
     }
 
+    // Print tokens for debugging
+    // cout << "--- Tokens ---" << endl;
+    // for (const auto& token : tokens) {
+    //     cout << token.to_string() << endl;
+    // }
+    // cout << "--------------" << endl;
+
     Parser parser(std::move(tokens));
     ParseResult ast = parser.parse();
     if (ast.error) {
         return { nullptr, ast.error };
     }
+
+    // Print AST for debugging
+    // cout << "--- AST ---" << endl;
+    // if (ast.node) cout << ast.node->to_string() << endl;
+    // cout << "-----------" << endl;
 
     Interpreter interpreter;
     auto context = make_shared<Context>("<program>");
