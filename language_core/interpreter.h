@@ -11,6 +11,7 @@
 #include "../ast_nodes/function_nodes.h"
 #include "../ast_nodes/string_nodes.h"
 #include "../ast_nodes/list_nodes.h"
+#include "../ast_nodes/jump_nodes.h"
 #include "../data_types/list_type.h"
 #include "../data_types/number_type.h"
 #include "../data_types/string_type.h"
@@ -61,6 +62,15 @@ public:
         visit_methods[typeid(FunctionCallNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_FunctionCallNode(static_pointer_cast<FunctionCallNode>(node), context);
             };
+        visit_methods[typeid(ReturnNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
+            return this->visit_ReturnNode(static_pointer_cast<ReturnNode>(node), context);
+            };
+        visit_methods[typeid(ContinueNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
+            return this->visit_ContinueNode(static_pointer_cast<ContinueNode>(node), context);
+            };
+        visit_methods[typeid(BreakNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
+            return this->visit_BreakNode(static_pointer_cast<BreakNode>(node), context);
+            };
     }
 
     RunTimeResult visit(const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
@@ -88,7 +98,7 @@ private:
 
         for (const auto& element_node : node->element_nodes) {
             elements.push_back(res.register_result(visit(element_node, context)));
-            if (res.error) return res;
+            if (res.should_return()) return res;
         }
 
         auto list_value = make_shared<List>(elements);
@@ -146,19 +156,23 @@ private:
 
     RunTimeResult visit_WhileNode(const shared_ptr<WhileNode>& node, const shared_ptr<Context>& context) {
         RunTimeResult res;
-
         vector<shared_ptr<DataType>> elements;
 
         while (true) {
             auto condition_value = res.register_result(visit(node->condition_node, context));
-            if (res.error) return res;
+            if (res.should_return()) return res;
 
             if (condition_value == nullptr || !condition_value->is_truthy()) {
                 break;
             }
 
-            elements.push_back(res.register_result(visit(node->body_node, context)));
-            if (res.error) return res;
+            auto value = res.register_result(visit(node->body_node, context));
+            if (res.should_return() && !res.loop_should_continue && !res.loop_should_break) return res;
+
+            if (res.loop_should_continue) continue;
+            if (res.loop_should_break) break;
+
+            elements.push_back(value);
         }
 
         if (node->return_null) {
@@ -176,19 +190,19 @@ private:
         RunTimeResult res;
 
         auto start_value_res = res.register_result(visit(node->start_value_node, context));
-        if (res.error) return res;
+        if (res.should_return()) return res;
         auto start_num = dynamic_pointer_cast<Number>(start_value_res);
         if (!start_num) return res.failure(RunTimeError(node->start_value_node->pos_start.value_or(Position()), node->start_value_node->pos_end.value_or(Position()), "For loop start value must be a number", context));
 
         auto end_value_res = res.register_result(visit(node->end_value_node, context));
-        if (res.error) return res;
+        if (res.should_return()) return res;
         auto end_num = dynamic_pointer_cast<Number>(end_value_res);
         if (!end_num) return res.failure(RunTimeError(node->end_value_node->pos_start.value_or(Position()), node->end_value_node->pos_end.value_or(Position()), "For loop end value must be a number", context));
 
         shared_ptr<Number> step_num;
         if (node->step_value_node) {
             auto step_value = res.register_result(visit(node->step_value_node, context));
-            if (res.error) return res;
+            if (res.should_return()) return res;
             step_num = dynamic_pointer_cast<Number>(step_value);
             if (!step_num) return res.failure(RunTimeError(node->step_value_node->pos_start.value_or(Position()), node->step_value_node->pos_end.value_or(Position()), "For loop step value must be a number", context));
         }
@@ -207,8 +221,16 @@ private:
 
             for (long long i = start; (step >= 0) ? (i <= end) : (i >= end); i += step) {
                 context->symbol_table->set(var_name, make_shared<Number>(i));
-                elements.push_back(res.register_result(visit(node->body_node, context)));
-                if (res.error) return res;
+                auto value = res.register_result(visit(node->body_node, context));
+                if (res.should_return() && !res.loop_should_continue && !res.loop_should_break) return res;
+
+                if (res.loop_should_continue) {
+                    continue;
+                }
+                if (res.loop_should_break) {
+                    break;
+                }
+                elements.push_back(value);
             }
         }
         else {
@@ -218,8 +240,13 @@ private:
 
             for (double i = start; (step >= 0) ? (i <= end) : (i >= end); i += step) {
                 context->symbol_table->set(var_name, make_shared<Number>(i));
-                elements.push_back(res.register_result(visit(node->body_node, context)));
-                if (res.error) return res;
+                auto value = res.register_result(visit(node->body_node, context));
+                if (res.should_return() && !res.loop_should_continue && !res.loop_should_break) return res;
+
+                if (res.loop_should_continue) continue;
+                if (res.loop_should_break) break;
+
+                elements.push_back(value);
             }
         }
 
@@ -247,13 +274,13 @@ private:
 
             if (is_truthy) {
                 const auto expr_value = res.register_result(visit(case_pair.second, context));
-                if (res.error) return res;
+                if (res.should_return()) return res;
                 return res.success(expr_value);
             }
         }
         if (node->else_case) {
             const auto else_value = res.register_result(visit(node->else_case, context));
-            if (res.error) return res;
+            if (res.should_return()) return res;
             return res.success(else_value);
         }
         return res.success(nullptr);
@@ -340,6 +367,9 @@ private:
             }
             else if (node->operator_token.type == T_DIVIDE) {
                 tie(result, error) = left_num->divide(right);
+            }
+            else if (node->operator_token.type == T_EXP) {
+                tie(result, error) = left_num->power(right);
             }
             else if (node->operator_token.type == T_EE) {
                 tie(result, error) = left_num->get_comparison_eq(right);
@@ -449,5 +479,23 @@ private:
 
         result->set_pos(node->pos_start, node->pos_end);
         return res.success(result);
+    }
+
+    RunTimeResult visit_ReturnNode(const shared_ptr<ReturnNode>& node, const shared_ptr<Context>& context) {
+        RunTimeResult res;
+        shared_ptr<DataType> value = make_shared<Number>(0LL);
+        if (node->node_to_return) {
+            value = res.register_result(visit(node->node_to_return, context));
+            if (res.should_return()) return res;
+        }
+        return res.success_return(value);
+    }
+
+    RunTimeResult visit_ContinueNode(const shared_ptr<ContinueNode>& node, const shared_ptr<Context>& context) {
+        return RunTimeResult().success_continue();
+    }
+
+    RunTimeResult visit_BreakNode(const shared_ptr<BreakNode>& node, const shared_ptr<Context>& context) {
+        return RunTimeResult().success_break();
     }
 };

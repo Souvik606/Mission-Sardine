@@ -182,6 +182,17 @@ public:
         return Token(token_type, {}, pos_start, pos);
     }
 
+    Token make_mul() {
+        Position pos_start = pos.copy();
+        advance();
+        string token_type = T_MUL;
+        if (current_char.has_value() && current_char.value() == '*') {
+            advance();
+            token_type = T_EXP;
+        }
+        return Token(token_type, {}, pos_start, pos);
+    }
+
     Token make_number() {
         string number_str;
         bool is_float = false;
@@ -239,8 +250,7 @@ public:
                 advance();
             }
             else if (c == '*') {
-                tokens.push_back(Token(T_MUL, {}, pos));
-                advance();
+                tokens.push_back(make_mul());
             }
             else if (c == '/') {
                 tokens.push_back(Token(T_DIVIDE, {}, pos));
