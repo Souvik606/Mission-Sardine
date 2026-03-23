@@ -38,6 +38,9 @@ public:
         visit_methods[typeid(BinaryOperationNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_BinaryOperationNode(static_pointer_cast<BinaryOperationNode>(node), context);
             };
+        visit_methods[typeid(TernaryOperationNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
+            return this->visit_TernaryOperationNode(static_pointer_cast<TernaryOperationNode>(node), context);
+            };
         visit_methods[typeid(UnaryOperationNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_UnaryOperationNode(static_pointer_cast<UnaryOperationNode>(node), context);
             };
@@ -438,6 +441,24 @@ private:
 
         result->set_pos(node->pos_start, node->pos_end);
         return res.success(result);
+    }
+
+    RunTimeResult visit_TernaryOperationNode(const shared_ptr<TernaryOperationNode>& node, const shared_ptr<Context>& context) {
+        RunTimeResult res;
+        auto condition_value = res.register_result(visit(node->comp_node, context));
+        if (res.should_return()) return res;
+
+        bool is_truthy = false;
+        if (condition_value != nullptr) {
+            is_truthy = condition_value->is_truthy();
+        }
+
+        if (is_truthy) {
+            return visit(node->true_node, context);
+        }
+        else {
+            return visit(node->false_node, context);
+        }
     }
 
     RunTimeResult visit_UnaryOperationNode(const shared_ptr<UnaryOperationNode>& node,
