@@ -26,8 +26,8 @@ public:
 
     explicit UnaryOperationNode(Token op, shared_ptr<Node> n)
         : Node(op.pos_start, n->pos_end),
-          operator_token(std::move(op)),
-          node(std::move(n)) {
+        operator_token(std::move(op)),
+        node(std::move(n)) {
     }
 
     [[nodiscard]] std::string to_string() const override {
@@ -43,12 +43,30 @@ public:
 
     explicit BinaryOperationNode(shared_ptr<Node> left, Token op, shared_ptr<Node> right)
         : Node(left->pos_start, right->pos_end),
-          left_node(std::move(left)),
-          operator_token(std::move(op)),
-          right_node(std::move(right)) {
+        left_node(std::move(left)),
+        operator_token(std::move(op)),
+        right_node(std::move(right)) {
     }
 
     [[nodiscard]] std::string to_string() const override {
         return "(" + left_node->to_string() + ", " + operator_token.to_string() + ", " + right_node->to_string() + ")";
+    }
+};
+
+class TernaryOperationNode final : public Node {
+public:
+    shared_ptr<Node> comp_node;
+    shared_ptr<Node> true_node;
+    shared_ptr<Node> false_node;
+
+    explicit TernaryOperationNode(shared_ptr<Node> comp, shared_ptr<Node> true_n, shared_ptr<Node> false_n)
+        : Node(comp->pos_start, false_n->pos_end),
+        comp_node(std::move(comp)),
+        true_node(std::move(true_n)),
+        false_node(std::move(false_n)) {
+    }
+
+    [[nodiscard]] std::string to_string() const override {
+        return "(" + comp_node->to_string() + " ? " + true_node->to_string() + " : " + false_node->to_string() + ")";
     }
 };

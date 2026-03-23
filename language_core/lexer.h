@@ -300,6 +300,10 @@ public:
                 tokens.push_back(Token(T_COLON, {}, pos));
                 advance();
             }
+            else if (c == '?') {
+                tokens.push_back(Token(T_QUESTION, {}, pos));
+                advance();
+            }
             else if (c == ',') {
                 tokens.push_back(Token(T_COMMA, {}, pos));
                 advance();

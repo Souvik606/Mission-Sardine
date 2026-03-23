@@ -32,6 +32,7 @@ const string T_RPAREN2 = "RPAREN2";
 const string T_LPAREN3 = "LPAREN3";
 const string T_RPAREN3 = "RPAREN3";
 const string T_COLON = "COLON";
+const string T_QUESTION = "QUESTION";
 const string T_COMMA = "COMMA";
 const string T_NEWLINE = "NEWLINE";
 const string T_EOF = "EOF";

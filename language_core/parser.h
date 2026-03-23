@@ -714,9 +714,46 @@ private:
     }
 
     ParseResult expression() {
+        ParseResult res;
+
+        if (current_tok.has_value() && current_tok->type == T_KEYWORD) {
+            auto keyword = any_cast<string>(current_tok->value);
+            if (keyword == "yield") {
+                Token token = current_tok.value();
+                res.register_advancement();
+                advance();
+
+                auto expr_res = expression();
+                auto expr = res.try_register(expr_res);
+                if (!expr) {
+                    reverse(res.to_reverse_count);
+                }
+
+                return res.success(make_shared<ReturnNode>(expr, token.pos_start, current_tok.has_value() ? current_tok->pos_end : token.pos_end));
+            }
+            else if (keyword == "escape") {
+                Token token = current_tok.value();
+                res.register_advancement();
+                advance();
+                return res.success(make_shared<BreakNode>(token.pos_start, token.pos_end));
+            }
+            else if (keyword == "proceed") {
+                Token token = current_tok.value();
+                res.register_advancement();
+                advance();
+                return res.success(make_shared<ContinueNode>(token.pos_start, token.pos_end));
+            }
+        }
+
+        return ternary_expression();
+    }
+
+    ParseResult ternary_expression() {
+        ParseResult res;
+        shared_ptr<Node> comp_node;
+
         if (current_tok.has_value() && current_tok->type == T_IDENTIFIER) {
             if (auto next_tok = peek(); next_tok.has_value() && next_tok->type == T_EQ) {
-                ParseResult res;
                 Token var_name = current_tok.value();
                 res.register_advancement();
                 advance();
@@ -724,10 +761,42 @@ private:
                 advance();
                 auto expr = res.register_node(expression());
                 if (res.error) return res;
-                return res.success(make_shared<VariableAssignNode>(var_name, expr));
+                comp_node = make_shared<VariableAssignNode>(var_name, expr);
+            }
+            else {
+                comp_node = res.register_node(logical_expression());
             }
         }
+        else {
+            comp_node = res.register_node(logical_expression());
+        }
 
+        if (res.error) return res;
+
+        while (current_tok.has_value() && current_tok->type == T_QUESTION) {
+            res.register_advancement();
+            advance();
+            auto true_node = res.register_node(ternary_expression());
+            if (res.error) return res;
+
+            if (!current_tok.has_value() || current_tok->type != T_COLON) {
+                Position s, e;
+                if (current_tok.has_value()) { s = current_tok->pos_start.value_or(Position()); e = current_tok->pos_end.value_or(Position()); }
+                return res.failure(InvalidSyntaxError(s, e, "Expected ':'"));
+            }
+            res.register_advancement();
+            advance();
+
+            auto false_node = res.register_node(ternary_expression());
+            if (res.error) return res;
+
+            comp_node = make_shared<TernaryOperationNode>(comp_node, true_node, false_node);
+        }
+
+        return res.success(comp_node);
+    }
+
+    ParseResult logical_expression() {
         ParseResult res;
         auto left_node = res.register_node(comp_expression());
         if (res.error) return res;
@@ -904,26 +973,6 @@ private:
                 const auto func_def = res.register_node(function_definition());
                 if (res.error) return res;
                 return res.success(func_def);
-            }
-            else if (keyword == "yield") {
-                res.register_advancement();
-                advance();
-                shared_ptr<Node> expr = nullptr;
-                if (current_tok.has_value() && current_tok->type != T_NEWLINE && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF && current_tok->type != T_RPAREN) {
-                    expr = res.register_node(expression());
-                    if (res.error) return res;
-                }
-                return res.success(make_shared<ReturnNode>(expr, token.pos_start, current_tok.has_value() ? current_tok->pos_end : token.pos_end));
-            }
-            else if (keyword == "escape") {
-                res.register_advancement();
-                advance();
-                return res.success(make_shared<BreakNode>(token.pos_start, token.pos_end));
-            }
-            else if (keyword == "proceed") {
-                res.register_advancement();
-                advance();
-                return res.success(make_shared<ContinueNode>(token.pos_start, token.pos_end));
             }
         }
 
