@@ -40,7 +40,8 @@ public:
         for (size_t i = 0; i < elements.size(); ++i) {
             if (elements[i]) {
                 ss << elements[i]->to_string();
-            } else {
+            }
+            else {
                 ss << "null";
             }
             if (i < elements.size() - 1) {
@@ -60,7 +61,7 @@ public:
         if (dynamic_cast<const Number*>(operand.get()) || dynamic_cast<const String*>(operand.get())) {
             new_list->elements.push_back(operand);
             new_list->set_context(this->context);
-            return {new_list, nullopt};
+            return { new_list, nullopt };
         }
         if (const auto other_list = dynamic_cast<const List*>(operand.get())) {
             new_list->elements.insert(
@@ -69,9 +70,9 @@ public:
                 other_list->elements.end()
             );
             new_list->set_context(this->context);
-            return {new_list, nullopt};
+            return { new_list, nullopt };
         }
-        return {nullptr, illegal_op_for_list(this, operand.get())};
+        return { nullptr, illegal_op_for_list(this, operand.get()) };
     }
 
     [[nodiscard]] OperationResult subtract(const shared_ptr<DataType>& operand) const override {
@@ -84,14 +85,15 @@ public:
                     }
                     new_list->elements.erase(new_list->elements.begin() + *int_val);
                     new_list->set_context(this->context);
-                    return {new_list, nullopt};
-                } catch (...) {
-                    return {nullptr, RunTimeError(num->pos_start.value_or(Position()), num->pos_end.value_or(Position()), "Index out of bounds", this->context)};
+                    return { new_list, nullopt };
+                }
+                catch (...) {
+                    return { nullptr, RunTimeError(num->pos_start.value_or(Position()), num->pos_end.value_or(Position()), "Index out of bounds", this->context) };
                 }
             }
-            return {nullptr, RunTimeError(num->pos_start.value_or(Position()), num->pos_end.value_or(Position()), "Index must be an integer", this->context)};
+            return { nullptr, RunTimeError(num->pos_start.value_or(Position()), num->pos_end.value_or(Position()), "Index must be an integer", this->context) };
         }
-        return {nullptr, illegal_op_for_list(this, operand.get())};
+        return { nullptr, illegal_op_for_list(this, operand.get()) };
     }
 
     [[nodiscard]] OperationResult multiply(const shared_ptr<DataType>& operand) const override {
@@ -103,41 +105,47 @@ public:
                 }
                 auto new_list = make_shared<List>(new_elements);
                 new_list->set_context(this->context);
-                return {new_list, nullopt};
+                return { new_list, nullopt };
             }
-            return {nullptr, RunTimeError(num->pos_start.value_or(Position()), num->pos_end.value_or(Position()), "List can only be multiplied by an integer", this->context)};
+            return { nullptr, RunTimeError(num->pos_start.value_or(Position()), num->pos_end.value_or(Position()), "List can only be multiplied by an integer", this->context) };
         }
-        return {nullptr, illegal_op_for_list(this, operand.get())};
+        return { nullptr, illegal_op_for_list(this, operand.get()) };
     }
 
     [[nodiscard]] OperationResult divide(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_list(this, other.get())};
+        return { nullptr, illegal_op_for_list(this, other.get()) };
+    }
+    [[nodiscard]] OperationResult modulus(const shared_ptr<DataType>& other) const override {
+        return { nullptr, illegal_op_for_list(this, other.get()) };
+    }
+    [[nodiscard]] OperationResult floor_divide(const shared_ptr<DataType>& other) const override {
+        return { nullptr, illegal_op_for_list(this, other.get()) };
     }
     [[nodiscard]] OperationResult get_comparison_eq(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_list(this, other.get())};
+        return { nullptr, illegal_op_for_list(this, other.get()) };
     }
     [[nodiscard]] OperationResult get_comparison_neq(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_list(this, other.get())};
+        return { nullptr, illegal_op_for_list(this, other.get()) };
     }
     [[nodiscard]] OperationResult get_comparison_lt(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_list(this, other.get())};
+        return { nullptr, illegal_op_for_list(this, other.get()) };
     }
     [[nodiscard]] OperationResult get_comparison_gt(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_list(this, other.get())};
+        return { nullptr, illegal_op_for_list(this, other.get()) };
     }
     [[nodiscard]] OperationResult get_comparison_lte(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_list(this, other.get())};
+        return { nullptr, illegal_op_for_list(this, other.get()) };
     }
     [[nodiscard]] OperationResult get_comparison_gte(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_list(this, other.get())};
+        return { nullptr, illegal_op_for_list(this, other.get()) };
     }
     [[nodiscard]] OperationResult and_by(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_list(this, other.get())};
+        return { nullptr, illegal_op_for_list(this, other.get()) };
     }
     [[nodiscard]] OperationResult or_by(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_list(this, other.get())};
+        return { nullptr, illegal_op_for_list(this, other.get()) };
     }
     [[nodiscard]] OperationResult not_by() const override {
-        return {nullptr, illegal_op_for_list(this)};
+        return { nullptr, illegal_op_for_list(this) };
     }
 };

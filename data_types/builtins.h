@@ -24,7 +24,8 @@ public:
     BuiltInFuncType execute_impl;
 
     explicit BuiltInFunction(string name, BuiltInFuncType impl)
-        : name(std::move(name)), execute_impl(std::move(impl)) {}
+        : name(std::move(name)), execute_impl(std::move(impl)) {
+    }
 
     [[nodiscard]] RunTimeResult execute(const vector<shared_ptr<DataType>>& args) const {
         return this->execute_impl(args);
@@ -46,42 +47,48 @@ public:
     }
 
     [[nodiscard]] OperationResult add(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_builtin(this)};
+        return { nullptr, illegal_op_for_builtin(this) };
     }
     [[nodiscard]] OperationResult subtract(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_builtin(this)};
+        return { nullptr, illegal_op_for_builtin(this) };
     }
     [[nodiscard]] OperationResult multiply(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_builtin(this)};
+        return { nullptr, illegal_op_for_builtin(this) };
     }
     [[nodiscard]] OperationResult divide(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_builtin(this)};
+        return { nullptr, illegal_op_for_builtin(this) };
+    }
+    [[nodiscard]] OperationResult modulus(const shared_ptr<DataType>& other) const override {
+        return { nullptr, illegal_op_for_builtin(this) };
+    }
+    [[nodiscard]] OperationResult floor_divide(const shared_ptr<DataType>& other) const override {
+        return { nullptr, illegal_op_for_builtin(this) };
     }
     [[nodiscard]] OperationResult get_comparison_eq(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_builtin(this)};
+        return { nullptr, illegal_op_for_builtin(this) };
     }
     [[nodiscard]] OperationResult get_comparison_neq(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_builtin(this)};
+        return { nullptr, illegal_op_for_builtin(this) };
     }
     [[nodiscard]] OperationResult get_comparison_lt(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_builtin(this)};
+        return { nullptr, illegal_op_for_builtin(this) };
     }
     [[nodiscard]] OperationResult get_comparison_gt(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_builtin(this)};
+        return { nullptr, illegal_op_for_builtin(this) };
     }
     [[nodiscard]] OperationResult get_comparison_lte(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_builtin(this)};
+        return { nullptr, illegal_op_for_builtin(this) };
     }
     [[nodiscard]] OperationResult get_comparison_gte(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_builtin(this)};
+        return { nullptr, illegal_op_for_builtin(this) };
     }
     [[nodiscard]] OperationResult and_by(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_builtin(this)};
+        return { nullptr, illegal_op_for_builtin(this) };
     }
     [[nodiscard]] OperationResult or_by(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_builtin(this)};
+        return { nullptr, illegal_op_for_builtin(this) };
     }
     [[nodiscard]] OperationResult not_by() const override {
-        return {nullptr, illegal_op_for_builtin(this)};
+        return { nullptr, illegal_op_for_builtin(this) };
     }
 };

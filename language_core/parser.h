@@ -7,6 +7,7 @@
 #include "../ast_nodes/operation_nodes.h"
 #include "../ast_nodes/variable_nodes.h"
 #include "../ast_nodes/if_else_elif_nodes.h"
+#include "../ast_nodes/switch_nodes.h"
 #include "../ast_nodes/for_nodes.h"
 #include "../ast_nodes/while_nodes.h"
 #include "../ast_nodes/function_nodes.h"
@@ -860,7 +861,7 @@ private:
         if (res.error) return res;
 
         while (current_tok.has_value()) {
-            if (current_tok->type == T_MUL || current_tok->type == T_DIVIDE) {
+            if (current_tok->type == T_MUL || current_tok->type == T_DIVIDE || current_tok->type == T_MODULUS || current_tok->type == T_FLOOR) {
                 Token op_token = current_tok.value();
                 res.register_advancement();
                 advance();
@@ -902,6 +903,252 @@ private:
             left_node = make_shared<BinaryOperationNode>(left_node, op_token, right_node);
         }
         return res.success(left_node);
+    }
+
+    ParseResult case_statement() {
+        ParseResult res;
+
+        if (!current_tok.has_value() || current_tok->type != T_KEYWORD || any_cast<string>(current_tok->value) != "choice") {
+            return res.failure(InvalidSyntaxError(
+                current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
+                current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
+                "Expected 'choice'"
+            ));
+        }
+        res.register_advancement();
+        advance();
+
+        auto choice_val = res.register_node(ternary_expression());
+        if (res.error) return res;
+
+        if (!current_tok.has_value() || current_tok->type != T_LPAREN2) {
+            return res.failure(InvalidSyntaxError(
+                current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
+                current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
+                "Expected '{'"
+            ));
+        }
+        res.register_advancement();
+        advance();
+
+        shared_ptr<Node> body_node;
+        bool return_null = false;
+
+        if (current_tok.has_value() && current_tok->type == T_NEWLINE) {
+            res.register_advancement();
+            advance();
+
+            body_node = res.register_node(multiline());
+            if (res.error) return res;
+
+            return_null = true;
+
+            if (!current_tok.has_value() || current_tok->type != T_RPAREN2) {
+                return res.failure(InvalidSyntaxError(
+                    current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
+                    current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
+                    "Expected '}'"
+                ));
+            }
+            res.register_advancement();
+            advance();
+        }
+        else {
+            if (current_tok.has_value() && current_tok->type == T_IDENTIFIER) {
+                auto next = peek();
+                if (next.has_value() && next->type == T_EQ) {
+                    body_node = res.register_node(statements());
+                }
+                else {
+                    body_node = res.register_node(expression());
+                }
+            }
+            else {
+                body_node = res.register_node(expression());
+            }
+
+            if (res.error) return res;
+
+            if (!current_tok.has_value() || current_tok->type != T_RPAREN2) {
+                return res.failure(InvalidSyntaxError(
+                    current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
+                    current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
+                    "Expected '}'"
+                ));
+            }
+
+            res.register_advancement();
+            advance();
+        }
+
+        return res.success(make_shared<SwitchCaseNode>(choice_val, body_node, return_null));
+    }
+
+    ParseResult default_statement() {
+        ParseResult res;
+
+        if (!current_tok.has_value() || current_tok->type != T_KEYWORD || any_cast<string>(current_tok->value) != "fallback") {
+            return res.failure(InvalidSyntaxError(
+                current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
+                current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
+                "Expected 'fallback'"
+            ));
+        }
+        res.register_advancement();
+        advance();
+
+        if (!current_tok.has_value() || current_tok->type != T_LPAREN2) {
+            return res.failure(InvalidSyntaxError(
+                current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
+                current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
+                "Expected '{'"
+            ));
+        }
+        res.register_advancement();
+        advance();
+
+        shared_ptr<Node> body_node;
+        bool return_null = false;
+
+        if (current_tok.has_value() && current_tok->type == T_NEWLINE) {
+            res.register_advancement();
+            advance();
+
+            body_node = res.register_node(multiline());
+            if (res.error) return res;
+
+            return_null = true;
+
+            if (!current_tok.has_value() || current_tok->type != T_RPAREN2) {
+                return res.failure(InvalidSyntaxError(
+                    current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
+                    current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
+                    "Expected '}'"
+                ));
+            }
+            res.register_advancement();
+            advance();
+        }
+        else {
+            if (current_tok.has_value() && current_tok->type == T_IDENTIFIER) {
+                auto next = peek();
+                if (next.has_value() && next->type == T_EQ) {
+                    body_node = res.register_node(statements());
+                }
+                else {
+                    body_node = res.register_node(expression());
+                }
+            }
+            else {
+                body_node = res.register_node(expression());
+            }
+
+            if (res.error) return res;
+
+            if (!current_tok.has_value() || current_tok->type != T_RPAREN2) {
+                return res.failure(InvalidSyntaxError(
+                    current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
+                    current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
+                    "Expected '}'"
+                ));
+            }
+
+            res.register_advancement();
+            advance();
+        }
+
+        return res.success(make_shared<SwitchCaseNode>(nullptr, body_node, return_null));
+    }
+
+
+    ParseResult switch_statement() {
+        ParseResult res;
+        vector<shared_ptr<SwitchCaseNode>> cases;
+
+        if (!current_tok.has_value() || current_tok->type != T_KEYWORD || any_cast<string>(current_tok->value) != "menu") {
+            return res.failure(InvalidSyntaxError(
+                current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
+                current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
+                "Expected 'menu'"
+            ));
+        }
+        res.register_advancement();
+        advance();
+
+        auto selection = res.register_node(ternary_expression());
+        if (res.error) return res;
+
+        if (!current_tok.has_value() || current_tok->type != T_LPAREN2) {
+            return res.failure(InvalidSyntaxError(
+                current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
+                current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
+                "Expected '{'"
+            ));
+        }
+        res.register_advancement();
+        advance();
+
+        while (current_tok.has_value() && current_tok->type == T_NEWLINE) {
+            res.register_advancement();
+            advance();
+        }
+
+        bool found_default = false;
+        int count = 0;
+
+        while (current_tok.has_value() && current_tok->type == T_KEYWORD &&
+            (any_cast<string>(current_tok->value) == "choice" || any_cast<string>(current_tok->value) == "fallback")) {
+
+            if (any_cast<string>(current_tok->value) == "choice") {
+                auto case_node = res.register_node(case_statement());
+                if (res.error) return res;
+                cases.push_back(dynamic_pointer_cast<SwitchCaseNode>(case_node));
+
+                while (current_tok.has_value() && current_tok->type == T_NEWLINE) {
+                    res.register_advancement();
+                    advance();
+                }
+            }
+            else {
+                if (found_default) {
+                    return res.failure(InvalidSyntaxError(
+                        current_tok->pos_start.value_or(Position()),
+                        current_tok->pos_end.value_or(Position()),
+                        "Multiple 'fallback' statements found"
+                    ));
+                }
+                found_default = true;
+                auto default_node = res.register_node(default_statement());
+                if (res.error) return res;
+                cases.push_back(dynamic_pointer_cast<SwitchCaseNode>(default_node));
+
+                while (current_tok.has_value() && current_tok->type == T_NEWLINE) {
+                    res.register_advancement();
+                    advance();
+                }
+            }
+            count++;
+        }
+
+        if (count == 0) {
+            return res.failure(InvalidSyntaxError(
+                current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
+                current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
+                "Expected 'choice' or 'fallback'"
+            ));
+        }
+
+        if (!current_tok.has_value() || current_tok->type != T_RPAREN2) {
+            return res.failure(InvalidSyntaxError(
+                current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
+                current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
+                "Expected '}'"
+            ));
+        }
+        res.register_advancement();
+        advance();
+
+        return res.success(make_shared<SwitchNode>(selection, cases, false));
     }
 
     ParseResult factor() {
@@ -973,6 +1220,11 @@ private:
                 const auto func_def = res.register_node(function_definition());
                 if (res.error) return res;
                 return res.success(func_def);
+            }
+            else if (keyword == "menu") {
+                const auto switch_res = res.register_node(switch_statement());
+                if (res.error) return res;
+                return res.success(switch_res);
             }
         }
 

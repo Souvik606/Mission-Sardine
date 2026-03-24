@@ -58,6 +58,12 @@ public:
     [[nodiscard]] OperationResult divide(const shared_ptr<DataType>& other) const override {
         return { nullptr, illegal_op_error(this, other.get()) };
     }
+    [[nodiscard]] OperationResult modulus(const shared_ptr<DataType>& other) const override {
+        return { nullptr, illegal_op_error(this, other.get()) };
+    }
+    [[nodiscard]] OperationResult floor_divide(const shared_ptr<DataType>& other) const override {
+        return { nullptr, illegal_op_error(this, other.get()) };
+    }
     [[nodiscard]] OperationResult get_comparison_eq(const shared_ptr<DataType>& other) const override {
         return { nullptr, illegal_op_error(this, other.get()) };
     }
