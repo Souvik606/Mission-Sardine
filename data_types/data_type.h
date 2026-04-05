@@ -43,6 +43,8 @@ public:
     [[nodiscard]] virtual OperationResult subtract(const shared_ptr<DataType>& other) const = 0;
     [[nodiscard]] virtual OperationResult multiply(const shared_ptr<DataType>& other) const = 0;
     [[nodiscard]] virtual OperationResult divide(const shared_ptr<DataType>& other) const = 0;
+    [[nodiscard]] virtual OperationResult modulus(const shared_ptr<DataType>& other) const = 0;
+    [[nodiscard]] virtual OperationResult floor_divide(const shared_ptr<DataType>& other) const = 0;
     [[nodiscard]] virtual OperationResult get_comparison_eq(const shared_ptr<DataType>& other) const = 0;
     [[nodiscard]] virtual OperationResult get_comparison_neq(const shared_ptr<DataType>& other) const = 0;
     [[nodiscard]] virtual OperationResult get_comparison_lt(const shared_ptr<DataType>& other) const = 0;

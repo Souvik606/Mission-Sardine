@@ -1,5 +1,6 @@
 # JetBrains/CLion user-specific files
 .idea/
+.vscode/
 
 # CMake build directories
 cmake-build-debug/

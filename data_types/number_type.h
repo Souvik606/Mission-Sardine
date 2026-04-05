@@ -107,6 +107,58 @@ public:
         return { nullptr, RunTimeError({}, {}, "Operand must be a number", this->context) };
     }
 
+    [[nodiscard]] OperationResult modulus(const shared_ptr<DataType>& operand) const override {
+        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+            if (std::visit([](auto val) { return val == 0; }, other->value)) {
+                return {
+                    nullptr, RunTimeError(
+                        other->pos_start.value_or(Position()),
+                        other->pos_end.value_or(Position()),
+                        "Division by zero",
+                        this->context
+                    )
+                };
+            }
+            auto new_value = std::visit([](auto left, auto right) -> variant<long long, double> {
+                if constexpr (is_integral_v<decltype(left)> && is_integral_v<decltype(right)>) {
+                    return left % right;
+                }
+                return fmod(static_cast<double>(left), static_cast<double>(right));
+                }, this->value, other->value);
+
+            auto result = std::visit([](auto val) { return make_shared<Number>(val); }, new_value);
+            result->set_context(this->context);
+            return { result, nullopt };
+        }
+        return { nullptr, RunTimeError({}, {}, "Operand must be a number", this->context) };
+    }
+
+    [[nodiscard]] OperationResult floor_divide(const shared_ptr<DataType>& operand) const override {
+        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+            if (std::visit([](auto val) { return val == 0; }, other->value)) {
+                return {
+                    nullptr, RunTimeError(
+                        other->pos_start.value_or(Position()),
+                        other->pos_end.value_or(Position()),
+                        "Division by zero",
+                        this->context
+                    )
+                };
+            }
+            auto new_value = std::visit([](auto left, auto right) -> variant<long long, double> {
+                if constexpr (is_integral_v<decltype(left)> && is_integral_v<decltype(right)>) {
+                    return left / right;
+                }
+                return floor(static_cast<double>(left) / static_cast<double>(right));
+                }, this->value, other->value);
+
+            auto result = std::visit([](auto val) { return make_shared<Number>(val); }, new_value);
+            result->set_context(this->context);
+            return { result, nullopt };
+        }
+        return { nullptr, RunTimeError({}, {}, "Operand must be a number", this->context) };
+    }
+
     [[nodiscard]] OperationResult power(const shared_ptr<DataType>& operand) const {
         if (const auto other = dynamic_cast<const Number*>(operand.get())) {
             auto new_value = std::visit([](auto left, auto right) -> variant<long long, double> {

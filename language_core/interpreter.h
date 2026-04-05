@@ -6,6 +6,7 @@
 #include "../ast_nodes/operation_nodes.h"
 #include "../ast_nodes/variable_nodes.h"
 #include "../ast_nodes/if_else_elif_nodes.h"
+#include "../ast_nodes/switch_nodes.h"
 #include "../ast_nodes/for_nodes.h"
 #include "../ast_nodes/while_nodes.h"
 #include "../ast_nodes/function_nodes.h"
@@ -52,6 +53,9 @@ public:
             };
         visit_methods[typeid(IfNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_IfNode(static_pointer_cast<IfNode>(node), context);
+            };
+        visit_methods[typeid(SwitchNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
+            return this->visit_SwitchNode(static_pointer_cast<SwitchNode>(node), context);
             };
         visit_methods[typeid(ForNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_ForNode(static_pointer_cast<ForNode>(node), context);
@@ -289,6 +293,77 @@ private:
         return res.success(nullptr);
     }
 
+    RunTimeResult visit_SwitchNode(const shared_ptr<SwitchNode>& node, const shared_ptr<Context>& context) {
+        RunTimeResult res;
+        auto selection_val = res.register_result(visit(node->switch_value, context));
+        if (res.error) return res;
+
+        int match_index = -1;
+        int default_index = -1;
+
+        for (int i = 0; i < node->cases.size(); ++i) {
+            const auto& c = node->cases[i];
+            if (c->value != nullptr) {
+                auto choice_val = res.register_result(visit(c->value, context));
+                if (res.error) return res;
+
+                shared_ptr<DataType> comp_res;
+                optional<RunTimeError> error;
+                tie(comp_res, error) = selection_val->get_comparison_eq(choice_val);
+                if (error) return res.failure(*error);
+
+                if (comp_res && comp_res->is_truthy()) {
+                    match_index = i;
+                    break;
+                }
+            }
+            else {
+                default_index = i;
+            }
+        }
+
+        if (match_index == -1) {
+            match_index = default_index;
+        }
+
+        vector<shared_ptr<DataType>> elements;
+
+        if (match_index != -1) {
+            for (size_t i = match_index; i < node->cases.size(); ++i) {
+                const auto& c = node->cases[i];
+                auto body_val = res.register_result(visit(c->body, context));
+
+                if (res.should_return() && !res.loop_should_break && !res.loop_should_continue) return res;
+
+                if (c->return_null) {
+                    elements.push_back(make_shared<Number>(0LL));
+                }
+                else {
+                    elements.push_back(body_val);
+                }
+
+                if (res.loop_should_break) {
+                    res.loop_should_break = false;
+                    break;
+                }
+                if (res.loop_should_continue) {
+                    // Propagate continue
+                    return res;
+                }
+            }
+        }
+
+        if (node->return_null) {
+            auto null_val = make_shared<Number>(0LL);
+            null_val->set_context(context).set_pos(node->pos_start, node->pos_end);
+            return res.success(null_val);
+        }
+
+        auto list_val = make_shared<List>(elements);
+        list_val->set_context(context).set_pos(node->pos_start, node->pos_end);
+        return res.success(list_val);
+    }
+
     static RunTimeResult visit_VariableUseNode(const shared_ptr<VariableUseNode>& node, const shared_ptr<Context>& context) {
         RunTimeResult res;
         const auto var_name = any_cast<string>(node->var_name_tok.value);
@@ -370,6 +445,12 @@ private:
             }
             else if (node->operator_token.type == T_DIVIDE) {
                 tie(result, error) = left_num->divide(right);
+            }
+            else if (node->operator_token.type == T_MODULUS) {
+                tie(result, error) = left_num->modulus(right);
+            }
+            else if (node->operator_token.type == T_FLOOR) {
+                tie(result, error) = left_num->floor_divide(right);
             }
             else if (node->operator_token.type == T_EXP) {
                 tie(result, error) = left_num->power(right);

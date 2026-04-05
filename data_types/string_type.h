@@ -52,9 +52,9 @@ public:
         if (const auto other = dynamic_cast<const String*>(operand.get())) {
             auto result = make_shared<String>(this->value + other->value);
             result->set_context(this->context);
-            return {result, nullopt};
+            return { result, nullopt };
         }
-        return {nullptr, illegal_op_for_string(this, operand.get())};
+        return { nullptr, illegal_op_for_string(this, operand.get()) };
     }
 
     [[nodiscard]] OperationResult multiply(const shared_ptr<DataType>& operand) const override {
@@ -62,45 +62,51 @@ public:
             if (const auto int_val = std::get_if<long long>(&other->value)) {
                 auto result = make_shared<String>(repeat_string(this->value, *int_val));
                 result->set_context(this->context);
-                return {result, nullopt};
+                return { result, nullopt };
             }
-            return {nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "String can only be multiplied by an integer", context)};
+            return { nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "String can only be multiplied by an integer", context) };
         }
-        return {nullptr, illegal_op_for_string(this, operand.get())};
+        return { nullptr, illegal_op_for_string(this, operand.get()) };
     }
 
     // --- All other operations are illegal for String ---
     [[nodiscard]] OperationResult subtract(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_string(this, other.get())};
+        return { nullptr, illegal_op_for_string(this, other.get()) };
     }
     [[nodiscard]] OperationResult divide(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_string(this, other.get())};
+        return { nullptr, illegal_op_for_string(this, other.get()) };
+    }
+    [[nodiscard]] OperationResult modulus(const shared_ptr<DataType>& other) const override {
+        return { nullptr, illegal_op_for_string(this, other.get()) };
+    }
+    [[nodiscard]] OperationResult floor_divide(const shared_ptr<DataType>& other) const override {
+        return { nullptr, illegal_op_for_string(this, other.get()) };
     }
     [[nodiscard]] OperationResult get_comparison_eq(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_string(this, other.get())};
+        return { nullptr, illegal_op_for_string(this, other.get()) };
     }
     [[nodiscard]] OperationResult get_comparison_neq(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_string(this, other.get())};
+        return { nullptr, illegal_op_for_string(this, other.get()) };
     }
     [[nodiscard]] OperationResult get_comparison_lt(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_string(this, other.get())};
+        return { nullptr, illegal_op_for_string(this, other.get()) };
     }
     [[nodiscard]] OperationResult get_comparison_gt(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_string(this, other.get())};
+        return { nullptr, illegal_op_for_string(this, other.get()) };
     }
     [[nodiscard]] OperationResult get_comparison_lte(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_string(this, other.get())};
+        return { nullptr, illegal_op_for_string(this, other.get()) };
     }
     [[nodiscard]] OperationResult get_comparison_gte(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_string(this, other.get())};
+        return { nullptr, illegal_op_for_string(this, other.get()) };
     }
     [[nodiscard]] OperationResult and_by(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_string(this, other.get())};
+        return { nullptr, illegal_op_for_string(this, other.get()) };
     }
     [[nodiscard]] OperationResult or_by(const shared_ptr<DataType>& other) const override {
-        return {nullptr, illegal_op_for_string(this, other.get())};
+        return { nullptr, illegal_op_for_string(this, other.get()) };
     }
     [[nodiscard]] OperationResult not_by() const override {
-        return {nullptr, illegal_op_for_string(this)};
+        return { nullptr, illegal_op_for_string(this) };
     }
 };

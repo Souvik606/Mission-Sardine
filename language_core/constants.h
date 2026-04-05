@@ -17,6 +17,8 @@ const string T_PLUS = "PLUS";
 const string T_MINUS = "MINUS";
 const string T_MUL = "MUL";
 const string T_DIVIDE = "DIV";
+const string T_MODULUS = "MOD";
+const string T_FLOOR = "FLOOR";
 const string T_EXP = "EXP";
 const string T_EQ = "EQUAL";
 const string T_NEQ = "NOTEQUAL";
@@ -39,5 +41,5 @@ const string T_EOF = "EOF";
 
 const vector<string> KEYWORDS = {
     "define", "and", "or", "not","when","orwhen","otherwise","cycle",
-    "during","method","yield","escape","proceed"
+    "during","method","yield","escape","proceed", "menu", "choice", "fallback"
 };

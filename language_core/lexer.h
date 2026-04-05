@@ -193,6 +193,17 @@ public:
         return Token(token_type, {}, pos_start, pos);
     }
 
+    Token make_div() {
+        Position pos_start = pos.copy();
+        advance();
+        string token_type = T_DIVIDE;
+        if (current_char.has_value() && current_char.value() == '/') {
+            advance();
+            token_type = T_FLOOR;
+        }
+        return Token(token_type, {}, pos_start, pos);
+    }
+
     Token make_number() {
         string number_str;
         bool is_float = false;
@@ -253,7 +264,10 @@ public:
                 tokens.push_back(make_mul());
             }
             else if (c == '/') {
-                tokens.push_back(Token(T_DIVIDE, {}, pos));
+                tokens.push_back(make_div());
+            }
+            else if (c == '%') {
+                tokens.push_back(Token(T_MODULUS, {}, pos));
                 advance();
             }
             else if (c == '=') {
