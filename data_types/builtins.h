@@ -1,5 +1,4 @@
 #pragma once
-
 #include <bits/stdc++.h>
 #include "data_type.h"
 #include "number_type.h"
@@ -35,6 +34,13 @@ public:
         return true;
     }
 
+    [[nodiscard]] OperationResult is_true() const override {
+        auto result = make_shared<Number>(1LL);
+        result->set_context(this->context);
+        result->set_pos(this->pos_start, this->pos_end);
+        return std::make_pair(std::static_pointer_cast<DataType>(result), std::nullopt);
+    }
+
     [[nodiscard]] shared_ptr<DataType> copy() const override {
         auto new_func = make_shared<BuiltInFunction>(this->name, this->execute_impl);
         new_func->set_pos(this->pos_start, this->pos_end);
@@ -46,49 +52,20 @@ public:
         return "<built-in function " + this->name + ">";
     }
 
-    [[nodiscard]] OperationResult add(const shared_ptr<DataType>& other) const override {
-        return { nullptr, illegal_op_for_builtin(this) };
-    }
-    [[nodiscard]] OperationResult subtract(const shared_ptr<DataType>& other) const override {
-        return { nullptr, illegal_op_for_builtin(this) };
-    }
-    [[nodiscard]] OperationResult multiply(const shared_ptr<DataType>& other) const override {
-        return { nullptr, illegal_op_for_builtin(this) };
-    }
-    [[nodiscard]] OperationResult divide(const shared_ptr<DataType>& other) const override {
-        return { nullptr, illegal_op_for_builtin(this) };
-    }
-    [[nodiscard]] OperationResult modulus(const shared_ptr<DataType>& other) const override {
-        return { nullptr, illegal_op_for_builtin(this) };
-    }
-    [[nodiscard]] OperationResult floor_divide(const shared_ptr<DataType>& other) const override {
-        return { nullptr, illegal_op_for_builtin(this) };
-    }
-    [[nodiscard]] OperationResult get_comparison_eq(const shared_ptr<DataType>& other) const override {
-        return { nullptr, illegal_op_for_builtin(this) };
-    }
-    [[nodiscard]] OperationResult get_comparison_neq(const shared_ptr<DataType>& other) const override {
-        return { nullptr, illegal_op_for_builtin(this) };
-    }
-    [[nodiscard]] OperationResult get_comparison_lt(const shared_ptr<DataType>& other) const override {
-        return { nullptr, illegal_op_for_builtin(this) };
-    }
-    [[nodiscard]] OperationResult get_comparison_gt(const shared_ptr<DataType>& other) const override {
-        return { nullptr, illegal_op_for_builtin(this) };
-    }
-    [[nodiscard]] OperationResult get_comparison_lte(const shared_ptr<DataType>& other) const override {
-        return { nullptr, illegal_op_for_builtin(this) };
-    }
-    [[nodiscard]] OperationResult get_comparison_gte(const shared_ptr<DataType>& other) const override {
-        return { nullptr, illegal_op_for_builtin(this) };
-    }
-    [[nodiscard]] OperationResult and_by(const shared_ptr<DataType>& other) const override {
-        return { nullptr, illegal_op_for_builtin(this) };
-    }
-    [[nodiscard]] OperationResult or_by(const shared_ptr<DataType>& other) const override {
-        return { nullptr, illegal_op_for_builtin(this) };
-    }
-    [[nodiscard]] OperationResult not_by() const override {
-        return { nullptr, illegal_op_for_builtin(this) };
-    }
+    [[nodiscard]] OperationResult add(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_builtin(this)); }
+    [[nodiscard]] OperationResult subtract(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_builtin(this)); }
+    [[nodiscard]] OperationResult multiply(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_builtin(this)); }
+    [[nodiscard]] OperationResult divide(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_builtin(this)); }
+    [[nodiscard]] OperationResult modulus(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_builtin(this)); }
+    [[nodiscard]] OperationResult floor_divide(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_builtin(this)); }
+    [[nodiscard]] OperationResult exponent(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_builtin(this)); }
+    [[nodiscard]] OperationResult get_comparison_eq(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_builtin(this)); }
+    [[nodiscard]] OperationResult get_comparison_neq(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_builtin(this)); }
+    [[nodiscard]] OperationResult get_comparison_lt(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_builtin(this)); }
+    [[nodiscard]] OperationResult get_comparison_gt(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_builtin(this)); }
+    [[nodiscard]] OperationResult get_comparison_lte(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_builtin(this)); }
+    [[nodiscard]] OperationResult get_comparison_gte(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_builtin(this)); }
+    [[nodiscard]] OperationResult and_by(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_builtin(this)); }
+    [[nodiscard]] OperationResult or_by(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_builtin(this)); }
+    [[nodiscard]] OperationResult not_by() const override { return std::make_pair(nullptr, illegal_op_for_builtin(this)); }
 };

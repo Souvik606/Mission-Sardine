@@ -1,19 +1,22 @@
-```
-multiline: NEWLINE* (expression|statements|jump_statements) (NEWLINE* (expression|statements|jump_statements))* NEWLINE*
+multiline: NEWLINE* (singleline)* (NEWLINE* (singleline))* NEWLINE*
 
-jump-statements:KEYWORD:yield expression|KEYWORD:proceed | KEYWORD:escape
+singleline: function-call | statements | if-expression | for-expression | while-expression | switch-statement | function-definition
 
-statements: (KEYWORD:define)? IDENTIFIER EQUAL expression
+yield-statement: KEYWORD:yield expression
 
-switch-statement: KEYWORD:menu ternary-expression LPAREN2 NEWLINE* (case-statement* NEWLINE*)* default-statement? NEWLINE* (case_statement* NEWLINE*)* RPAREN2
+jump-statements: KEYWORD:proceed | KEYWORD:escape
 
-case-statement: KEYWORD:choice ternary-expression LPAREN2 ((expression|statements) RPAREN2)| (NEWLINE multiline RPAREN2)
+statements: IDENTIFIER (LPAREN3 expression RPAREN3)* (COMMA IDENTIFIER (LPAREN3 expression RPAREN3)*)* EQUAL expression (COMMA expression)*
 
-default-statement: KEYWORD:fallback LPAREN2 ((expression|statements) RPAREN2)| (NEWLINE multiline RPAREN2)
+switch-statement: KEYWORD:menu ternary-expression LPAREN2 NEWLINE* (case-statement* NEWLINE*)* default-statement? NEWLINE* (case-statement* NEWLINE*)* RPAREN2
 
-expression: jump_statements | ternary-expression
+case-statement: KEYWORD:choice ternary-expression LPAREN2 ((expression | statements) RPAREN2) | (NEWLINE multiline RPAREN2)
 
-ternary-expression: (logical-expression|statements) (QUESTION ternary-expression COLON ternary-expression)*
+default-statement: KEYWORD:fallback LPAREN2 ((expression | statements) RPAREN2) | (NEWLINE multiline RPAREN2)
+
+expression: ternary-expression
+
+ternary-expression: (logical-expression | statements) (QUESTION ternary-expression COLON ternary-expression)*
 
 logical-expression: comp-expression ((KEYWORD:AND | KEYWORD:OR) comp-expression)*
 
@@ -27,21 +30,20 @@ unary: (PLUS | MINUS) unary | exponent
 
 exponent: factor (EXP unary)*
 
-factor: INT | FLOAT | STRING | IDENTIFIER | LPAREN expression RPAREN | if-expression | for-expression | while-expression | function-definition | list-expression | function-call | switch-statement
+factor: INT | FLOAT | STRING | IDENTIFIER (LPAREN3 expression RPAREN3)* | LPAREN expression RPAREN | list-expression | function-call
 
 function-call: IDENTIFIER LPAREN (expression(COMMA expression)*)? RPAREN
 
-list-expression: LPAREN3 (expression(COMMA expression)*)? RPAREN RPAREN3
+list-expression: LPAREN3 (expression(COMMA expression)*)? RPAREN3
 
-while-expression: KEYWORD:during expression LPAREN2 ((expression|statements) RPAREN2)| (NEWLINE multiline RPAREN2)
+while-expression: KEYWORD:whenever expression LPAREN2 (multiline | jump-statements)* RPAREN2
 
-for-expression: KEYWORD:cycle IDENTIFIER EQUAL expression COLON expression (COLON:expression)?LPAREN2 ((expression|statements)RPAREN2)| (NEWLINE multiline RPAREN2)
+for-expression: KEYWORD:Cycle IDENTIFIER EQUAL expression COLON expression (COLON expression)? LPAREN2 (multiline | jump-statements)* RPAREN2
 
-function-definition: KEYWORD:method IDENTIFIER?LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN LPAREN2 ((expression|statements)RPAREN2)| (NEWLINE multiline RPAREN2)
+function-definition: KEYWORD:method IDENTIFIER? LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN LPAREN2 (multiline |jump-statements | yield-statement)* RPAREN2
 
-if-expression: KEYWORD:when expression LPAREN2 ((expression|statements) RPAREN2 (elif-expression|else-expression)?) | (NEWLINE multiline RPAREN2 (elif-expression|else-expression))
+if-expression: KEYWORD:when expression LPAREN2 (multiline | jump-statements)* RPAREN2 NEWLINE* (elif-expression | else-expression)
 
-elif-expression: KEYWORD:orwhen expression LPAREN2 ((expression|statements) RPAREN2 (elif-expression|else-expression)?) | (NEWLINE multiline RPAREN2 (elif-expression|else-expression))
+elif-expression: KEYWORD:orwhen expression LPAREN2 (multiline | jump-statements)* RPAREN2 NEWLINE* (elif-expression |else-expression)
 
-else-expression: KEYWORD:otherwise LPAREN2 (((expression|statements)RPAREN2)|NEWLINE multiline RPAREN2)
-```
+else-expression: KEYWORD:otherwise LPAREN2 (multiline | jump-statements)* RPAREN2
