@@ -27,57 +27,57 @@ using namespace std;
 class Interpreter {
 public:
     Interpreter() {
-        visit_methods[typeid(NumberNode)] = [](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
-            return visit_NumberNode(static_pointer_cast<NumberNode>(node), context);
-            };
-        visit_methods[typeid(StringNode)] = [](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
-            return visit_StringNode(static_pointer_cast<StringNode>(node), context);
-            };
+        visit_methods[typeid(NumberNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
+            return this->visit_NumberNode(static_pointer_cast<NumberNode>(node), context);
+        };
+        visit_methods[typeid(StringNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
+            return this->visit_StringNode(static_pointer_cast<StringNode>(node), context);
+        };
         visit_methods[typeid(ListNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_ListNode(static_pointer_cast<ListNode>(node), context);
-            };
+        };
         visit_methods[typeid(BinaryOperationNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_BinaryOperationNode(static_pointer_cast<BinaryOperationNode>(node), context);
-            };
+        };
         visit_methods[typeid(TernaryOperationNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_TernaryOperationNode(static_pointer_cast<TernaryOperationNode>(node), context);
-            };
+        };
         visit_methods[typeid(UnaryOperationNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_UnaryOperationNode(static_pointer_cast<UnaryOperationNode>(node), context);
-            };
+        };
         visit_methods[typeid(VariableUseNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_VariableUseNode(static_pointer_cast<VariableUseNode>(node), context);
-            };
+        };
         visit_methods[typeid(VariableAssignNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_VariableAssignNode(static_pointer_cast<VariableAssignNode>(node), context);
-            };
+        };
         visit_methods[typeid(IfNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_IfNode(static_pointer_cast<IfNode>(node), context);
-            };
+        };
         visit_methods[typeid(SwitchNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_SwitchNode(static_pointer_cast<SwitchNode>(node), context);
-            };
+        };
         visit_methods[typeid(ForNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_ForNode(static_pointer_cast<ForNode>(node), context);
-            };
+        };
         visit_methods[typeid(WhileNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_WhileNode(static_pointer_cast<WhileNode>(node), context);
-            };
+        };
         visit_methods[typeid(FunctionDefinitionNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_FunctionDefinitionNode(static_pointer_cast<FunctionDefinitionNode>(node), context);
-            };
+        };
         visit_methods[typeid(FunctionCallNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_FunctionCallNode(static_pointer_cast<FunctionCallNode>(node), context);
-            };
+        };
         visit_methods[typeid(ReturnNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_ReturnNode(static_pointer_cast<ReturnNode>(node), context);
-            };
+        };
         visit_methods[typeid(ContinueNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_ContinueNode(static_pointer_cast<ContinueNode>(node), context);
-            };
+        };
         visit_methods[typeid(BreakNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_BreakNode(static_pointer_cast<BreakNode>(node), context);
-            };
+        };
     }
 
     RunTimeResult visit(const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
@@ -110,10 +110,24 @@ private:
 
         auto list_value = make_shared<List>(elements);
         list_value->set_context(context).set_pos(node->pos_start, node->pos_end);
-        return res.success(list_value);
+        return res.success(std::static_pointer_cast<DataType>(list_value));
     }
 
-    static RunTimeResult visit_FunctionDefinitionNode(const shared_ptr<FunctionDefinitionNode>& node, const shared_ptr<Context>& context) {
+    RunTimeResult visit_StringNode(const shared_ptr<StringNode>& node, const shared_ptr<Context>& context) {
+        RunTimeResult res;
+        shared_ptr<String> str;
+
+        if (node->token.value.type() == typeid(string)) {
+            str = make_shared<String>(any_cast<string>(node->token.value));
+        } else {
+            return res.failure(RunTimeError(node->pos_start.value_or(Position()), node->pos_end.value_or(Position()), "Invalid value in string token", context));
+        }
+
+        str->set_context(context).set_pos(node->pos_start, node->pos_end);
+        return res.success(std::static_pointer_cast<DataType>(str));
+    }
+
+    RunTimeResult visit_FunctionDefinitionNode(const shared_ptr<FunctionDefinitionNode>& node, const shared_ptr<Context>& context) {
         RunTimeResult res;
         string func_name = node->var_name_tok.has_value() ? any_cast<string>(node->var_name_tok->value) : "";
         auto body_node = node->body_node;
@@ -122,43 +136,46 @@ private:
             arg_names.push_back(any_cast<string>(tok.value));
         }
 
-        const auto func_value = make_shared<Function>(func_name, body_node, arg_names, node->return_null);
+        auto func_value = make_shared<Function>(func_name, body_node, arg_names, node->return_null);
         func_value->set_context(context).set_pos(node->pos_start, node->pos_end);
 
         if (node->var_name_tok.has_value()) {
             context->symbol_table->set(func_name, func_value);
         }
 
-        return res.success(func_value);
+        return res.success(std::static_pointer_cast<DataType>(func_value));
     }
 
     RunTimeResult visit_FunctionCallNode(const shared_ptr<FunctionCallNode>& node, const shared_ptr<Context>& context) {
         RunTimeResult res;
         vector<shared_ptr<DataType>> args;
 
-        const auto call_value = res.register_result(visit(node->call_node, context));
-        if (res.error) return res;
+        auto call_value = res.register_result(visit(node->call_node, context));
+        if (res.should_return()) return res;
 
-        const auto copied_call_value = call_value->copy();
+        auto copied_call_value = call_value->copy();
         copied_call_value->set_pos(node->pos_start, node->pos_end);
 
         for (const auto& arg_node : node->arg_nodes) {
             args.push_back(res.register_result(visit(arg_node, context)));
-            if (res.error) return res;
+            if (res.should_return()) return res;
         }
 
-        if (const auto func_to_call = dynamic_pointer_cast<Function>(copied_call_value)) {
-            const auto return_value = res.register_result(func_to_call->execute(args, *this));
-            if (res.error) return res;
-            return res.success(return_value);
-        }
-        else if (const auto builtin_to_call = dynamic_pointer_cast<BuiltInFunction>(copied_call_value)) {
-            const auto return_value = res.register_result(builtin_to_call->execute(args));
-            if (res.error) return res;
-            return res.success(return_value);
+        shared_ptr<DataType> return_value;
+        if (auto func_to_call = dynamic_pointer_cast<Function>(copied_call_value)) {
+            return_value = res.register_result(func_to_call->execute(args, *this));
+        } else if (auto builtin_to_call = dynamic_pointer_cast<BuiltInFunction>(copied_call_value)) {
+            return_value = res.register_result(builtin_to_call->execute(args));
+        } else {
+            return res.failure(RunTimeError(node->pos_start.value_or(Position()), node->pos_end.value_or(Position()), "Value is not a function", context));
         }
 
-        return res.failure(RunTimeError(node->pos_start.value_or(Position()), node->pos_end.value_or(Position()), "Value is not a function", context));
+        if (res.should_return()) return res;
+
+        auto final_return_val = return_value->copy();
+        final_return_val->set_pos(node->pos_start, node->pos_end).set_context(context);
+
+        return res.success(final_return_val);
     }
 
     RunTimeResult visit_WhileNode(const shared_ptr<WhileNode>& node, const shared_ptr<Context>& context) {
@@ -169,423 +186,282 @@ private:
             auto condition_value = res.register_result(visit(node->condition_node, context));
             if (res.should_return()) return res;
 
-            if (condition_value == nullptr || !condition_value->is_truthy()) {
-                break;
-            }
+            auto [cond, error] = condition_value->is_true();
+            if (error) return res.failure(*error);
+
+            if (cond && !cond->is_truthy()) break;
 
             auto value = res.register_result(visit(node->body_node, context));
-            if (res.should_return() && !res.loop_should_continue && !res.loop_should_break) return res;
+            if (res.should_return() && !res.loop_or_switch_break && !res.loop_continue) {
+                return res;
+            }
 
-            if (res.loop_should_continue) continue;
-            if (res.loop_should_break) break;
+            if (res.loop_continue) continue;
+            if (res.loop_or_switch_break) break;
 
             elements.push_back(value);
         }
 
         if (node->return_null) {
-            auto null_value = make_shared<Number>(0LL);
-            null_value->set_context(context).set_pos(node->pos_start, node->pos_end);
-            return res.success(null_value);
+            auto null_val = make_shared<Number>(0LL);
+            null_val->set_context(context).set_pos(node->pos_start, node->pos_end);
+            return res.success(std::static_pointer_cast<DataType>(null_val));
         }
 
         auto list_value = make_shared<List>(elements);
         list_value->set_context(context).set_pos(node->pos_start, node->pos_end);
-        return res.success(list_value);
+        return res.success(std::static_pointer_cast<DataType>(list_value));
     }
 
     RunTimeResult visit_ForNode(const shared_ptr<ForNode>& node, const shared_ptr<Context>& context) {
         RunTimeResult res;
+        vector<shared_ptr<DataType>> elements;
 
-        auto start_value_res = res.register_result(visit(node->start_value_node, context));
+        auto start_value = res.register_result(visit(node->start_value_node, context));
         if (res.should_return()) return res;
-        auto start_num = dynamic_pointer_cast<Number>(start_value_res);
-        if (!start_num) return res.failure(RunTimeError(node->start_value_node->pos_start.value_or(Position()), node->start_value_node->pos_end.value_or(Position()), "For loop start value must be a number", context));
 
-        auto end_value_res = res.register_result(visit(node->end_value_node, context));
+        auto end_value = res.register_result(visit(node->end_value_node, context));
         if (res.should_return()) return res;
-        auto end_num = dynamic_pointer_cast<Number>(end_value_res);
-        if (!end_num) return res.failure(RunTimeError(node->end_value_node->pos_start.value_or(Position()), node->end_value_node->pos_end.value_or(Position()), "For loop end value must be a number", context));
 
-        shared_ptr<Number> step_num;
+        shared_ptr<DataType> step_value;
         if (node->step_value_node) {
-            auto step_value = res.register_result(visit(node->step_value_node, context));
+            step_value = res.register_result(visit(node->step_value_node, context));
             if (res.should_return()) return res;
-            step_num = dynamic_pointer_cast<Number>(step_value);
-            if (!step_num) return res.failure(RunTimeError(node->step_value_node->pos_start.value_or(Position()), node->step_value_node->pos_end.value_or(Position()), "For loop step value must be a number", context));
+        } else {
+            step_value = std::static_pointer_cast<DataType>(make_shared<Number>(1LL));
         }
-        else {
-            step_num = make_shared<Number>(1LL);
+
+        auto start_num = dynamic_pointer_cast<Number>(start_value);
+        auto end_num = dynamic_pointer_cast<Number>(end_value);
+        auto step_num = dynamic_pointer_cast<Number>(step_value);
+
+        if (!start_num || !end_num || !step_num) {
+            return res.failure(RunTimeError(node->pos_start.value_or(Position()), node->pos_end.value_or(Position()), "For loop parameters must be numbers", context));
         }
 
         auto var_name = any_cast<string>(node->var_name_tok.value);
 
-        vector<shared_ptr<DataType>> elements;
+        double i_val = holds_alternative<long long>(start_num->value) ? get<long long>(start_num->value) : get<double>(start_num->value);
+        double end_val = holds_alternative<long long>(end_num->value) ? get<long long>(end_num->value) : get<double>(end_num->value);
+        double step_val = holds_alternative<long long>(step_num->value) ? get<long long>(step_num->value) : get<double>(step_num->value);
 
-        if (bool all_integers = holds_alternative<long long>(start_num->value) && holds_alternative<long long>(end_num->value) && holds_alternative<long long>(step_num->value)) {
-            long long start = get<long long>(start_num->value);
-            long long end = get<long long>(end_num->value);
-            long long step = get<long long>(step_num->value);
+        auto condition = [&]() { return step_val >= 0 ? (i_val <= end_val) : (i_val >= end_val); };
 
-            for (long long i = start; (step >= 0) ? (i <= end) : (i >= end); i += step) {
-                context->symbol_table->set(var_name, make_shared<Number>(i));
-                auto value = res.register_result(visit(node->body_node, context));
-                if (res.should_return() && !res.loop_should_continue && !res.loop_should_break) return res;
-
-                if (res.loop_should_continue) {
-                    continue;
-                }
-                if (res.loop_should_break) {
-                    break;
-                }
-                elements.push_back(value);
-            }
-        }
-        else {
-            double start = std::visit([](auto v) { return static_cast<double>(v); }, start_num->value);
-            double end = std::visit([](auto v) { return static_cast<double>(v); }, end_num->value);
-            double step = std::visit([](auto v) { return static_cast<double>(v); }, step_num->value);
-
-            for (double i = start; (step >= 0) ? (i <= end) : (i >= end); i += step) {
-                context->symbol_table->set(var_name, make_shared<Number>(i));
-                auto value = res.register_result(visit(node->body_node, context));
-                if (res.should_return() && !res.loop_should_continue && !res.loop_should_break) return res;
-
-                if (res.loop_should_continue) continue;
-                if (res.loop_should_break) break;
-
-                elements.push_back(value);
-            }
-        }
-
-        if (node->return_null) {
-            auto null_value = make_shared<Number>(0LL);
-            null_value->set_context(context).set_pos(node->pos_start, node->pos_end);
-            return res.success(null_value);
-        }
-
-        auto list_value = make_shared<List>(elements);
-        list_value->set_context(context).set_pos(node->pos_start, node->pos_end);
-        return res.success(list_value);
-    }
-
-    RunTimeResult visit_IfNode(const shared_ptr<IfNode>& node, const shared_ptr<Context>& context) {
-        RunTimeResult res;
-        for (const auto& case_pair : node->cases) {
-            auto condition_value = res.register_result(visit(case_pair.first, context));
-            if (res.error) return res;
-
-            bool is_truthy = false;
-            if (condition_value != nullptr) {
-                is_truthy = condition_value->is_truthy();
+        while (condition()) {
+            if (holds_alternative<long long>(start_num->value) && holds_alternative<long long>(step_num->value)) {
+                context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(make_shared<Number>((long long)i_val)));
+            } else {
+                context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(make_shared<Number>(i_val)));
             }
 
-            if (is_truthy) {
-                const auto expr_value = res.register_result(visit(case_pair.second, context));
-                if (res.should_return()) return res;
-                return res.success(expr_value);
+            i_val += step_val;
+
+            auto value = res.register_result(visit(node->body_node, context));
+            if (res.should_return() && !res.loop_continue && !res.loop_or_switch_break) {
+                return res;
             }
-        }
-        if (node->else_case) {
-            const auto else_value = res.register_result(visit(node->else_case, context));
-            if (res.should_return()) return res;
-            return res.success(else_value);
-        }
-        return res.success(nullptr);
-    }
 
-    RunTimeResult visit_SwitchNode(const shared_ptr<SwitchNode>& node, const shared_ptr<Context>& context) {
-        RunTimeResult res;
-        auto selection_val = res.register_result(visit(node->switch_value, context));
-        if (res.error) return res;
+            if (res.loop_continue) continue;
+            if (res.loop_or_switch_break) break;
 
-        int match_index = -1;
-        int default_index = -1;
-
-        for (int i = 0; i < node->cases.size(); ++i) {
-            const auto& c = node->cases[i];
-            if (c->value != nullptr) {
-                auto choice_val = res.register_result(visit(c->value, context));
-                if (res.error) return res;
-
-                shared_ptr<DataType> comp_res;
-                optional<RunTimeError> error;
-                tie(comp_res, error) = selection_val->get_comparison_eq(choice_val);
-                if (error) return res.failure(*error);
-
-                if (comp_res && comp_res->is_truthy()) {
-                    match_index = i;
-                    break;
-                }
-            }
-            else {
-                default_index = i;
-            }
-        }
-
-        if (match_index == -1) {
-            match_index = default_index;
-        }
-
-        vector<shared_ptr<DataType>> elements;
-
-        if (match_index != -1) {
-            for (size_t i = match_index; i < node->cases.size(); ++i) {
-                const auto& c = node->cases[i];
-                auto body_val = res.register_result(visit(c->body, context));
-
-                if (res.should_return() && !res.loop_should_break && !res.loop_should_continue) return res;
-
-                if (c->return_null) {
-                    elements.push_back(make_shared<Number>(0LL));
-                }
-                else {
-                    elements.push_back(body_val);
-                }
-
-                if (res.loop_should_break) {
-                    res.loop_should_break = false;
-                    break;
-                }
-                if (res.loop_should_continue) {
-                    // Propagate continue
-                    return res;
-                }
-            }
+            elements.push_back(value);
         }
 
         if (node->return_null) {
             auto null_val = make_shared<Number>(0LL);
             null_val->set_context(context).set_pos(node->pos_start, node->pos_end);
-            return res.success(null_val);
+            return res.success(std::static_pointer_cast<DataType>(null_val));
+        }
+
+        auto list_value = make_shared<List>(elements);
+        list_value->set_context(context).set_pos(node->pos_start, node->pos_end);
+        return res.success(std::static_pointer_cast<DataType>(list_value));
+    }
+
+    RunTimeResult visit_SwitchNode(const shared_ptr<SwitchNode>& node, const shared_ptr<Context>& context) {
+        RunTimeResult res;
+        vector<shared_ptr<DataType>> elements;
+
+        auto selection_val = res.register_result(visit(node->switch_value, context));
+        if (res.should_return()) return res;
+
+        int match_index = 0, start_index = 0;
+        int default_index = node->cases.size();
+        bool match_found = false;
+
+        for (const auto& c : node->cases) {
+            if (c->value == nullptr) {
+                default_index = match_index;
+                match_index++;
+                continue;
+            }
+
+            auto choice_val = res.register_result(visit(c->value, context));
+            if (res.should_return()) return res;
+
+            auto [comp_res, error] = selection_val->get_comparison_eq(choice_val);
+            if (error) return res.failure(*error);
+
+            if (comp_res && comp_res->is_truthy()) {
+                match_found = true;
+                break;
+            }
+            match_index++;
+        }
+
+        start_index = match_found ? match_index : default_index;
+
+        for (size_t i = start_index; i < node->cases.size(); ++i) {
+            const auto& c = node->cases[i];
+            auto body_val = res.register_result(visit(c->body, context));
+
+            if (res.should_return() && !res.loop_or_switch_break) return res;
+
+            if (c->return_null) {
+                elements.push_back(std::static_pointer_cast<DataType>(make_shared<Number>(0LL)));
+            } else {
+                elements.push_back(body_val);
+            }
+
+            if (res.loop_or_switch_break) break;
+        }
+
+        if (node->return_null) {
+            auto null_val = make_shared<Number>(0LL);
+            null_val->set_context(context).set_pos(node->pos_start, node->pos_end);
+            return res.success(std::static_pointer_cast<DataType>(null_val));
         }
 
         auto list_val = make_shared<List>(elements);
         list_val->set_context(context).set_pos(node->pos_start, node->pos_end);
-        return res.success(list_val);
+        return res.success(std::static_pointer_cast<DataType>(list_val));
     }
 
-    static RunTimeResult visit_VariableUseNode(const shared_ptr<VariableUseNode>& node, const shared_ptr<Context>& context) {
+    RunTimeResult visit_IfNode(const shared_ptr<IfNode>& node, const shared_ptr<Context>& context) {
         RunTimeResult res;
-        const auto var_name = any_cast<string>(node->var_name_tok.value);
-        const shared_ptr<DataType> value = context->symbol_table->get(var_name);
-        if (!value) {
-            return res.failure(RunTimeError(node->pos_start.value_or(Position()), node->pos_end.value_or(Position()), "'" + var_name + "' is not defined", context));
+
+        for (const auto& case_tuple : node->cases) {
+            auto condition_value = res.register_result(visit(get<0>(case_tuple), context));
+            if (res.should_return()) return res;
+
+            auto [cond, error] = condition_value->is_true();
+            if (error) return res.failure(*error);
+
+            if (cond && cond->is_truthy()) {
+                auto expr_value = res.register_result(visit(get<1>(case_tuple), context));
+                if (res.should_return()) return res;
+
+                if (get<2>(case_tuple)) return res.success(std::static_pointer_cast<DataType>(make_shared<Number>(0LL)));
+                return res.success(expr_value);
+            }
         }
-        const auto copied_value = value->copy();
-        copied_value->set_pos(node->pos_start, node->pos_end).set_context(context);
-        return res.success(copied_value);
+
+        if (node->else_case) {
+            auto else_value = res.register_result(visit(node->else_case->first, context));
+            if (res.should_return()) return res;
+
+            if (node->else_case->second) return res.success(std::static_pointer_cast<DataType>(make_shared<Number>(0LL)));
+            return res.success(else_value);
+        }
+
+        return res.success(std::static_pointer_cast<DataType>(make_shared<Number>(0LL)));
+    }
+
+    RunTimeResult visit_VariableUseNode(const shared_ptr<VariableUseNode>& node, const shared_ptr<Context>& context) {
+        RunTimeResult res;
+        string var_name = any_cast<string>(node->var_name_tok.value);
+        shared_ptr<DataType> value = context->symbol_table->get(var_name);
+
+        if (!value) {
+            return res.failure(RunTimeError(
+                node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
+                "'" + var_name + "' is not defined", context
+            ));
+        }
+
+        vector<shared_ptr<DataType>> indexes;
+        for (const auto& index : node->index_node) {
+            auto index_val = res.register_result(visit(index, context));
+            if (res.error) return res;
+            indexes.push_back(index_val);
+        }
+
+        if (indexes.empty()) {
+            auto copy_val = value->copy();
+            copy_val->set_pos(node->pos_start, node->pos_end).set_context(context);
+            return res.success(copy_val);
+        } else {
+            auto [indexed_val, error] = value->getByIndex(indexes);
+            if (error) return res.failure(*error);
+
+            auto copy_val = indexed_val->copy();
+            copy_val->set_pos(node->pos_start, node->pos_end).set_context(context);
+            return res.success(copy_val);
+        }
     }
 
     RunTimeResult visit_VariableAssignNode(const shared_ptr<VariableAssignNode>& node, const shared_ptr<Context>& context) {
         RunTimeResult res;
-        const auto var_name = any_cast<string>(node->var_name_tok.value);
-        const shared_ptr<DataType> value = res.register_result(visit(node->value_node, context));
-        if (res.error) return res;
-        context->symbol_table->set(var_name, value);
-        return res.success(value);
+        shared_ptr<DataType> last_result = nullptr;
+
+        for (size_t i = 0; i < node->var_name_toks.size(); ++i) {
+            string var_name = any_cast<string>(node->var_name_toks[i].value);
+            vector<shared_ptr<DataType>> indexes_vals;
+
+            if (i < node->index_nodes.size() && !node->index_nodes[i].empty()) {
+                for (const auto& index : node->index_nodes[i]) {
+                    auto index_val = res.register_result(visit(index, context));
+                    if (res.should_return()) return res;
+                    indexes_vals.push_back(index_val);
+                }
+            }
+
+            auto value = res.register_result(visit(node->value_nodes[i], context));
+            if (res.should_return()) return res;
+
+            if (!indexes_vals.empty()) {
+                auto list_value = context->symbol_table->get(var_name);
+                if (!list_value) {
+                    return res.failure(RunTimeError(
+                        node->var_name_toks[i].pos_start.value_or(Position()),
+                        node->value_nodes[i]->pos_end.value_or(Position()),
+                        "'" + var_name + "' is not defined", context
+                    ));
+                }
+
+                auto [new_list, error] = list_value->assignIndex(indexes_vals, value);
+                if (error) return res.failure(*error);
+
+                context->symbol_table->set(var_name, new_list);
+                last_result = new_list;
+            } else {
+                context->symbol_table->set(var_name, value);
+                last_result = value;
+            }
+        }
+
+        return res.success(last_result);
     }
 
-    static RunTimeResult visit_StringNode(const shared_ptr<StringNode>& node, const shared_ptr<Context>& context) {
+    RunTimeResult visit_NumberNode(const shared_ptr<NumberNode>& node, const shared_ptr<Context>& context) {
         RunTimeResult res;
-        auto token_value = node->token.value;
-        shared_ptr<String> str;
-
-        if (token_value.type() == typeid(string)) {
-            str = make_shared<String>(any_cast<string>(token_value));
-        }
-        else {
-            return res.failure(RunTimeError(
-                node->pos_start.value_or(Position()),
-                node->pos_end.value_or(Position()),
-                "Invalid value in string token", context
-            ));
-        }
-
-        str->set_context(context).set_pos(node->pos_start, node->pos_end);
-        return res.success(str);
-    }
-
-    static RunTimeResult visit_NumberNode(const shared_ptr<NumberNode>& node, const shared_ptr<Context>& context) {
-        RunTimeResult res;
-        auto token_value = node->token.value;
         shared_ptr<Number> number;
-        if (token_value.type() == typeid(long long)) {
-            number = make_shared<Number>(any_cast<long long>(token_value));
+
+        if (node->token.value.type() == typeid(long long)) {
+            number = make_shared<Number>(any_cast<long long>(node->token.value));
+        } else if (node->token.value.type() == typeid(double)) {
+            number = make_shared<Number>(any_cast<double>(node->token.value));
+        } else {
+            return res.failure(RunTimeError(node->pos_start.value_or(Position()), node->pos_end.value_or(Position()), "Invalid number format", context));
         }
-        else if (token_value.type() == typeid(double)) {
-            number = make_shared<Number>(any_cast<double>(token_value));
-        }
-        else {
-            return res.failure(RunTimeError(node->pos_start.value_or(Position()), node->pos_end.value_or(Position()), "Invalid number value in token", context));
-        }
+
         number->set_context(context).set_pos(node->pos_start, node->pos_end);
-        return res.success(number);
-    }
-
-    RunTimeResult visit_BinaryOperationNode(const shared_ptr<BinaryOperationNode>& node,
-        const shared_ptr<Context>& context) {
-        RunTimeResult res;
-        const shared_ptr<DataType> left = res.register_result(visit(node->left_node, context));
-        if (res.error) return res;
-        const shared_ptr<DataType> right = res.register_result(visit(node->right_node, context));
-        if (res.error) return res;
-
-        shared_ptr<DataType> result = nullptr;
-        optional<RunTimeError> error = nullopt;
-
-        if (const auto left_num = dynamic_pointer_cast<Number>(left)) {
-            if (node->operator_token.type == T_PLUS) {
-                tie(result, error) = left_num->add(right);
-            }
-            else if (node->operator_token.type == T_MINUS) {
-                tie(result, error) = left_num->subtract(right);
-            }
-            else if (node->operator_token.type == T_MUL) {
-                tie(result, error) = left_num->multiply(right);
-            }
-            else if (node->operator_token.type == T_DIVIDE) {
-                tie(result, error) = left_num->divide(right);
-            }
-            else if (node->operator_token.type == T_MODULUS) {
-                tie(result, error) = left_num->modulus(right);
-            }
-            else if (node->operator_token.type == T_FLOOR) {
-                tie(result, error) = left_num->floor_divide(right);
-            }
-            else if (node->operator_token.type == T_EXP) {
-                tie(result, error) = left_num->power(right);
-            }
-            else if (node->operator_token.type == T_EE) {
-                tie(result, error) = left_num->get_comparison_eq(right);
-            }
-            else if (node->operator_token.type == T_NEQ) {
-                tie(result, error) = left_num->get_comparison_neq(right);
-            }
-            else if (node->operator_token.type == T_LT) {
-                tie(result, error) = left_num->get_comparison_lt(right);
-            }
-            else if (node->operator_token.type == T_GT) {
-                tie(result, error) = left_num->get_comparison_gt(right);
-            }
-            else if (node->operator_token.type == T_LTE) {
-                tie(result, error) = left_num->get_comparison_lte(right);
-            }
-            else if (node->operator_token.type == T_GTE) {
-                tie(result, error) = left_num->get_comparison_gte(right);
-            }
-            else if (node->operator_token.type == T_KEYWORD) {
-                if (const auto keyword = any_cast<string>(node->operator_token.value); keyword == "and") {
-                    tie(result, error) = left_num->and_by(right);
-                }
-                else if (keyword == "or") {
-                    tie(result, error) = left_num->or_by(right);
-                }
-            }
-        }
-        else if (const auto left_str = dynamic_pointer_cast<String>(left)) {
-            if (node->operator_token.type == T_PLUS) {
-                tie(result, error) = left_str->add(right);
-            }
-            else if (node->operator_token.type == T_MUL) {
-                tie(result, error) = left_str->multiply(right);
-            }
-        }
-        else if (const auto left_list = dynamic_pointer_cast<List>(left)) {
-            if (node->operator_token.type == T_PLUS) {
-                tie(result, error) = left_list->add(right);
-            }
-            else if (node->operator_token.type == T_MINUS) {
-                tie(result, error) = left_list->subtract(right);
-            }
-            else if (node->operator_token.type == T_MUL) {
-                tie(result, error) = left_list->multiply(right);
-            }
-        }
-        else {
-            return res.failure(RunTimeError(
-                node->pos_start.value_or(Position()),
-                node->pos_end.value_or(Position()),
-                // You can update the error message now if you want
-                "Left operand for binary operation is not a supported type (Number, String, List)", context
-            ));
-        }
-
-        if (error) return res.failure(*error);
-
-        if (result == nullptr) {
-            return res.failure(RunTimeError(
-                node->pos_start.value_or(Position()),
-                node->pos_end.value_or(Position()),
-                "Unsupported binary operation for the given types", context
-            ));
-        }
-
-        result->set_pos(node->pos_start, node->pos_end);
-        return res.success(result);
-    }
-
-    RunTimeResult visit_TernaryOperationNode(const shared_ptr<TernaryOperationNode>& node, const shared_ptr<Context>& context) {
-        RunTimeResult res;
-        auto condition_value = res.register_result(visit(node->comp_node, context));
-        if (res.should_return()) return res;
-
-        bool is_truthy = false;
-        if (condition_value != nullptr) {
-            is_truthy = condition_value->is_truthy();
-        }
-
-        if (is_truthy) {
-            return visit(node->true_node, context);
-        }
-        else {
-            return visit(node->false_node, context);
-        }
-    }
-
-    RunTimeResult visit_UnaryOperationNode(const shared_ptr<UnaryOperationNode>& node,
-        const shared_ptr<Context>& context) {
-        RunTimeResult res;
-        const shared_ptr<DataType> number_val = res.register_result(visit(node->node, context));
-        if (res.error) return res;
-
-        optional<RunTimeError> error = nullopt;
-        shared_ptr<DataType> result = nullptr;
-
-        if (const auto number = dynamic_pointer_cast<Number>(number_val)) {
-            if (node->operator_token.type == T_MINUS) {
-                tie(result, error) = number->multiply(make_shared<Number>(-1LL));
-            }
-            else if (node->operator_token.type == T_KEYWORD) {
-                if (const auto keyword = any_cast<string>(node->operator_token.value); keyword == "not") {
-                    tie(result, error) = number->not_by();
-                }
-            }
-        }
-        else {
-            return res.failure(RunTimeError(
-                node->pos_start.value_or(Position()),
-                node->pos_end.value_or(Position()),
-                "Unary operand must be a number", context
-            ));
-        }
-
-        if (error) return res.failure(*error);
-
-        if (result == nullptr) {
-            return res.failure(RunTimeError(
-                node->pos_start.value_or(Position()),
-                node->pos_end.value_or(Position()),
-                "Unsupported unary operation", context
-            ));
-        }
-
-        result->set_pos(node->pos_start, node->pos_end);
-        return res.success(result);
+        return res.success(std::static_pointer_cast<DataType>(number));
     }
 
     RunTimeResult visit_ReturnNode(const shared_ptr<ReturnNode>& node, const shared_ptr<Context>& context) {
         RunTimeResult res;
-        shared_ptr<DataType> value = make_shared<Number>(0LL);
+        shared_ptr<DataType> value = std::static_pointer_cast<DataType>(make_shared<Number>(0LL));
         if (node->node_to_return) {
             value = res.register_result(visit(node->node_to_return, context));
             if (res.should_return()) return res;
@@ -599,5 +475,82 @@ private:
 
     RunTimeResult visit_BreakNode(const shared_ptr<BreakNode>& node, const shared_ptr<Context>& context) {
         return RunTimeResult().success_break();
+    }
+
+    RunTimeResult visit_BinaryOperationNode(const shared_ptr<BinaryOperationNode>& node, const shared_ptr<Context>& context) {
+        RunTimeResult res;
+        const shared_ptr<DataType> left = res.register_result(visit(node->left_node, context));
+        if (res.should_return()) return res;
+        const shared_ptr<DataType> right = res.register_result(visit(node->right_node, context));
+        if (res.should_return()) return res;
+
+        shared_ptr<DataType> result = nullptr;
+        optional<RunTimeError> error = nullopt;
+
+        if (node->operator_token.type == T_PLUS) tie(result, error) = left->add(right);
+        else if (node->operator_token.type == T_MINUS) tie(result, error) = left->subtract(right);
+        else if (node->operator_token.type == T_MUL) tie(result, error) = left->multiply(right);
+        else if (node->operator_token.type == T_DIVIDE) tie(result, error) = left->divide(right);
+        else if (node->operator_token.type == T_MODULUS) tie(result, error) = left->modulus(right);
+        else if (node->operator_token.type == T_FLOOR) tie(result, error) = left->floor_divide(right);
+        else if (node->operator_token.type == T_EXP) tie(result, error) = left->exponent(right);
+        else if (node->operator_token.type == T_EE) tie(result, error) = left->get_comparison_eq(right);
+        else if (node->operator_token.type == T_NEQ) tie(result, error) = left->get_comparison_neq(right);
+        else if (node->operator_token.type == T_LT) tie(result, error) = left->get_comparison_lt(right);
+        else if (node->operator_token.type == T_GT) tie(result, error) = left->get_comparison_gt(right);
+        else if (node->operator_token.type == T_LTE) tie(result, error) = left->get_comparison_lte(right);
+        else if (node->operator_token.type == T_GTE) tie(result, error) = left->get_comparison_gte(right);
+        else if (node->operator_token.type == T_KEYWORD) {
+            if (any_cast<string>(node->operator_token.value) == "and") tie(result, error) = left->and_by(right);
+            else if (any_cast<string>(node->operator_token.value) == "or") tie(result, error) = left->or_by(right);
+        }
+
+        if (error) return res.failure(*error);
+        if (!result) return res.failure(RunTimeError(node->pos_start.value_or(Position()), node->pos_end.value_or(Position()), "Unsupported operation", context));
+
+        result->set_pos(node->pos_start, node->pos_end);
+        return res.success(result);
+    }
+
+    RunTimeResult visit_TernaryOperationNode(const shared_ptr<TernaryOperationNode>& node, const shared_ptr<Context>& context) {
+        RunTimeResult res;
+        auto comp_node = res.register_result(visit(node->comp_node, context));
+        if (res.should_return()) return res;
+
+        auto [cond, error] = comp_node->is_true();
+        if (error) return res.failure(*error);
+
+        shared_ptr<DataType> result;
+        if (cond && cond->is_truthy()) {
+            result = res.register_result(visit(node->true_node, context));
+            if (res.should_return()) return res;
+        } else {
+            result = res.register_result(visit(node->false_node, context));
+            if (res.should_return()) return res;
+        }
+
+        result->set_pos(node->pos_start, node->pos_end);
+        return res.success(result);
+    }
+
+    RunTimeResult visit_UnaryOperationNode(const shared_ptr<UnaryOperationNode>& node, const shared_ptr<Context>& context) {
+        RunTimeResult res;
+        auto number = res.register_result(visit(node->node, context));
+        if (res.should_return()) return res;
+
+        shared_ptr<DataType> result = nullptr;
+        optional<RunTimeError> error = nullopt;
+
+        if (node->operator_token.type == T_MINUS) {
+            tie(result, error) = number->multiply(std::static_pointer_cast<DataType>(make_shared<Number>(-1LL)));
+        } else if (node->operator_token.type == T_KEYWORD && any_cast<string>(node->operator_token.value) == "not") {
+            tie(result, error) = number->not_by();
+        }
+
+        if (error) return res.failure(*error);
+        if (!result) return res.failure(RunTimeError(node->pos_start.value_or(Position()), node->pos_end.value_or(Position()), "Unsupported unary operation", context));
+
+        result->set_pos(node->pos_start, node->pos_end);
+        return res.success(result);
     }
 };

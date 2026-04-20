@@ -1,4 +1,5 @@
 #include "function_type.h"
+#include "number_type.h"
 #include "../language_core/interpreter.h"
 #include "../language_core/symbol_table.h"
 
@@ -51,7 +52,8 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>>& args, Interp
     if (this->return_null) {
         auto val = make_shared<Number>(0LL);
         val->set_context(new_context).set_pos(this->pos_start, this->pos_end);
-        return res.success(val);
+
+        return res.success(std::static_pointer_cast<DataType>(val));
     }
 
     return res.success(value);
@@ -62,7 +64,8 @@ shared_ptr<DataType> Function::copy() const {
     auto new_func = make_shared<Function>(this->name, this->body_node, this->arg_names, this->return_null);
     new_func->set_pos(this->pos_start, this->pos_end);
     new_func->set_context(this->context);
-    return new_func;
+
+    return std::static_pointer_cast<DataType>(new_func);
 }
 
 inline string Function::to_string() const {

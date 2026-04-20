@@ -39,11 +39,13 @@ public:
 
     [[nodiscard]] virtual bool is_truthy() const = 0;
 
+    [[nodiscard]] virtual OperationResult is_true() const = 0;
     [[nodiscard]] virtual OperationResult add(const shared_ptr<DataType>& other) const = 0;
     [[nodiscard]] virtual OperationResult subtract(const shared_ptr<DataType>& other) const = 0;
     [[nodiscard]] virtual OperationResult multiply(const shared_ptr<DataType>& other) const = 0;
     [[nodiscard]] virtual OperationResult divide(const shared_ptr<DataType>& other) const = 0;
     [[nodiscard]] virtual OperationResult modulus(const shared_ptr<DataType>& other) const = 0;
+    [[nodiscard]] virtual OperationResult exponent(const shared_ptr<DataType>& other) const = 0;
     [[nodiscard]] virtual OperationResult floor_divide(const shared_ptr<DataType>& other) const = 0;
     [[nodiscard]] virtual OperationResult get_comparison_eq(const shared_ptr<DataType>& other) const = 0;
     [[nodiscard]] virtual OperationResult get_comparison_neq(const shared_ptr<DataType>& other) const = 0;
@@ -54,4 +56,12 @@ public:
     [[nodiscard]] virtual OperationResult and_by(const shared_ptr<DataType>& other) const = 0;
     [[nodiscard]] virtual OperationResult or_by(const shared_ptr<DataType>& other) const = 0;
     [[nodiscard]] virtual OperationResult not_by() const = 0;
+
+    [[nodiscard]] virtual OperationResult getByIndex(const vector<shared_ptr<DataType>>& indexes) const {
+        return { nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Type does not support indexing", context) };
+    }
+
+    [[nodiscard]] virtual OperationResult assignIndex(const vector<shared_ptr<DataType>>& indexes, const shared_ptr<DataType>& value) const {
+        return { nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Type does not support index assignment", context) };
+    }
 };

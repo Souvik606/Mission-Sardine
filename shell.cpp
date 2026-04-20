@@ -1,4 +1,7 @@
 #include <bits/stdc++.h>
+#include <fstream>
+#include <sstream>
+#include <algorithm>
 
 #include "language_core/error.h"
 #include "language_core/lexer.h"
@@ -10,7 +13,6 @@
 #include "language_core/symbol_table.h"
 #include "data_types/data_type.h"
 #include "data_types/number_type.h"
-
 #include "data_types/string_type.h"
 #include "data_types/list_type.h"
 #include "data_types/function_type.h"
@@ -169,45 +171,74 @@ pair<shared_ptr<DataType>, optional<Error>> run(const string& filename, const st
     return { result.value, result.error };
 }
 
+void run_file(const string& filepath) {
+    ifstream file(filepath);
+    if (!file.is_open()) {
+        cout << "Error: File '" << filepath << "' not found.\n";
+        return;
+    }
+
+    stringstream buffer;
+    buffer << file.rdbuf();
+    string file_content = buffer.str();
+
+    auto [result, error] = run(filepath, file_content);
+
+    if (error) {
+        cout << "Error in " << filepath << ":\n";
+        cout << error->to_string() << "\n";
+    }
+    else if (result) {
+        cout << result->to_string() << "\n";
+    }
+}
+
 int main() {
+    global_symbol_table->set("None", make_shared<Number>(0LL));
     global_symbol_table->set("null", make_shared<Number>(0LL));
     global_symbol_table->set("True", make_shared<Number>(1LL));
     global_symbol_table->set("False", make_shared<Number>(0LL));
 
-    global_symbol_table->set("show",
-        make_shared<BuiltInFunction>("show", builtin_show)
-    );
+    global_symbol_table->set("show", make_shared<BuiltInFunction>("show", builtin_show));
+    global_symbol_table->set("listen", make_shared<BuiltInFunction>("listen", builtin_listen));
+    global_symbol_table->set("type", make_shared<BuiltInFunction>("type", builtin_type));
+    global_symbol_table->set("Integer", make_shared<BuiltInFunction>("Integer", builtin_integer));
+    global_symbol_table->set("String", make_shared<BuiltInFunction>("String", builtin_string));
 
-    global_symbol_table->set("listen",
-        make_shared<BuiltInFunction>("listen", builtin_listen)
-    );
+    string choice;
+    cout << "Enter 0 for REPL mode and 1 for file input: ";
+    if (!getline(cin, choice)) return 0; // Handle EOF early
 
-    global_symbol_table->set("type",
-        make_shared<BuiltInFunction>("type", builtin_type)
-    );
+    if (choice == "0") {
+        // REPL Mode
+        while (true) {
+            cout << "code > ";
+            string text;
 
-    global_symbol_table->set("Integer",
-        make_shared<BuiltInFunction>("Integer", builtin_integer)
-    );
+            if (!getline(cin, text)) {
+                cout << "\nGoodbye!\n";
+                break;
+            }
 
-    global_symbol_table->set("String",
-        make_shared<BuiltInFunction>("String", builtin_string)
-    );
+            string lower_text = text;
+            transform(lower_text.begin(), lower_text.end(), lower_text.begin(), ::tolower);
+            if (lower_text == "exit" || lower_text == "quit") {
+                cout << "Goodbye!\n";
+                break;
+            }
 
-    while (true) {
-        cout << "code > ";
-        string text;
+            if (text.empty()) continue;
 
-        if (!getline(cin, text)) {
-            break;
+            if (auto [result, error] = run("<stdin>", text); error) {
+                cout << error->to_string() << endl;
+            }
+            else if (result) {
+                cout << result->to_string() << endl;
+            }
         }
-
-        if (auto [result, error] = run("<stdin>", text); error) {
-            cout << error->to_string() << endl;
-        }
-        else if (result) {
-            cout << result->to_string() << endl;
-        }
+    }
+    else {
+        run_file("samples/main.sad");
     }
 
     return 0;
