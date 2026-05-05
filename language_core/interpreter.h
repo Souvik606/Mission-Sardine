@@ -12,8 +12,11 @@
 #include "../ast_nodes/function_nodes.h"
 #include "../ast_nodes/string_nodes.h"
 #include "../ast_nodes/list_nodes.h"
+#include "../ast_nodes/dict_nodes.h"
 #include "../ast_nodes/jump_nodes.h"
+#include "../ast_nodes/try_catch_nodes.h"
 #include "../data_types/list_type.h"
+#include "../data_types/dict_type.h"
 #include "../data_types/number_type.h"
 #include "../data_types/string_type.h"
 #include "../data_types/function_type.h"
@@ -77,6 +80,12 @@ public:
         };
         visit_methods[typeid(BreakNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_BreakNode(static_pointer_cast<BreakNode>(node), context);
+        };
+        visit_methods[typeid(DictNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
+            return this->visit_DictNode(static_pointer_cast<DictNode>(node), context);
+        };
+        visit_methods[typeid(TryNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
+            return this->visit_TryNode(static_pointer_cast<TryNode>(node), context);
         };
     }
 
@@ -552,5 +561,87 @@ private:
 
         result->set_pos(node->pos_start, node->pos_end);
         return res.success(result);
+    }
+
+    RunTimeResult visit_DictNode(const shared_ptr<DictNode>& node, const shared_ptr<Context>& context) {
+        RunTimeResult res;
+        vector<pair<shared_ptr<DataType>, shared_ptr<DataType>>> elements;
+
+        for (const auto& pair : node->keyval_nodes) {
+            auto key = res.register_result(visit(pair.first, context));
+            if (res.should_return()) return res;
+
+            if (!dynamic_cast<Number*>(key.get()) && !dynamic_cast<String*>(key.get())) {
+                return res.failure(IllegalOperationError(pair.first->pos_start.value_or(Position{}), pair.first->pos_end.value_or(Position{}), "Dictionary keys must be numbers or strings", context));
+            }
+
+            auto value = res.register_result(visit(pair.second, context));
+            if (res.should_return()) return res;
+
+            elements.push_back({key, value});
+        }
+
+        auto dict_val = make_shared<Dict>(elements);
+        dict_val->set_context(context);
+        dict_val->set_pos(node->pos_start.value_or(Position{}), node->pos_end.value_or(Position{}));
+        
+        return res.success(dict_val);
+    }
+
+    RunTimeResult visit_TryNode(const shared_ptr<TryNode>& node, const shared_ptr<Context>& context) {
+        RunTimeResult res;
+        auto try_result = res.register_result(visit(node->body_node, context));
+
+        if (!res.error) {
+            if (node->clean_node) {
+                res.register_result(visit(node->clean_node->body_node, context));
+                if (res.should_return()) return res;
+            }
+            return res.success(try_result);
+        }
+
+        auto error = *res.error;
+        res.error = nullopt;
+        bool handled = false;
+
+        for (const auto& trap_node : node->trap_nodes) {
+            bool matches = false;
+            if (!trap_node->error_type) {
+                matches = true;
+            } else {
+                string caught_err = any_cast<string>(trap_node->error_type->value);
+                if (caught_err == "RunTimeError" || caught_err == error.error_name) {
+                    matches = true;
+                } else if (find(ERROR_TYPES.begin(), ERROR_TYPES.end(), caught_err) == ERROR_TYPES.end()) {
+                    return res.failure(InvalidErrorTypeError(trap_node->pos_start.value_or(Position{}), trap_node->pos_end.value_or(Position{}), "'" + caught_err + "' is not a valid error type", context));
+                }
+            }
+
+            if (matches) {
+                auto trap_context = make_shared<Context>("<trap block>", context, trap_node->pos_start.value_or(Position{}));
+                trap_context->symbol_table = make_shared<SymbolTable>(context->symbol_table);
+
+                if (trap_node->error_name) {
+                    auto err_str = make_shared<String>(error.to_string());
+                    err_str->set_pos(trap_node->pos_start.value_or(Position{}), trap_node->pos_end.value_or(Position{}));
+                    err_str->set_context(trap_context);
+                    trap_context->symbol_table->set(any_cast<string>(trap_node->error_name->value), err_str);
+                }
+
+                res.register_result(visit(trap_node->body_node, trap_context));
+                if (res.error) return res;
+                handled = true;
+                break;
+            }
+        }
+
+        if (node->clean_node) {
+            res.register_result(visit(node->clean_node->body_node, context));
+            if (res.should_return()) return res;
+        }
+
+        if (handled) return res.success(nullptr);
+
+        return res.failure(error);
     }
 };

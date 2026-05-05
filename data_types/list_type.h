@@ -7,16 +7,7 @@
 
 using namespace std;
 
-inline RunTimeError illegal_op_for_list(const DataType* self, const DataType* other = nullptr) {
-    const auto pos_start = self->pos_start;
-    const auto pos_end = other ? other->pos_end : self->pos_end;
-    return RunTimeError(
-        pos_start.value_or(Position()),
-        pos_end.value_or(Position()),
-        "Illegal Operation for type 'List'",
-        self->context
-    );
-}
+
 
 class List final : public DataType {
 public:
@@ -187,7 +178,7 @@ public:
             new_list->set_context(this->context);
             return std::make_pair(std::static_pointer_cast<DataType>(new_list), std::nullopt);
         }
-        return std::make_pair(nullptr, illegal_op_for_list(this, operand.get()));
+        return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Cannot add List and " + operand->to_string(), context));
     }
 
     [[nodiscard]] OperationResult subtract(const shared_ptr<DataType>& operand) const override {
@@ -203,19 +194,18 @@ public:
                     return std::make_pair(std::static_pointer_cast<DataType>(new_list), std::nullopt);
                 }
                 catch (...) {
-                    return std::make_pair(nullptr, RunTimeError(num->pos_start.value_or(Position()), num->pos_end.value_or(Position()), "Index out of bounds", this->context));
+                    return std::make_pair(nullptr, IndexOutOfBoundsError(num->pos_start.value_or(Position()), num->pos_end.value_or(Position()), "Index out of bounds", this->context));
                 }
             }
-            return std::make_pair(nullptr, RunTimeError(num->pos_start.value_or(Position()), num->pos_end.value_or(Position()), "Index must be of an integer Number type", this->context));
         }
-        return std::make_pair(nullptr, illegal_op_for_list(this, operand.get()));
+        return std::make_pair(nullptr, IllegalOperationError(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Index must be of an integer Number type", this->context));
     }
 
     [[nodiscard]] OperationResult multiply(const shared_ptr<DataType>& operand) const override {
         if (const auto num = dynamic_cast<const Number*>(operand.get())) {
             if (const auto int_val = std::get_if<long long>(&num->value)) {
                 if (*int_val < 0) {
-                     return std::make_pair(nullptr, RunTimeError(num->pos_start.value_or(Position()), num->pos_end.value_or(Position()), "List repetition cannot be negative", this->context));
+                     return std::make_pair(nullptr, IllegalOperationError(num->pos_start.value_or(Position()), num->pos_end.value_or(Position()), "List repetition cannot be negative", this->context));
                 }
                 vector<shared_ptr<DataType>> new_elements;
                 for (long long i = 0; i < *int_val; ++i) {
@@ -225,9 +215,8 @@ public:
                 new_list->set_context(this->context);
                 return std::make_pair(std::static_pointer_cast<DataType>(new_list), std::nullopt);
             }
-            return std::make_pair(nullptr, RunTimeError(num->pos_start.value_or(Position()), num->pos_end.value_or(Position()), "Expected an integer Number type", this->context));
         }
-        return std::make_pair(nullptr, illegal_op_for_list(this, operand.get()));
+        return std::make_pair(nullptr, IllegalOperationError(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected an integer Number type", this->context));
     }
 
     [[nodiscard]] OperationResult divide(const shared_ptr<DataType>& other) const override {
@@ -254,9 +243,9 @@ public:
         return std::make_pair(std::static_pointer_cast<DataType>(new_list), std::nullopt);
     }
 
-    [[nodiscard]] OperationResult modulus(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '%' to a List", context)); }
-    [[nodiscard]] OperationResult floor_divide(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '//' to a List", context)); }
-    [[nodiscard]] OperationResult exponent(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '**' to a List", context)); }
+    [[nodiscard]] OperationResult modulus(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '%' to a List", context)); }
+    [[nodiscard]] OperationResult floor_divide(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '//' to a List", context)); }
+    [[nodiscard]] OperationResult exponent(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '**' to a List", context)); }
 
     [[nodiscard]] OperationResult get_comparison_eq(const shared_ptr<DataType>& other) const override {
         if (const auto o = dynamic_cast<const List*>(other.get())) {
@@ -279,7 +268,7 @@ public:
             res->set_context(this->context);
             return std::make_pair(std::static_pointer_cast<DataType>(res), std::nullopt);
         }
-        return std::make_pair(nullptr, RunTimeError(other->pos_start.value_or(Position()), other->pos_end.value_or(Position()), "Expected a List", context));
+        return std::make_pair(nullptr, IllegalOperationError(other->pos_start.value_or(Position()), other->pos_end.value_or(Position()), "Expected a List", context));
     }
 
     [[nodiscard]] OperationResult get_comparison_neq(const shared_ptr<DataType>& other) const override {
@@ -291,11 +280,11 @@ public:
         return std::make_pair(std::static_pointer_cast<DataType>(res), std::nullopt);
     }
 
-    [[nodiscard]] OperationResult get_comparison_lt(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '<' to a List", context)); }
-    [[nodiscard]] OperationResult get_comparison_gt(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '>' to a List", context)); }
-    [[nodiscard]] OperationResult get_comparison_lte(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '<=' to a List", context)); }
-    [[nodiscard]] OperationResult get_comparison_gte(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '>=' to a List", context)); }
-    [[nodiscard]] OperationResult and_by(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply 'and' to a List", context)); }
-    [[nodiscard]] OperationResult or_by(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply 'or' to a List", context)); }
-    [[nodiscard]] OperationResult not_by() const override { return std::make_pair(nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply 'not' to a List", context)); }
+    [[nodiscard]] OperationResult get_comparison_lt(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '<' to a List", context)); }
+    [[nodiscard]] OperationResult get_comparison_gt(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '>' to a List", context)); }
+    [[nodiscard]] OperationResult get_comparison_lte(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '<=' to a List", context)); }
+    [[nodiscard]] OperationResult get_comparison_gte(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '>=' to a List", context)); }
+    [[nodiscard]] OperationResult and_by(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply 'and' to a List", context)); }
+    [[nodiscard]] OperationResult or_by(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply 'or' to a List", context)); }
+    [[nodiscard]] OperationResult not_by() const override { return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply 'not' to a List", context)); }
 };

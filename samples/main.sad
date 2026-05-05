@@ -1,7 +1,22 @@
-matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
-cycle i = 0 : 2 {
-    cycle j = 0 : 2 {
-        matrix[i][j] = matrix[i][j] ** 2
+method div(a, b) {
+    show(a)
+    show(b)
+    risk {
+        when a>b {
+            escape;
+        }
     }
+    clean {show(a*b)}
 }
-show(matrix)
+
+
+risk {
+    show([1,2]-[3])
+} trap IllegalOperationError e {
+    show("Caught expected error:"+ e)
+}
+
+
+
+x,y=9,0
+div(x,y)

@@ -135,6 +135,14 @@ public:
                 break;
             }
         }
+        if (token_type == T_IDENTIFIER) {
+            for (const auto& err_type : ERROR_TYPES) {
+                if (id_str == err_type) {
+                    token_type = T_ERROR;
+                    break;
+                }
+            }
+        }
         return Token(token_type, id_str, pos_start, pos);
     }
 

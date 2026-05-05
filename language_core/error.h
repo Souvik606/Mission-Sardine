@@ -51,12 +51,12 @@ public:
     }
 };
 
-class RunTimeError final : public Error {
+class RunTimeError : public Error {
 public:
     shared_ptr<Context> context;
 
-    RunTimeError(const Position &pos_start, const Position &pos_end, const string &details, shared_ptr<Context> context)
-        : Error(pos_start, pos_end, "Runtime Error", details), context(std::move(context)) {
+    RunTimeError(const Position &pos_start, const Position &pos_end, const string &details, shared_ptr<Context> context, const string &error_name = "RunTimeError")
+        : Error(pos_start, pos_end, error_name, details), context(std::move(context)) {
     }
 
     [[nodiscard]] string to_string() const override {
@@ -84,4 +84,52 @@ public:
 
         return final_ss.str();
     }
+};
+
+class IllegalOperationError final : public RunTimeError {
+public:
+    IllegalOperationError(const Position &pos_start, const Position &pos_end, const string &details, shared_ptr<Context> context)
+        : RunTimeError(pos_start, pos_end, details, context, "IllegalOperationError") {}
+};
+
+class DivisionByZeroError final : public RunTimeError {
+public:
+    DivisionByZeroError(const Position &pos_start, const Position &pos_end, const string &details, shared_ptr<Context> context)
+        : RunTimeError(pos_start, pos_end, details, context, "DivisionByZeroError") {}
+};
+
+class IndexOutOfBoundsError final : public RunTimeError {
+public:
+    IndexOutOfBoundsError(const Position &pos_start, const Position &pos_end, const string &details, shared_ptr<Context> context)
+        : RunTimeError(pos_start, pos_end, details, context, "IndexOutOfBoundsError") {}
+};
+
+class NameError final : public RunTimeError {
+public:
+    NameError(const Position &pos_start, const Position &pos_end, const string &details, shared_ptr<Context> context)
+        : RunTimeError(pos_start, pos_end, details, context, "NameError") {}
+};
+
+class ArgumentError final : public RunTimeError {
+public:
+    ArgumentError(const Position &pos_start, const Position &pos_end, const string &details, shared_ptr<Context> context)
+        : RunTimeError(pos_start, pos_end, details, context, "ArgumentError") {}
+};
+
+class NotImplementedError final : public RunTimeError {
+public:
+    NotImplementedError(const Position &pos_start, const Position &pos_end, const string &details, shared_ptr<Context> context)
+        : RunTimeError(pos_start, pos_end, details, context, "NotImplementedError") {}
+};
+
+class InvalidErrorTypeError final : public RunTimeError {
+public:
+    InvalidErrorTypeError(const Position &pos_start, const Position &pos_end, const string &details, shared_ptr<Context> context)
+        : RunTimeError(pos_start, pos_end, details, context, "InvalidErrorTypeError") {}
+};
+
+class DictKeyError final : public RunTimeError {
+public:
+    DictKeyError(const Position &pos_start, const Position &pos_end, const string &details, shared_ptr<Context> context)
+        : RunTimeError(pos_start, pos_end, details, context, "DictKeyError") {}
 };
