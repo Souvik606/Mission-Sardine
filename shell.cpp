@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <chrono>
 
 #include "language_core/error.h"
 #include "language_core/lexer.h"
@@ -137,6 +138,30 @@ RunTimeResult builtin_string(const vector<shared_ptr<DataType>>& args) {
     return RunTimeResult().success(make_shared<String>(str_val));
 }
 
+RunTimeResult builtin_size(const vector<shared_ptr<DataType>>& args) {
+    if (args.size() != 1) {
+        return RunTimeResult().failure(RunTimeError(
+            Position(), Position(),
+            "size() takes exactly 1 argument (got " + std::to_string(args.size()) + ")",
+            nullptr
+        ));
+    }
+
+    const auto& value = args[0];
+
+    if (const auto str = dynamic_pointer_cast<String>(value)) {
+        return RunTimeResult().success(make_shared<Number>(static_cast<long long>(str->value.length())));
+    }
+    else if (const auto lst = dynamic_pointer_cast<List>(value)) {
+        return RunTimeResult().success(make_shared<Number>(static_cast<long long>(lst->elements.size())));
+    }
+
+    return RunTimeResult().failure(RunTimeError(
+        value->pos_start.value_or(Position()), value->pos_end.value_or(Position()),
+        "illegal operation error",
+        value->context
+    ));
+}
 
 pair<shared_ptr<DataType>, optional<Error>> run(const string& filename, const string& text) {
     Lexer lexer(filename, text);
@@ -158,11 +183,6 @@ pair<shared_ptr<DataType>, optional<Error>> run(const string& filename, const st
         return { nullptr, ast.error };
     }
 
-    // Print AST for debugging
-    // cout << "--- AST ---" << endl;
-    // if (ast.node) cout << ast.node->to_string() << endl;
-    // cout << "-----------" << endl;
-
     Interpreter interpreter;
     auto context = make_shared<Context>("<program>");
     context->symbol_table = global_symbol_table;
@@ -182,7 +202,9 @@ void run_file(const string& filepath) {
     buffer << file.rdbuf();
     string file_content = buffer.str();
 
+    auto start_time = chrono::high_resolution_clock::now();
     auto [result, error] = run(filepath, file_content);
+    auto end_time = chrono::high_resolution_clock::now();
 
     if (error) {
         cout << "Error in " << filepath << ":\n";
@@ -191,6 +213,9 @@ void run_file(const string& filepath) {
     else if (result) {
         cout << result->to_string() << "\n";
     }
+
+    chrono::duration<double> exec_time = end_time - start_time;
+    cout << "Execution time: " << exec_time.count() << " seconds\n";
 }
 
 int main() {
@@ -204,6 +229,7 @@ int main() {
     global_symbol_table->set("type", make_shared<BuiltInFunction>("type", builtin_type));
     global_symbol_table->set("Integer", make_shared<BuiltInFunction>("Integer", builtin_integer));
     global_symbol_table->set("String", make_shared<BuiltInFunction>("String", builtin_string));
+    global_symbol_table->set("size", make_shared<BuiltInFunction>("size", builtin_size));
 
     string choice;
     cout << "Enter 0 for REPL mode and 1 for file input: ";

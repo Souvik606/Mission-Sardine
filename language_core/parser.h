@@ -174,6 +174,11 @@ private:
             if (res.error) return res;
             return res.success(exception_expr);
         }
+        if (token.type == T_KEYWORD && (any_cast<string>(token.value) == "escape" || any_cast<string>(token.value) == "proceed" || any_cast<string>(token.value) == "yield")) {
+            auto jump_node = res.register_node(jump_statements());
+            if (res.error) return res;
+            return res.success(jump_node);
+        }
         if (token.type == T_IDENTIFIER && peek().has_value() && peek()->type == T_LPAREN) {
             auto call_node = res.register_node(function_call());
             if (res.error) return res;

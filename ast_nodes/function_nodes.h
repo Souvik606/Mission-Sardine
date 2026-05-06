@@ -37,7 +37,14 @@ public:
 
     [[nodiscard]] std::string to_string() const override {
         const string name = var_name_tok.has_value() ? any_cast<string>(var_name_tok->value) : "<anonymous>";
-        return "(FUNCTION " + name + ")";
+        stringstream ss;
+        ss << "(FUNCTION " << name << "(";
+        for (size_t i = 0; i < arg_name_toks.size(); ++i) {
+            ss << any_cast<string>(arg_name_toks[i].value);
+            if (i < arg_name_toks.size() - 1) ss << ", ";
+        }
+        ss << ") -> " << (body_node ? body_node->to_string() : "null") << ")";
+        return ss.str();
     }
 };
 
@@ -60,6 +67,13 @@ public:
     }
 
     [[nodiscard]] std::string to_string() const override {
-        return "(CALL)";
+        stringstream ss;
+        ss << "(CALL " << (call_node ? call_node->to_string() : "null") << "(";
+        for (size_t i = 0; i < arg_nodes.size(); ++i) {
+            ss << (arg_nodes[i] ? arg_nodes[i]->to_string() : "null");
+            if (i < arg_nodes.size() - 1) ss << ", ";
+        }
+        ss << "))";
+        return ss.str();
     }
 };
