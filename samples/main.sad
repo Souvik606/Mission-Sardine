@@ -1,22 +1,291 @@
-method div(a, b) {
-    show(a)
-    show(b)
-    risk {
-        when a>b {
-            escape;
-        }
-    }
-    clean {show(a*b)}
-}
+show("=== Conversions ===")
+show(Integer("42"))
+show(Integer(3.9))
+show(String(123))
+show(String([1, 2]))
+show(String({"a": 1}))
 
+show("=== Numbers ===")
+n1 = 12
+n2 = 5
+n3 = 2.5
+show(n1 + n2)
+show(n1 - n2)
+show(n1 * n3)
+show(n1 / n2)
+show(n1 % n2)
+show(n1 // n2)
+show(2 ** -3)
+show(n3 + 1)
+show(n3 == 2.5)
+show(n3 != 2)
+show(n3 < 3)
+show(n3 <= 2.5)
+show(n1 > n2)
+show(n1 >= 12)
+show((n1 > n2) and (n1 == 12))
+show((n1 < n2) or (n1 == 12))
+show(not 0)
+show(not 1)
 
 risk {
-    show([1,2]-[3])
-} trap IllegalOperationError e {
-    show("Caught expected error:"+ e)
+    show(10 / 0)
+} trap DivisionByZeroError e {
+    show(e)
+} clean {
+    show("division by zero clean")
 }
 
+risk {
+    show(10 % 0)
+} trap DivisionByZeroError e {
+    show(e)
+} clean {
+    show("modulus by zero clean")
+}
 
+risk {
+    show(10 // 0)
+} trap DivisionByZeroError e {
+    show(e)
+} clean {
+    show("floor divide by zero clean")
+}
 
-x,y=9,0
-div(x,y)
+risk {
+    show(Integer("abc"))
+} trap RunTimeError e {
+    show(e)
+} clean {
+    show("integer conversion clean")
+}
+
+show("=== Strings ===")
+s1 = "hello"
+s2 = " world"
+show(s1 + s2)
+show(s1 * 3)
+show(s1 * 0)
+show(s1 * -2)
+show(s1 == "hello")
+show(s1 != "HELLO")
+show(s1 < "zebra")
+show(s1 > "aardvark")
+show(s1 <= "hello")
+show(s1 >= "hello")
+show(s1[0])
+show(s1[1])
+show(s1[4])
+s3 = "abc"
+s3[1] = "Z"
+show(s3)
+show(String(789))
+
+risk {
+    show(s1[1.5])
+} trap IllegalOperationError e {
+    show(e)
+} clean {
+    show("string float index clean")
+}
+
+risk {
+    show(s1["a"])
+} trap IllegalOperationError e {
+    show(e)
+} clean {
+    show("string invalid index clean")
+}
+
+risk {
+    show(s1[99])
+} trap IndexOutOfBoundsError e {
+    show(e)
+} clean {
+    show("string out of bounds clean")
+}
+
+risk {
+    s1[0] = "xy"
+} trap IllegalOperationError e {
+    show(e)
+} clean {
+    show("string assign length clean")
+}
+
+risk {
+    s1[0][0] = "x"
+} trap IllegalOperationError e {
+    show(e)
+} clean {
+    show("string nested assign clean")
+}
+
+s="abc"
+risk {
+    show(s["a"])
+} trap {
+    show("generic trap caught string index error")
+} clean {
+    show("generic trap clean")
+}
+
+show("=== Lists ===")
+l1 = [1, 2, 3]
+l2 = ["a", "b"]
+l3 = [[10, 20], [30, 40]]
+show(l1)
+show(l1 + 4)
+show(l1 + 4.5)
+show(l1 + "x")
+show(l1 + l2)
+show(l1 + {"k": 1})
+show(l1 - 1)
+show(l1 * 2)
+show(l1 * 0)
+show([1, 2, 1] / 1)
+show([[1], 2] / [1])
+show(l1 == [1, 2, 3])
+show(l1 != [1, 2, 4])
+ltmp = [1, 2]
+show(ltmp[0])
+show(l3[0][1])
+l3[1][0] = 99
+show(l3)
+lnested = [1, [2, 3]]
+show(lnested[1][0])
+show(lnested[1][1])
+show(String(l3))
+
+risk {
+    show(l1[1.5])
+} trap IllegalOperationError e {
+    show(e)
+} clean {
+    show("list float index clean")
+}
+
+risk {
+    show(l1["a"])
+} trap IllegalOperationError e {
+    show(e)
+} clean {
+    show("list invalid index clean")
+}
+
+risk {
+    show(l1[99])
+} trap IndexOutOfBoundsError e {
+    show(e)
+} clean {
+    show("list out of bounds clean")
+}
+
+risk {
+    show(l1 - 1.5)
+} trap IllegalOperationError e {
+    show(e)
+} clean {
+    show("list subtract float clean")
+}
+
+risk {
+    show(l1 * -2)
+} trap IllegalOperationError e {
+    show(e)
+} clean {
+    show("list negative multiply clean")
+}
+
+risk {
+    show(l1 - -1)
+} trap IndexOutOfBoundsError e {
+    show(e)
+} clean {
+    show("list negative index clean")
+}
+
+risk {
+    show(l1 - {"x": 1})
+} trap IllegalOperationError e {
+    show(e)
+} clean {
+    show("list subtract bad type clean")
+}
+
+show("=== Dicts ===")
+d1 = {"name": "sards"}
+d2 = {1: "one", 1.5: "half", -2: "neg"}
+show(d1["name"])
+show(d2[1])
+show(d2[1.5])
+show(d2[-2])
+d3 = {"a": 1}
+d3["b"] = 2
+show(d3["a"])
+show(d3["b"])
+show(d3 - "a")
+dict_sum_a = {"a": 1} + {"a": 2}
+dict_sum_b = {"a": 1} + {"b": 2}
+dict_nested = {"nested": {"inner": [7, 8, 9]}}
+dict_outer = {"outer": {"inner": [7, 8]}}
+show(dict_sum_a["a"])
+show(dict_sum_b["a"])
+show(dict_sum_b["b"])
+show(dict_nested["nested"]["inner"][2])
+show(dict_outer["outer"]["inner"][1])
+show(String({"a": 1}))
+show(String({"nested": [1, 2]}))
+
+risk {
+    show(d3[[1]])
+} trap DictKeyError e {
+    show(e)
+} clean {
+    show("dict bad index clean")
+}
+
+risk {
+    d3[[1]] = 3
+} trap DictKeyError e {
+    show(e)
+} clean {
+    show("dict bad assign clean")
+}
+
+risk {
+    show(d3["missing"])
+} trap DictKeyError e {
+    show(e)
+} clean {
+    show("dict missing key clean")
+}
+
+risk {
+    show(d3 - [1])
+} trap DictKeyError e {
+    show(e)
+} clean {
+    show("dict subtract bad key clean")
+}
+
+risk {
+    show({[1]: "bad"})
+} trap IllegalOperationError e {
+    show(e)
+} clean {
+    show("dict literal bad key clean")
+}
+
+show("=== Nested Mutation ===")
+copy_list = [[1], [2]]
+copy_list_alias = copy_list
+copy_list_alias[0][0] = 9
+show(copy_list)
+show(copy_list_alias)
+
+copy_dict = {"outer": {"inner": [1, 2]}}
+copy_dict_alias = copy_dict
+copy_dict_alias["outer"]["inner"][1] = 77
+show(copy_dict["outer"]["inner"][1])
+show(copy_dict_alias["outer"]["inner"][1])

@@ -11,7 +11,8 @@ public:
 
     CatchNode(optional<Token> error_type, optional<Token> error_name, shared_ptr<Node> body_node)
         : Node(error_type ? error_type->pos_start.value() : body_node->pos_start, body_node->pos_end),
-          error_type(std::move(error_type)), error_name(std::move(error_name)), body_node(std::move(body_node)) {}
+        error_type(std::move(error_type)), error_name(std::move(error_name)), body_node(std::move(body_node)) {
+    }
 
     [[nodiscard]] string to_string() const override {
         stringstream ss;
@@ -28,7 +29,8 @@ public:
     shared_ptr<Node> body_node;
 
     explicit FinallyNode(shared_ptr<Node> body_node)
-        : Node(body_node->pos_start, body_node->pos_end), body_node(std::move(body_node)) {}
+        : Node(body_node->pos_start, body_node->pos_end), body_node(std::move(body_node)) {
+    }
 
     [[nodiscard]] string to_string() const override {
         stringstream ss;
@@ -44,9 +46,10 @@ public:
     shared_ptr<FinallyNode> clean_node;
 
     TryNode(shared_ptr<Node> body_node, vector<shared_ptr<CatchNode>> trap_nodes, shared_ptr<FinallyNode> clean_node)
-        : Node(body_node->pos_start, 
-               clean_node ? clean_node->pos_end : (!trap_nodes.empty() ? trap_nodes.back()->pos_end : body_node->pos_end)),
-          body_node(std::move(body_node)), trap_nodes(std::move(trap_nodes)), clean_node(std::move(clean_node)) {}
+        : Node(body_node->pos_start,
+            clean_node ? clean_node->pos_end : (!trap_nodes.empty() ? trap_nodes.back()->pos_end : body_node->pos_end)),
+        body_node(std::move(body_node)), trap_nodes(std::move(trap_nodes)), clean_node(std::move(clean_node)) {
+    }
 
     [[nodiscard]] string to_string() const override {
         stringstream ss;

@@ -32,61 +32,61 @@ public:
     Interpreter() {
         visit_methods[typeid(NumberNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_NumberNode(static_pointer_cast<NumberNode>(node), context);
-        };
+            };
         visit_methods[typeid(StringNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_StringNode(static_pointer_cast<StringNode>(node), context);
-        };
+            };
         visit_methods[typeid(ListNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_ListNode(static_pointer_cast<ListNode>(node), context);
-        };
+            };
         visit_methods[typeid(BinaryOperationNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_BinaryOperationNode(static_pointer_cast<BinaryOperationNode>(node), context);
-        };
+            };
         visit_methods[typeid(TernaryOperationNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_TernaryOperationNode(static_pointer_cast<TernaryOperationNode>(node), context);
-        };
+            };
         visit_methods[typeid(UnaryOperationNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_UnaryOperationNode(static_pointer_cast<UnaryOperationNode>(node), context);
-        };
+            };
         visit_methods[typeid(VariableUseNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_VariableUseNode(static_pointer_cast<VariableUseNode>(node), context);
-        };
+            };
         visit_methods[typeid(VariableAssignNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_VariableAssignNode(static_pointer_cast<VariableAssignNode>(node), context);
-        };
+            };
         visit_methods[typeid(IfNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_IfNode(static_pointer_cast<IfNode>(node), context);
-        };
+            };
         visit_methods[typeid(SwitchNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_SwitchNode(static_pointer_cast<SwitchNode>(node), context);
-        };
+            };
         visit_methods[typeid(ForNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_ForNode(static_pointer_cast<ForNode>(node), context);
-        };
+            };
         visit_methods[typeid(WhileNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_WhileNode(static_pointer_cast<WhileNode>(node), context);
-        };
+            };
         visit_methods[typeid(FunctionDefinitionNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_FunctionDefinitionNode(static_pointer_cast<FunctionDefinitionNode>(node), context);
-        };
+            };
         visit_methods[typeid(FunctionCallNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_FunctionCallNode(static_pointer_cast<FunctionCallNode>(node), context);
-        };
+            };
         visit_methods[typeid(ReturnNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_ReturnNode(static_pointer_cast<ReturnNode>(node), context);
-        };
+            };
         visit_methods[typeid(ContinueNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_ContinueNode(static_pointer_cast<ContinueNode>(node), context);
-        };
+            };
         visit_methods[typeid(BreakNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_BreakNode(static_pointer_cast<BreakNode>(node), context);
-        };
+            };
         visit_methods[typeid(DictNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_DictNode(static_pointer_cast<DictNode>(node), context);
-        };
+            };
         visit_methods[typeid(TryNode)] = [this](const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
             return this->visit_TryNode(static_pointer_cast<TryNode>(node), context);
-        };
+            };
     }
 
     RunTimeResult visit(const shared_ptr<Node>& node, const shared_ptr<Context>& context) {
@@ -128,7 +128,8 @@ private:
 
         if (node->token.value.type() == typeid(string)) {
             str = make_shared<String>(any_cast<string>(node->token.value));
-        } else {
+        }
+        else {
             return res.failure(RunTimeError(node->pos_start.value_or(Position()), node->pos_end.value_or(Position()), "Invalid value in string token", context));
         }
 
@@ -173,9 +174,11 @@ private:
         shared_ptr<DataType> return_value;
         if (auto func_to_call = dynamic_pointer_cast<Function>(copied_call_value)) {
             return_value = res.register_result(func_to_call->execute(args, *this));
-        } else if (auto builtin_to_call = dynamic_pointer_cast<BuiltInFunction>(copied_call_value)) {
+        }
+        else if (auto builtin_to_call = dynamic_pointer_cast<BuiltInFunction>(copied_call_value)) {
             return_value = res.register_result(builtin_to_call->execute(args));
-        } else {
+        }
+        else {
             return res.failure(RunTimeError(node->pos_start.value_or(Position()), node->pos_end.value_or(Position()), "Value is not a function", context));
         }
 
@@ -236,7 +239,8 @@ private:
         if (node->step_value_node) {
             step_value = res.register_result(visit(node->step_value_node, context));
             if (res.should_return()) return res;
-        } else {
+        }
+        else {
             step_value = std::static_pointer_cast<DataType>(make_shared<Number>(1LL));
         }
 
@@ -259,7 +263,8 @@ private:
         while (condition()) {
             if (holds_alternative<long long>(start_num->value) && holds_alternative<long long>(step_num->value)) {
                 context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(make_shared<Number>((long long)i_val)));
-            } else {
+            }
+            else {
                 context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(make_shared<Number>(i_val)));
             }
 
@@ -328,7 +333,8 @@ private:
 
             if (c->return_null) {
                 elements.push_back(std::static_pointer_cast<DataType>(make_shared<Number>(0LL)));
-            } else {
+            }
+            else {
                 elements.push_back(body_val);
             }
 
@@ -399,7 +405,8 @@ private:
             auto copy_val = value->copy();
             copy_val->set_pos(node->pos_start, node->pos_end).set_context(context);
             return res.success(copy_val);
-        } else {
+        }
+        else {
             auto [indexed_val, error] = value->getByIndex(indexes);
             if (error) return res.failure(*error);
 
@@ -443,7 +450,8 @@ private:
 
                 context->symbol_table->set(var_name, new_list);
                 last_result = new_list;
-            } else {
+            }
+            else {
                 context->symbol_table->set(var_name, value);
                 last_result = value;
             }
@@ -458,9 +466,11 @@ private:
 
         if (node->token.value.type() == typeid(long long)) {
             number = make_shared<Number>(any_cast<long long>(node->token.value));
-        } else if (node->token.value.type() == typeid(double)) {
+        }
+        else if (node->token.value.type() == typeid(double)) {
             number = make_shared<Number>(any_cast<double>(node->token.value));
-        } else {
+        }
+        else {
             return res.failure(RunTimeError(node->pos_start.value_or(Position()), node->pos_end.value_or(Position()), "Invalid number format", context));
         }
 
@@ -533,7 +543,8 @@ private:
         if (cond && cond->is_truthy()) {
             result = res.register_result(visit(node->true_node, context));
             if (res.should_return()) return res;
-        } else {
+        }
+        else {
             result = res.register_result(visit(node->false_node, context));
             if (res.should_return()) return res;
         }
@@ -552,7 +563,8 @@ private:
 
         if (node->operator_token.type == T_MINUS) {
             tie(result, error) = number->multiply(std::static_pointer_cast<DataType>(make_shared<Number>(-1LL)));
-        } else if (node->operator_token.type == T_KEYWORD && any_cast<string>(node->operator_token.value) == "not") {
+        }
+        else if (node->operator_token.type == T_KEYWORD && any_cast<string>(node->operator_token.value) == "not") {
             tie(result, error) = number->not_by();
         }
 
@@ -578,13 +590,13 @@ private:
             auto value = res.register_result(visit(pair.second, context));
             if (res.should_return()) return res;
 
-            elements.push_back({key, value});
+            elements.push_back({ key, value });
         }
 
         auto dict_val = make_shared<Dict>(elements);
         dict_val->set_context(context);
         dict_val->set_pos(node->pos_start.value_or(Position{}), node->pos_end.value_or(Position{}));
-        
+
         return res.success(dict_val);
     }
 
@@ -608,11 +620,13 @@ private:
             bool matches = false;
             if (!trap_node->error_type) {
                 matches = true;
-            } else {
+            }
+            else {
                 string caught_err = any_cast<string>(trap_node->error_type->value);
                 if (caught_err == "RunTimeError" || caught_err == error.error_name) {
                     matches = true;
-                } else if (find(ERROR_TYPES.begin(), ERROR_TYPES.end(), caught_err) == ERROR_TYPES.end()) {
+                }
+                else if (find(ERROR_TYPES.begin(), ERROR_TYPES.end(), caught_err) == ERROR_TYPES.end()) {
                     return res.failure(InvalidErrorTypeError(trap_node->pos_start.value_or(Position{}), trap_node->pos_end.value_or(Position{}), "'" + caught_err + "' is not a valid error type", context));
                 }
             }

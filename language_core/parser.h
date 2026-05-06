@@ -26,7 +26,8 @@ public:
     vector<tuple<shared_ptr<Node>, shared_ptr<Node>, bool>> cases;
     optional<pair<shared_ptr<Node>, bool>> else_case;
     ElifElseResultNode(vector<tuple<shared_ptr<Node>, shared_ptr<Node>, bool>> cases, optional<pair<shared_ptr<Node>, bool>> else_case)
-        : Node(Position(), Position()), cases(std::move(cases)), else_case(std::move(else_case)) {}
+        : Node(Position(), Position()), cases(std::move(cases)), else_case(std::move(else_case)) {
+    }
     [[nodiscard]] std::string to_string() const override { return ""; }
 };
 
@@ -59,7 +60,8 @@ private:
     void update_current_tok() {
         if (tok_index >= 0 && tok_index < static_cast<int>(tokens.size())) {
             current_tok = make_optional(tokens[tok_index]);
-        } else {
+        }
+        else {
             current_tok = nullopt;
         }
     }
@@ -121,7 +123,8 @@ private:
                 auto stmt = res.register_node(singleline());
                 if (res.error) return res;
                 statements_list.push_back(stmt);
-            } else {
+            }
+            else {
                 break;
             }
         }
@@ -213,7 +216,8 @@ private:
         if (current_tok.has_value() && current_tok->type == T_RPAREN3) {
             pos_end = current_tok->pos_end;
             res.register_advancement(); advance();
-        } else {
+        }
+        else {
             element_nodes.push_back(res.register_node(expression()));
             if (res.error) return res;
 
@@ -262,7 +266,8 @@ private:
                     "Expected '('"
                 ));
             }
-        } else {
+        }
+        else {
             if (!current_tok.has_value() || current_tok->type != T_LPAREN) {
                 return res.failure(InvalidSyntaxError(
                     current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
@@ -298,7 +303,8 @@ private:
                     "Expected ',' or ')'"
                 ));
             }
-        } else {
+        }
+        else {
             if (!current_tok.has_value() || current_tok->type != T_RPAREN) {
                 return res.failure(InvalidSyntaxError(
                     current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
@@ -324,20 +330,21 @@ private:
 
         while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF) {
             if (current_tok->type == T_KEYWORD &&
-               (any_cast<string>(current_tok->value) == "escape" ||
-                any_cast<string>(current_tok->value) == "proceed" ||
-                any_cast<string>(current_tok->value) == "yield")) {
+                (any_cast<string>(current_tok->value) == "escape" ||
+                    any_cast<string>(current_tok->value) == "proceed" ||
+                    any_cast<string>(current_tok->value) == "yield")) {
                 auto jump_node = res.register_node(jump_statements());
                 if (res.error) return res;
                 body_nodes.push_back(jump_node);
-            } else {
+            }
+            else {
                 auto multiline_node = res.try_register(multiline());
                 if (res.error) return res;
                 if (!multiline_node) {
                     bool is_jump = current_tok.has_value() && current_tok->type == T_KEYWORD &&
-                                   (any_cast<string>(current_tok->value) == "escape" ||
-                                    any_cast<string>(current_tok->value) == "proceed" ||
-                                    any_cast<string>(current_tok->value) == "yield");
+                        (any_cast<string>(current_tok->value) == "escape" ||
+                            any_cast<string>(current_tok->value) == "proceed" ||
+                            any_cast<string>(current_tok->value) == "yield");
                     if (!is_jump && current_tok.has_value() && current_tok->type != T_RPAREN2) {
                         return res.failure(InvalidSyntaxError(
                             current_tok->pos_start.value_or(Position()),
@@ -377,7 +384,8 @@ private:
             call_node = res.register_node(res.success(make_shared<VariableUseNode>(current_tok.value())));
             if (res.error) return res;
             res.register_advancement(); advance();
-        } else {
+        }
+        else {
             res.failure(InvalidSyntaxError(
                 current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
                 current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
@@ -399,7 +407,8 @@ private:
 
         if (current_tok.has_value() && current_tok->type == T_RPAREN) {
             res.register_advancement(); advance();
-        } else {
+        }
+        else {
             arg_nodes.push_back(res.register_node(expression()));
             if (res.error) return res;
 
@@ -458,7 +467,7 @@ private:
         int count = 0;
 
         while (current_tok.has_value() && current_tok->type == T_KEYWORD &&
-              (any_cast<string>(current_tok->value) == "choice" || any_cast<string>(current_tok->value) == "fallback")) {
+            (any_cast<string>(current_tok->value) == "choice" || any_cast<string>(current_tok->value) == "fallback")) {
 
             if (any_cast<string>(current_tok->value) == "choice") {
                 auto case_node = res.register_node(case_statement());
@@ -467,7 +476,8 @@ private:
                 while (current_tok.has_value() && current_tok->type == T_NEWLINE) {
                     res.register_advancement(); advance();
                 }
-            } else {
+            }
+            else {
                 if (found_default) {
                     return res.failure(InvalidSyntaxError(
                         current_tok->pos_start.value_or(Position()),
@@ -551,10 +561,12 @@ private:
                 ));
             }
             res.register_advancement(); advance();
-        } else {
+        }
+        else {
             if (current_tok.has_value() && current_tok->type == T_IDENTIFIER && peek().has_value() && peek()->type == T_EQ) {
                 body_node = res.register_node(statements());
-            } else {
+            }
+            else {
                 body_node = res.register_node(expression());
             }
             if (res.error) return res;
@@ -613,10 +625,12 @@ private:
                 ));
             }
             res.register_advancement(); advance();
-        } else {
+        }
+        else {
             if (current_tok.has_value() && current_tok->type == T_IDENTIFIER && peek().has_value() && peek()->type == T_EQ) {
                 body_node = res.register_node(statements());
-            } else {
+            }
+            else {
                 body_node = res.register_node(expression());
             }
             if (res.error) return res;
@@ -663,20 +677,21 @@ private:
 
         while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF) {
             if (current_tok->type == T_KEYWORD &&
-               (any_cast<string>(current_tok->value) == "escape" ||
-                any_cast<string>(current_tok->value) == "proceed" ||
-                any_cast<string>(current_tok->value) == "yield")) {
+                (any_cast<string>(current_tok->value) == "escape" ||
+                    any_cast<string>(current_tok->value) == "proceed" ||
+                    any_cast<string>(current_tok->value) == "yield")) {
                 auto jump_node = res.register_node(jump_statements());
                 if (res.error) return res;
                 body_nodes.push_back(jump_node);
-            } else {
+            }
+            else {
                 auto multiline_node = res.try_register(multiline());
                 if (res.error) return res;
                 if (!multiline_node) {
                     bool is_jump = current_tok.has_value() && current_tok->type == T_KEYWORD &&
-                                   (any_cast<string>(current_tok->value) == "escape" ||
-                                    any_cast<string>(current_tok->value) == "proceed" ||
-                                    any_cast<string>(current_tok->value) == "yield");
+                        (any_cast<string>(current_tok->value) == "escape" ||
+                            any_cast<string>(current_tok->value) == "proceed" ||
+                            any_cast<string>(current_tok->value) == "yield");
                     if (!is_jump && current_tok.has_value() && current_tok->type != T_RPAREN2) {
                         return res.failure(InvalidSyntaxError(
                             current_tok->pos_start.value_or(Position()),
@@ -774,20 +789,21 @@ private:
 
         while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF) {
             if (current_tok->type == T_KEYWORD &&
-               (any_cast<string>(current_tok->value) == "escape" ||
-                any_cast<string>(current_tok->value) == "proceed" ||
-                any_cast<string>(current_tok->value) == "yield")) {
+                (any_cast<string>(current_tok->value) == "escape" ||
+                    any_cast<string>(current_tok->value) == "proceed" ||
+                    any_cast<string>(current_tok->value) == "yield")) {
                 auto jump_node = res.register_node(jump_statements());
                 if (res.error) return res;
                 body_nodes.push_back(jump_node);
-            } else {
+            }
+            else {
                 auto multiline_node = res.try_register(multiline());
                 if (res.error) return res;
                 if (!multiline_node) {
                     bool is_jump = current_tok.has_value() && current_tok->type == T_KEYWORD &&
-                                   (any_cast<string>(current_tok->value) == "escape" ||
-                                    any_cast<string>(current_tok->value) == "proceed" ||
-                                    any_cast<string>(current_tok->value) == "yield");
+                        (any_cast<string>(current_tok->value) == "escape" ||
+                            any_cast<string>(current_tok->value) == "proceed" ||
+                            any_cast<string>(current_tok->value) == "yield");
                     if (!is_jump && current_tok.has_value() && current_tok->type != T_RPAREN2) {
                         return res.failure(InvalidSyntaxError(
                             current_tok->pos_start.value_or(Position()),
@@ -849,20 +865,21 @@ private:
 
         while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF) {
             if (current_tok->type == T_KEYWORD &&
-               (any_cast<string>(current_tok->value) == "escape" ||
-                any_cast<string>(current_tok->value) == "proceed" ||
-                any_cast<string>(current_tok->value) == "yield")) {
+                (any_cast<string>(current_tok->value) == "escape" ||
+                    any_cast<string>(current_tok->value) == "proceed" ||
+                    any_cast<string>(current_tok->value) == "yield")) {
                 auto jump_node = res.register_node(jump_statements());
                 if (res.error) return res;
                 body_nodes.push_back(jump_node);
-            } else {
+            }
+            else {
                 auto multiline_node = res.try_register(multiline());
                 if (res.error) return res;
                 if (!multiline_node) {
                     bool is_jump = current_tok.has_value() && current_tok->type == T_KEYWORD &&
-                                   (any_cast<string>(current_tok->value) == "escape" ||
-                                    any_cast<string>(current_tok->value) == "proceed" ||
-                                    any_cast<string>(current_tok->value) == "yield");
+                        (any_cast<string>(current_tok->value) == "escape" ||
+                            any_cast<string>(current_tok->value) == "proceed" ||
+                            any_cast<string>(current_tok->value) == "yield");
                     if (!is_jump && current_tok.has_value() && current_tok->type != T_RPAREN2) {
                         return res.failure(InvalidSyntaxError(
                             current_tok->pos_start.value_or(Position()),
@@ -920,7 +937,8 @@ private:
                 cases = elif_result->cases;
                 else_case = elif_result->else_case;
             }
-        } else if (current_tok.has_value() && current_tok->type == T_KEYWORD && any_cast<string>(current_tok->value) == "otherwise") {
+        }
+        else if (current_tok.has_value() && current_tok->type == T_KEYWORD && any_cast<string>(current_tok->value) == "otherwise") {
             auto else_node = res.register_node(else_expression());
             if (res.error) return res;
             if (else_node) {
@@ -962,20 +980,21 @@ private:
 
         while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF) {
             if (current_tok->type == T_KEYWORD &&
-               (any_cast<string>(current_tok->value) == "escape" ||
-                any_cast<string>(current_tok->value) == "proceed" ||
-                any_cast<string>(current_tok->value) == "yield")) {
+                (any_cast<string>(current_tok->value) == "escape" ||
+                    any_cast<string>(current_tok->value) == "proceed" ||
+                    any_cast<string>(current_tok->value) == "yield")) {
                 auto jump_node = res.register_node(jump_statements());
                 if (res.error) return res;
                 body_nodes.push_back(jump_node);
-            } else {
+            }
+            else {
                 auto multiline_node = res.try_register(multiline());
                 if (res.error) return res;
                 if (!multiline_node) {
                     bool is_jump = current_tok.has_value() && current_tok->type == T_KEYWORD &&
-                                   (any_cast<string>(current_tok->value) == "escape" ||
-                                    any_cast<string>(current_tok->value) == "proceed" ||
-                                    any_cast<string>(current_tok->value) == "yield");
+                        (any_cast<string>(current_tok->value) == "escape" ||
+                            any_cast<string>(current_tok->value) == "proceed" ||
+                            any_cast<string>(current_tok->value) == "yield");
                     if (!is_jump && current_tok.has_value() && current_tok->type != T_RPAREN2) {
                         return res.failure(InvalidSyntaxError(
                             current_tok->pos_start.value_or(Position()),
@@ -1037,20 +1056,21 @@ private:
 
             while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF) {
                 if (current_tok->type == T_KEYWORD &&
-                   (any_cast<string>(current_tok->value) == "escape" ||
-                    any_cast<string>(current_tok->value) == "proceed" ||
-                    any_cast<string>(current_tok->value) == "yield")) {
+                    (any_cast<string>(current_tok->value) == "escape" ||
+                        any_cast<string>(current_tok->value) == "proceed" ||
+                        any_cast<string>(current_tok->value) == "yield")) {
                     auto jump_node = res.register_node(jump_statements());
                     if (res.error) return res;
                     body_nodes.push_back(jump_node);
-                } else {
+                }
+                else {
                     auto multiline_node = res.try_register(multiline());
                     if (res.error) return res;
                     if (!multiline_node) {
                         bool is_jump = current_tok.has_value() && current_tok->type == T_KEYWORD &&
-                                       (any_cast<string>(current_tok->value) == "escape" ||
-                                        any_cast<string>(current_tok->value) == "proceed" ||
-                                        any_cast<string>(current_tok->value) == "yield");
+                            (any_cast<string>(current_tok->value) == "escape" ||
+                                any_cast<string>(current_tok->value) == "proceed" ||
+                                any_cast<string>(current_tok->value) == "yield");
                         if (!is_jump && current_tok.has_value() && current_tok->type != T_RPAREN2) {
                             return res.failure(InvalidSyntaxError(
                                 current_tok->pos_start.value_or(Position()),
@@ -1129,7 +1149,8 @@ private:
 
         if (current_tok.has_value() && current_tok->type == T_IDENTIFIER && peek().has_value() && peek()->type == T_EQ) {
             comp_node = res.register_node(statements());
-        } else {
+        }
+        else {
             comp_node = res.register_node(logical_expression());
         }
 
@@ -1227,7 +1248,7 @@ private:
             if (res.error) return res;
             return res.success(list_expr);
         }
-        
+
         if (token.type == T_LPAREN2) {
             auto dict_expr = res.register_node(dict_expression());
             if (res.error) return res;
@@ -1248,7 +1269,7 @@ private:
         if (res.error) return res;
 
         while (current_tok.has_value() && (current_tok->type == T_MUL || current_tok->type == T_DIVIDE ||
-               current_tok->type == T_MODULUS || current_tok->type == T_FLOOR)) {
+            current_tok->type == T_MODULUS || current_tok->type == T_FLOOR)) {
             Token op_token = current_tok.value();
             res.register_advancement(); advance();
             auto right_node = res.register_node(unary());
@@ -1341,8 +1362,8 @@ private:
 
         if (!current_tok.has_value() || current_tok->type != T_KEYWORD ||
             (any_cast<string>(current_tok->value) != "proceed" &&
-             any_cast<string>(current_tok->value) != "escape" &&
-             any_cast<string>(current_tok->value) != "yield")) {
+                any_cast<string>(current_tok->value) != "escape" &&
+                any_cast<string>(current_tok->value) != "yield")) {
             return res.failure(InvalidSyntaxError(
                 current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
                 current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
@@ -1401,7 +1422,7 @@ private:
         if (res.error) return res;
 
         while (current_tok.has_value() && current_tok->type == T_KEYWORD &&
-              (any_cast<string>(current_tok->value) == "and" || any_cast<string>(current_tok->value) == "or")) {
+            (any_cast<string>(current_tok->value) == "and" || any_cast<string>(current_tok->value) == "or")) {
             Token operator_tok = current_tok.value();
             res.register_advancement(); advance();
 
@@ -1438,8 +1459,8 @@ private:
         if (res.error) return res;
 
         while (current_tok.has_value() && (current_tok->type == T_EE || current_tok->type == T_NEQ ||
-               current_tok->type == T_LT || current_tok->type == T_GT ||
-               current_tok->type == T_GTE || current_tok->type == T_LTE)) {
+            current_tok->type == T_LT || current_tok->type == T_GT ||
+            current_tok->type == T_GTE || current_tok->type == T_LTE)) {
             Token operator_tok = current_tok.value();
             res.register_advancement(); advance();
             auto right_node = res.register_node(arith_expression());
@@ -1494,7 +1515,8 @@ private:
 
         if (current_tok.has_value() && current_tok->type == T_RPAREN2) {
             res.register_advancement(); advance();
-        } else {
+        }
+        else {
             auto key_node = res.register_node(expression());
             if (res.error) return res;
 
@@ -1506,7 +1528,7 @@ private:
             auto value_node = res.register_node(expression());
             if (res.error) return res;
 
-            keyval_nodes.push_back({key_node, value_node});
+            keyval_nodes.push_back({ key_node, value_node });
 
             while (current_tok.has_value() && current_tok->type == T_COMMA) {
                 res.register_advancement(); advance();
@@ -1522,7 +1544,7 @@ private:
                 value_node = res.register_node(expression());
                 if (res.error) return res;
 
-                keyval_nodes.push_back({key_node, value_node});
+                keyval_nodes.push_back({ key_node, value_node });
             }
 
             if (!current_tok.has_value() || current_tok->type != T_RPAREN2) {
@@ -1541,20 +1563,21 @@ private:
 
         while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF) {
             if (current_tok->type == T_KEYWORD &&
-               (any_cast<string>(current_tok->value) == "escape" ||
-                any_cast<string>(current_tok->value) == "proceed" ||
-                any_cast<string>(current_tok->value) == "yield")) {
+                (any_cast<string>(current_tok->value) == "escape" ||
+                    any_cast<string>(current_tok->value) == "proceed" ||
+                    any_cast<string>(current_tok->value) == "yield")) {
                 auto jump_node = res.register_node(jump_statements());
                 if (res.error) return res;
                 body_nodes.push_back(jump_node);
-            } else {
+            }
+            else {
                 auto multiline_node = res.try_register(multiline());
                 if (res.error) return res;
                 if (!multiline_node) {
                     bool is_jump = current_tok.has_value() && current_tok->type == T_KEYWORD &&
-                                   (any_cast<string>(current_tok->value) == "escape" ||
-                                    any_cast<string>(current_tok->value) == "proceed" ||
-                                    any_cast<string>(current_tok->value) == "yield");
+                        (any_cast<string>(current_tok->value) == "escape" ||
+                            any_cast<string>(current_tok->value) == "proceed" ||
+                            any_cast<string>(current_tok->value) == "yield");
                     if (!is_jump && current_tok.has_value() && current_tok->type != T_RPAREN2) {
                         return res.failure(InvalidSyntaxError(
                             current_tok->pos_start.value_or(Position()),
@@ -1672,7 +1695,7 @@ private:
         while (current_tok.has_value() && current_tok->type == T_KEYWORD && any_cast<string>(current_tok->value) == "trap") {
             auto trap_node = res.register_node(catch_expression());
             if (res.error) return res;
-            
+
             trap_nodes.push_back(dynamic_pointer_cast<CatchNode>(trap_node));
 
             while (current_tok.has_value() && current_tok->type == T_NEWLINE) {

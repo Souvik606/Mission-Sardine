@@ -8,7 +8,8 @@ public:
     vector<pair<shared_ptr<Node>, shared_ptr<Node>>> keyval_nodes;
 
     DictNode(vector<pair<shared_ptr<Node>, shared_ptr<Node>>> keyval_nodes, Position pos_start, Position pos_end)
-        : Node(std::move(pos_start), std::move(pos_end)), keyval_nodes(std::move(keyval_nodes)) {}
+        : Node(std::move(pos_start), std::move(pos_end)), keyval_nodes(std::move(keyval_nodes)) {
+    }
 
     [[nodiscard]] string to_string() const override {
         stringstream ss;
