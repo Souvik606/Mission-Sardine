@@ -183,6 +183,11 @@ pair<shared_ptr<DataType>, optional<Error>> run(const string& filename, const st
         return { nullptr, ast.error };
     }
 
+    // Print AST for debugging
+    // cout << "--- AST ---" << endl;
+    // if (ast.node) cout << ast.node->to_string() << endl;
+    // cout << "-----------" << endl;
+
     Interpreter interpreter;
     auto context = make_shared<Context>("<program>");
     context->symbol_table = global_symbol_table;

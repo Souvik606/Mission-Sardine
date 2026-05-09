@@ -228,17 +228,25 @@ public:
     }
 
     OperationResult assignIndex(const vector<shared_ptr<DataType>>& indexes, const shared_ptr<DataType>& val) const override {
+        if (indexes.empty()) return { nullptr, IndexOutOfBoundsError(pos_start.value_or(Position{}), pos_end.value_or(Position{}), "Index out of bounds", context) };
+
         auto new_dict = dynamic_pointer_cast<Dict>(copy());
-        shared_ptr<DataType> temp = new_dict;
+        shared_ptr<DataType> current = new_dict;
 
         try {
-            for (size_t i = 0; i < indexes.size() - 1; ++i) {
+            vector<shared_ptr<DataType>> parent_chain;
+            vector<shared_ptr<DataType>> parent_indexes;
+
+            for (size_t i = 0; i + 1 < indexes.size(); ++i) {
+                parent_chain.push_back(current);
+                parent_indexes.push_back(indexes[i]);
+
                 const auto& idx = indexes[i];
-                if (const auto dict_temp = dynamic_cast<Dict*>(temp.get())) {
+                if (const auto dict_temp = dynamic_cast<Dict*>(current.get())) {
                     if (dynamic_cast<const Number*>(idx.get()) || dynamic_cast<const String*>(idx.get())) {
                         string key = get_dict_key(idx);
                         if (dict_temp->elements.find(key) != dict_temp->elements.end()) {
-                            temp = dict_temp->elements[key];
+                            current = dict_temp->elements[key];
                         }
                         else {
                             return { nullptr, DictKeyError(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Key does not exist", context) };
@@ -251,10 +259,10 @@ public:
                 else {
                     auto num_idx = dynamic_cast<const Number*>(idx.get());
                     if (num_idx && holds_alternative<long long>(num_idx->value)) {
-                        if (const auto list_temp = dynamic_cast<List*>(temp.get())) {
-                            temp = list_temp->elements.at(get<long long>(num_idx->value));
+                        if (const auto list_temp = dynamic_cast<List*>(current.get())) {
+                            current = list_temp->elements.at(get<long long>(num_idx->value));
                         }
-                        else if (dynamic_cast<String*>(temp.get())) {
+                        else if (dynamic_cast<String*>(current.get())) {
                             return { nullptr, RunTimeError(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Can't assign inside string beyond one level", context, "RunTimeError") };
                         }
                         else {
@@ -267,59 +275,40 @@ public:
                 }
             }
 
+            shared_ptr<DataType> updated_current;
+            optional<RunTimeError> leaf_error;
             auto last_idx = indexes.back();
 
-            if (const auto dict_temp = dynamic_cast<Dict*>(temp.get())) {
+            if (const auto dict_temp = dynamic_cast<Dict*>(current.get())) {
+                updated_current = dict_temp->copy();
                 if (dynamic_cast<const Number*>(last_idx.get()) || dynamic_cast<const String*>(last_idx.get())) {
                     string key = get_dict_key(last_idx);
-                    dict_temp->elements[key] = val;
-                    return { new_dict, nullopt };
+                    dynamic_pointer_cast<Dict>(updated_current)->elements[key] = val;
                 }
-                return { nullptr, DictKeyError(last_idx->pos_start.value_or(Position{}), last_idx->pos_end.value_or(Position{}), "Dictionary keys must be numbers or strings", context) };
+                else {
+                    return { nullptr, DictKeyError(last_idx->pos_start.value_or(Position{}), last_idx->pos_end.value_or(Position{}), "Dictionary keys must be numbers or strings", context) };
+                }
             }
-
-            auto num_last_idx = dynamic_cast<const Number*>(last_idx.get());
-            if (!num_last_idx || !holds_alternative<long long>(num_last_idx->value)) {
-                return { nullptr, RunTimeError(last_idx->pos_start.value_or(Position{}), last_idx->pos_end.value_or(Position{}), "Invalid Index Type", context) };
+            else if (dynamic_cast<List*>(current.get())) {
+                tie(updated_current, leaf_error) = current->assignIndex({ last_idx }, val);
             }
-
-            if (const auto list_temp = dynamic_cast<List*>(temp.get())) {
-                list_temp->elements.at(get<long long>(num_last_idx->value)) = val;
-                return { new_dict, nullopt };
-            }
-            else if (const auto str_temp = dynamic_cast<String*>(temp.get())) {
-                auto val_str = dynamic_cast<const String*>(val.get());
-                if (!val_str || val_str->value.length() != 1) {
-                    return { nullptr, RunTimeError(val->pos_start.value_or(Position{}), val->pos_end.value_or(Position{}), "Assigned value must be a single character string", context, "RunTimeError") };
-                }
-
-                string s = str_temp->value;
-                s.at(get<long long>(num_last_idx->value)) = val_str->value[0];
-                auto replaced = make_shared<String>(s);
-                replaced->set_context(context);
-
-                shared_ptr<DataType> parent = new_dict;
-                for (size_t i = 0; i < indexes.size() - 2; ++i) {
-                    if (auto p_dict = dynamic_cast<Dict*>(parent.get())) {
-                        parent = p_dict->elements[get_dict_key(indexes[i])];
-                    }
-                    else if (auto p_list = dynamic_cast<List*>(parent.get())) {
-                        parent = p_list->elements.at(get<long long>(dynamic_cast<const Number*>(indexes[i].get())->value));
-                    }
-                }
-
-                auto target_idx = indexes[indexes.size() - 2];
-                if (auto p_dict = dynamic_cast<Dict*>(parent.get())) {
-                    p_dict->elements[get_dict_key(target_idx)] = replaced;
-                }
-                else if (auto p_list = dynamic_cast<List*>(parent.get())) {
-                    p_list->elements.at(get<long long>(dynamic_cast<const Number*>(target_idx.get())->value)) = replaced;
-                }
-                return { new_dict, nullopt };
+            else if (dynamic_cast<String*>(current.get())) {
+                tie(updated_current, leaf_error) = current->assignIndex({ last_idx }, val);
             }
             else {
                 return { nullptr, RunTimeError(last_idx->pos_start.value_or(Position{}), last_idx->pos_end.value_or(Position{}), "Can't index a data type which is not iterable", context, "RunTimeError") };
             }
+
+            if (leaf_error) return { nullptr, leaf_error };
+
+            shared_ptr<DataType> rebuilt = updated_current;
+            for (size_t i = parent_chain.size(); i-- > 0;) {
+                auto [updated_parent, error] = parent_chain[i]->assignIndex({ parent_indexes[i] }, rebuilt);
+                if (error) return { nullptr, error };
+                rebuilt = updated_parent;
+            }
+
+            return { rebuilt, nullopt };
         }
         catch (const out_of_range&) {
             auto bad_idx = indexes.back();
