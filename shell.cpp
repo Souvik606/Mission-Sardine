@@ -163,6 +163,94 @@ RunTimeResult builtin_size(const vector<shared_ptr<DataType>>& args) {
     ));
 }
 
+RunTimeResult builtin_range(const vector<shared_ptr<DataType>>& args) {
+    if (args.size() != 1) {
+        return RunTimeResult().failure(RunTimeError(
+            Position(), Position(),
+            "range() takes exactly 1 argument (got " + std::to_string(args.size()) + ")",
+            nullptr
+        ));
+    }
+    const auto num = dynamic_pointer_cast<Number>(args[0]);
+    if (!num || !holds_alternative<long long>(num->value)) {
+        return RunTimeResult().failure(RunTimeError(
+            args[0]->pos_start.value_or(Position()), args[0]->pos_end.value_or(Position()),
+            "range() argument must be an integer",
+            args[0]->context
+        ));
+    }
+    long long n = get<long long>(num->value);
+    vector<shared_ptr<DataType>> elems;
+    elems.reserve(static_cast<size_t>(n > 0 ? n : 0));
+    for (long long i = 0; i < n; ++i)
+        elems.push_back(make_shared<Number>(i));
+    return RunTimeResult().success(make_shared<List>(std::move(elems)));
+}
+
+RunTimeResult builtin_copy(const vector<shared_ptr<DataType>>& args) {
+    if (args.size() != 1) {
+        return RunTimeResult().failure(RunTimeError(
+            Position(), Position(),
+            "copy() takes exactly 1 argument (got " + std::to_string(args.size()) + ")",
+            nullptr
+        ));
+    }
+    const auto lst = dynamic_pointer_cast<List>(args[0]);
+    if (!lst) {
+        return RunTimeResult().failure(RunTimeError(
+            args[0]->pos_start.value_or(Position()), args[0]->pos_end.value_or(Position()),
+            "copy() argument must be a List",
+            args[0]->context
+        ));
+    }
+    
+    auto new_list = make_shared<List>(lst->elements);
+    new_list->set_context(lst->context);
+    new_list->set_pos(lst->pos_start, lst->pos_end);
+    return RunTimeResult().success(new_list);
+}
+
+RunTimeResult builtin_reverse(const vector<shared_ptr<DataType>>& args) {
+    if (args.size() != 3) {
+        return RunTimeResult().failure(RunTimeError(
+            Position(), Position(),
+            "reverse() takes exactly 3 arguments (got " + std::to_string(args.size()) + ")",
+            nullptr
+        ));
+    }
+    const auto lst = dynamic_pointer_cast<List>(args[0]);
+    const auto s   = dynamic_pointer_cast<Number>(args[1]);
+    const auto e   = dynamic_pointer_cast<Number>(args[2]);
+    if (!lst || !s || !e ||
+        !holds_alternative<long long>(s->value) ||
+        !holds_alternative<long long>(e->value)) {
+        return RunTimeResult().failure(RunTimeError(
+            Position(), Position(),
+            "reverse() expects (List, int, int)",
+            nullptr
+        ));
+    }
+    
+    auto new_list = make_shared<List>(lst->elements);
+    new_list->set_context(lst->context);
+    new_list->set_pos(lst->pos_start, lst->pos_end);
+    long long lo = get<long long>(s->value);
+    long long hi = get<long long>(e->value);
+    long long sz = static_cast<long long>(new_list->elements.size());
+    if (lo < 0 || hi >= sz) {
+        return RunTimeResult().failure(RunTimeError(
+            Position(), Position(),
+            "reverse() index out of bounds",
+            nullptr
+        ));
+    }
+    while (lo < hi) {
+        std::swap(new_list->elements[lo], new_list->elements[hi]);
+        ++lo; --hi;
+    }
+    return RunTimeResult().success(new_list);
+}
+
 pair<shared_ptr<DataType>, optional<Error>> run(const string& filename, const string& text) {
     Lexer lexer(filename, text);
     auto [tokens, lexer_error] = lexer.enumerate_tokens();
@@ -234,7 +322,10 @@ int main() {
     global_symbol_table->set("type", make_shared<BuiltInFunction>("type", builtin_type));
     global_symbol_table->set("Integer", make_shared<BuiltInFunction>("Integer", builtin_integer));
     global_symbol_table->set("String", make_shared<BuiltInFunction>("String", builtin_string));
-    global_symbol_table->set("size", make_shared<BuiltInFunction>("size", builtin_size));
+    global_symbol_table->set("size",    make_shared<BuiltInFunction>("size",    builtin_size));
+    global_symbol_table->set("range",   make_shared<BuiltInFunction>("range",   builtin_range));
+    global_symbol_table->set("copy",    make_shared<BuiltInFunction>("copy",    builtin_copy));
+    global_symbol_table->set("reverse", make_shared<BuiltInFunction>("reverse", builtin_reverse));
 
     string choice;
     cout << "Enter 0 for REPL mode and 1 for file input: ";

@@ -163,8 +163,7 @@ private:
         auto call_value = res.register_result(visit(node->call_node, context));
         if (res.should_return()) return res;
 
-        auto copied_call_value = call_value->copy();
-        copied_call_value->set_pos(node->pos_start, node->pos_end);
+       call_value->set_pos(node->pos_start, node->pos_end);
 
         for (const auto& arg_node : node->arg_nodes) {
             args.push_back(res.register_result(visit(arg_node, context)));
@@ -172,10 +171,10 @@ private:
         }
 
         shared_ptr<DataType> return_value;
-        if (auto func_to_call = dynamic_pointer_cast<Function>(copied_call_value)) {
+        if (auto func_to_call = dynamic_pointer_cast<Function>(call_value)) {
             return_value = res.register_result(func_to_call->execute(args, *this));
         }
-        else if (auto builtin_to_call = dynamic_pointer_cast<BuiltInFunction>(copied_call_value)) {
+        else if (auto builtin_to_call = dynamic_pointer_cast<BuiltInFunction>(call_value)) {
             return_value = res.register_result(builtin_to_call->execute(args));
         }
         else {
@@ -184,10 +183,8 @@ private:
 
         if (res.should_return()) return res;
 
-        auto final_return_val = return_value->copy();
-        final_return_val->set_pos(node->pos_start, node->pos_end).set_context(context);
-
-        return res.success(final_return_val);
+       return_value->set_pos(node->pos_start, node->pos_end).set_context(context);
+        return res.success(return_value);
     }
 
     RunTimeResult visit_WhileNode(const shared_ptr<WhileNode>& node, const shared_ptr<Context>& context) {
@@ -215,9 +212,7 @@ private:
         }
 
         if (node->return_null) {
-            auto null_val = make_shared<Number>(0LL);
-            null_val->set_context(context).set_pos(node->pos_start, node->pos_end);
-            return res.success(std::static_pointer_cast<DataType>(null_val));
+            return res.success(std::static_pointer_cast<DataType>(Number::make(0LL)));
         }
 
         auto list_value = make_shared<List>(elements);
@@ -241,7 +236,7 @@ private:
             if (res.should_return()) return res;
         }
         else {
-            step_value = std::static_pointer_cast<DataType>(make_shared<Number>(1LL));
+            step_value = std::static_pointer_cast<DataType>(Number::make(1LL));
         }
 
         auto start_num = dynamic_pointer_cast<Number>(start_value);
@@ -262,7 +257,7 @@ private:
 
         while (condition()) {
             if (holds_alternative<long long>(start_num->value) && holds_alternative<long long>(step_num->value)) {
-                context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(make_shared<Number>((long long)i_val)));
+                context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(Number::make((long long)i_val)));
             }
             else {
                 context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(make_shared<Number>(i_val)));
@@ -282,9 +277,7 @@ private:
         }
 
         if (node->return_null) {
-            auto null_val = make_shared<Number>(0LL);
-            null_val->set_context(context).set_pos(node->pos_start, node->pos_end);
-            return res.success(std::static_pointer_cast<DataType>(null_val));
+            return res.success(std::static_pointer_cast<DataType>(Number::make(0LL)));
         }
 
         auto list_value = make_shared<List>(elements);
@@ -402,17 +395,17 @@ private:
         }
 
         if (indexes.empty()) {
-            auto copy_val = value->copy();
-            copy_val->set_pos(node->pos_start, node->pos_end).set_context(context);
-            return res.success(copy_val);
+            value->set_pos(node->pos_start, node->pos_end);
+            value->set_context(context);
+            return res.success(value);
         }
         else {
             auto [indexed_val, error] = value->getByIndex(indexes);
             if (error) return res.failure(*error);
 
-            auto copy_val = indexed_val->copy();
-            copy_val->set_pos(node->pos_start, node->pos_end).set_context(context);
-            return res.success(copy_val);
+            indexed_val->set_pos(node->pos_start, node->pos_end);
+            indexed_val->set_context(context);
+            return res.success(indexed_val);
         }
     }
 
@@ -443,6 +436,26 @@ private:
                         node->value_nodes[i]->pos_end.value_or(Position()),
                         "'" + var_name + "' is not defined", context
                     ));
+                }
+
+               if (indexes_vals.size() == 1) {
+                    if (const auto lst = dynamic_pointer_cast<List>(list_value)) {
+                        if (const auto num_idx = dynamic_cast<const Number*>(indexes_vals[0].get())) {
+                            if (holds_alternative<long long>(num_idx->value)) {
+                                long long idx = get<long long>(num_idx->value);
+                                if (idx < 0 || idx >= static_cast<long long>(lst->elements.size())) {
+                                    return res.failure(IndexOutOfBoundsError(
+                                        node->var_name_toks[i].pos_start.value_or(Position()),
+                                        node->value_nodes[i]->pos_end.value_or(Position()),
+                                        "Index out of bounds", context
+                                    ));
+                                }
+                                lst->elements[idx] = value;  // zero extra allocation
+                                last_result = list_value;
+                                continue;
+                            }
+                        }
+                    }
                 }
 
                 auto [new_list, error] = list_value->assignIndex(indexes_vals, value);
