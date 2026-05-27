@@ -189,7 +189,6 @@ private:
 
     RunTimeResult visit_WhileNode(const shared_ptr<WhileNode>& node, const shared_ptr<Context>& context) {
         RunTimeResult res;
-        vector<shared_ptr<DataType>> elements;
 
         while (true) {
             auto condition_value = res.register_result(visit(node->condition_node, context));
@@ -200,29 +199,20 @@ private:
 
             if (cond && !cond->is_truthy()) break;
 
-            auto value = res.register_result(visit(node->body_node, context));
+            res.register_result(visit(node->body_node, context));
             if (res.should_return() && !res.loop_or_switch_break && !res.loop_continue) {
                 return res;
             }
 
-            if (res.loop_continue) continue;
-            if (res.loop_or_switch_break) break;
-
-            elements.push_back(value);
+            if (res.loop_continue) { res.loop_continue = false; continue; }
+            if (res.loop_or_switch_break) { res.loop_or_switch_break = false; break; }
         }
 
-        if (node->return_null) {
-            return res.success(std::static_pointer_cast<DataType>(Number::make(0LL)));
-        }
-
-        auto list_value = make_shared<List>(elements);
-        list_value->set_context(context).set_pos(node->pos_start, node->pos_end);
-        return res.success(std::static_pointer_cast<DataType>(list_value));
+        return res.success(std::static_pointer_cast<DataType>(Number::make(0LL)));
     }
 
     RunTimeResult visit_ForNode(const shared_ptr<ForNode>& node, const shared_ptr<Context>& context) {
         RunTimeResult res;
-        vector<shared_ptr<DataType>> elements;
 
         auto start_value = res.register_result(visit(node->start_value_node, context));
         if (res.should_return()) return res;
@@ -240,49 +230,55 @@ private:
         }
 
         auto start_num = dynamic_pointer_cast<Number>(start_value);
-        auto end_num = dynamic_pointer_cast<Number>(end_value);
-        auto step_num = dynamic_pointer_cast<Number>(step_value);
+        auto end_num   = dynamic_pointer_cast<Number>(end_value);
+        auto step_num  = dynamic_pointer_cast<Number>(step_value);
 
         if (!start_num || !end_num || !step_num) {
             return res.failure(RunTimeError(node->pos_start.value_or(Position()), node->pos_end.value_or(Position()), "For loop parameters must be numbers", context));
         }
 
-        auto var_name = any_cast<string>(node->var_name_tok.value);
+        const string& var_name = any_cast<string>(node->var_name_tok.value);
 
-        double i_val = holds_alternative<long long>(start_num->value) ? get<long long>(start_num->value) : get<double>(start_num->value);
-        double end_val = holds_alternative<long long>(end_num->value) ? get<long long>(end_num->value) : get<double>(end_num->value);
-        double step_val = holds_alternative<long long>(step_num->value) ? get<long long>(step_num->value) : get<double>(step_num->value);
+        // ── Fast integer-only path ────────────────────────────────────────────
+        if (holds_alternative<long long>(start_num->value) &&
+            holds_alternative<long long>(end_num->value)   &&
+            holds_alternative<long long>(step_num->value)) {
 
-        auto condition = [&]() { return step_val >= 0 ? (i_val <= end_val) : (i_val >= end_val); };
+            long long i    = get<long long>(start_num->value);
+            long long end  = get<long long>(end_num->value);
+            long long step = get<long long>(step_num->value);
 
-        while (condition()) {
-            if (holds_alternative<long long>(start_num->value) && holds_alternative<long long>(step_num->value)) {
-                context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(Number::make((long long)i_val)));
+            auto cond = [&]() { return step >= 0 ? (i <= end) : (i >= end); };
+            while (cond()) {
+                context->symbol_table->set(var_name, Number::make(i));
+                i += step;
+
+                res.register_result(visit(node->body_node, context));
+                if (res.should_return() && !res.loop_continue && !res.loop_or_switch_break)
+                    return res;
+                if (res.loop_continue) { res.loop_continue = false; continue; }
+                if (res.loop_or_switch_break) { res.loop_or_switch_break = false; break; }
             }
-            else {
-                context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(make_shared<Number>(i_val)));
-            }
-
-            i_val += step_val;
-
-            auto value = res.register_result(visit(node->body_node, context));
-            if (res.should_return() && !res.loop_continue && !res.loop_or_switch_break) {
-                return res;
-            }
-
-            if (res.loop_continue) continue;
-            if (res.loop_or_switch_break) break;
-
-            elements.push_back(value);
-        }
-
-        if (node->return_null) {
             return res.success(std::static_pointer_cast<DataType>(Number::make(0LL)));
         }
 
-        auto list_value = make_shared<List>(elements);
-        list_value->set_context(context).set_pos(node->pos_start, node->pos_end);
-        return res.success(std::static_pointer_cast<DataType>(list_value));
+        // ── Floating-point path ───────────────────────────────────────────────
+        double i_val   = holds_alternative<long long>(start_num->value) ? (double)get<long long>(start_num->value) : get<double>(start_num->value);
+        double end_val = holds_alternative<long long>(end_num->value)   ? (double)get<long long>(end_num->value)   : get<double>(end_num->value);
+        double step_val= holds_alternative<long long>(step_num->value)  ? (double)get<long long>(step_num->value)  : get<double>(step_num->value);
+
+        auto cond_f = [&]() { return step_val >= 0 ? (i_val <= end_val) : (i_val >= end_val); };
+        while (cond_f()) {
+            context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(make_shared<Number>(i_val)));
+            i_val += step_val;
+
+            res.register_result(visit(node->body_node, context));
+            if (res.should_return() && !res.loop_continue && !res.loop_or_switch_break)
+                return res;
+            if (res.loop_continue) { res.loop_continue = false; continue; }
+            if (res.loop_or_switch_break) { res.loop_or_switch_break = false; break; }
+        }
+        return res.success(std::static_pointer_cast<DataType>(Number::make(0LL)));
     }
 
     RunTimeResult visit_SwitchNode(const shared_ptr<SwitchNode>& node, const shared_ptr<Context>& context) {
@@ -377,36 +373,34 @@ private:
 
     RunTimeResult visit_VariableUseNode(const shared_ptr<VariableUseNode>& node, const shared_ptr<Context>& context) {
         RunTimeResult res;
-        string var_name = any_cast<string>(node->var_name_tok.value);
+        // any_cast is expensive – but we need the name; cache the reference
+        const string& var_name = any_cast<string>(node->var_name_tok.value);
         shared_ptr<DataType> value = context->symbol_table->get(var_name);
 
         if (!value) {
-            return res.failure(RunTimeError(
+            return res.failure(NameError(
                 node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
                 "'" + var_name + "' is not defined", context
             ));
         }
 
+        if (node->index_node.empty()) {
+            // Hot path: plain variable read – skip set_pos/set_context (only needed for error msgs)
+            return res.success(value);
+        }
+
+        // Index access path
         vector<shared_ptr<DataType>> indexes;
+        indexes.reserve(node->index_node.size());
         for (const auto& index : node->index_node) {
             auto index_val = res.register_result(visit(index, context));
             if (res.error) return res;
-            indexes.push_back(index_val);
+            indexes.push_back(std::move(index_val));
         }
 
-        if (indexes.empty()) {
-            value->set_pos(node->pos_start, node->pos_end);
-            value->set_context(context);
-            return res.success(value);
-        }
-        else {
-            auto [indexed_val, error] = value->getByIndex(indexes);
-            if (error) return res.failure(*error);
-
-            indexed_val->set_pos(node->pos_start, node->pos_end);
-            indexed_val->set_context(context);
-            return res.success(indexed_val);
-        }
+        auto [indexed_val, error] = value->getByIndex(indexes);
+        if (error) return res.failure(*error);
+        return res.success(indexed_val);
     }
 
     RunTimeResult visit_VariableAssignNode(const shared_ptr<VariableAssignNode>& node, const shared_ptr<Context>& context) {
@@ -431,7 +425,7 @@ private:
             if (!indexes_vals.empty()) {
                 auto list_value = context->symbol_table->get(var_name);
                 if (!list_value) {
-                    return res.failure(RunTimeError(
+                    return res.failure(NameError(
                         node->var_name_toks[i].pos_start.value_or(Position()),
                         node->value_nodes[i]->pos_end.value_or(Position()),
                         "'" + var_name + "' is not defined", context

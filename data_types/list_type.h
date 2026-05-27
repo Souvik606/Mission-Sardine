@@ -51,46 +51,78 @@ public:
     }
 
     [[nodiscard]] OperationResult getByIndex(const vector<shared_ptr<DataType>>& indexes) const override {
-        shared_ptr<DataType> temp = const_cast<List*>(this)->copy();
+        // Fast path: single integer index into a List (by far the most common case)
+        if (indexes.size() == 1) {
+            if (const auto num_idx = dynamic_cast<const Number*>(indexes[0].get())) {
+                if (holds_alternative<long long>(num_idx->value)) {
+                    long long idx = get<long long>(num_idx->value);
+                    if (idx < 0 || idx >= static_cast<long long>(elements.size())) {
+                        return std::make_pair(nullptr, IndexOutOfBoundsError(
+                            indexes[0]->pos_start.value_or(Position()),
+                            indexes[0]->pos_end.value_or(Position()),
+                            "Index out of bounds", this->context));
+                    }
+                    return std::make_pair(elements[idx], std::nullopt);
+                }
+            }
+        }
+
+        // General path: multi-level indexing (no upfront copy)
+        const DataType* cur = this;
+        shared_ptr<DataType> cur_owned;   // keeps ownership when we step into a child
 
         try {
             for (const auto& idx : indexes) {
-                if (temp->is_dict()) {
+                if (cur->is_dict()) {
                     if (dynamic_cast<const Number*>(idx.get()) || dynamic_cast<const String*>(idx.get())) {
-                        auto [next_temp, error] = temp->getByIndex({ idx });
+                        auto [next, error] = cur->getByIndex({ idx });
                         if (error) return std::make_pair(nullptr, error);
-                        temp = next_temp;
+                        cur_owned = next;
+                        cur = cur_owned.get();
                     }
                     else {
-                        return std::make_pair(nullptr, DictKeyError(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Dictionary keys must be numbers or strings", this->context));
+                        return std::make_pair(nullptr, DictKeyError(
+                            idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()),
+                            "Dictionary keys must be numbers or strings", this->context));
                     }
                 }
                 else if (const auto num_idx = dynamic_cast<const Number*>(idx.get())) {
                     if (holds_alternative<long long>(num_idx->value)) {
-                        if (const auto list_temp = dynamic_cast<List*>(temp.get())) {
-                            temp = list_temp->elements.at(get<long long>(num_idx->value));
+                        long long i = get<long long>(num_idx->value);
+                        if (const auto list_cur = dynamic_cast<const List*>(cur)) {
+                            cur_owned = list_cur->elements.at(i);
+                            cur = cur_owned.get();
                         }
-                        else if (const auto str_temp = dynamic_cast<String*>(temp.get())) {
-                            temp = make_shared<String>(string(1, str_temp->value.at(get<long long>(num_idx->value))));
-                            temp->set_context(this->context);
+                        else if (const auto str_cur = dynamic_cast<const String*>(cur)) {
+                            cur_owned = make_shared<String>(string(1, str_cur->value.at(i)));
+                            cur_owned->set_context(this->context);
+                            cur = cur_owned.get();
                         }
                         else {
-                            return std::make_pair(nullptr, IllegalOperationError(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Can't index a data type which is not iterable", this->context));
+                            return std::make_pair(nullptr, IllegalOperationError(
+                                idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()),
+                                "Can't index a data type which is not iterable", this->context));
                         }
                     }
                     else {
-                        return std::make_pair(nullptr, IllegalOperationError(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Invalid Index Type", this->context));
+                        return std::make_pair(nullptr, IllegalOperationError(
+                            idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()),
+                            "Invalid Index Type", this->context));
                     }
                 }
                 else {
-                    return std::make_pair(nullptr, IllegalOperationError(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Invalid Index Type", this->context));
+                    return std::make_pair(nullptr, IllegalOperationError(
+                        idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()),
+                        "Invalid Index Type", this->context));
                 }
             }
-            return std::make_pair(std::static_pointer_cast<DataType>(temp), std::nullopt);
+            return std::make_pair(cur_owned, std::nullopt);
         }
         catch (const out_of_range&) {
             auto bad_idx = indexes.back();
-            return std::make_pair(nullptr, IndexOutOfBoundsError(bad_idx->pos_start.value_or(Position()), bad_idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
+            return std::make_pair(nullptr, IndexOutOfBoundsError(
+                bad_idx->pos_start.value_or(Position()), bad_idx->pos_end.value_or(Position()),
+                "Index out of bounds", this->context));
         }
     }
 
