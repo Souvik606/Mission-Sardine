@@ -1,71 +1,70 @@
-method fannkuch(n) {
-    maxFlipsCount = 0
-    permSign = 1
-    checksum = 0
+model Animal{
+    attr<name>
+    attr<age,gender>
+    attr<weight=20,height>
 
-    perm1 = range(n)
-    count = copy(perm1)
-    nm = size(perm1) - 1
+    init(name,age,gender,weight) {
+        name:name,age:2*age
+        gender:gender
+        weight:weight
+    }
 
-    during 1 {
-        k = perm1[0]
-        when k != 0 {
-            perm = copy(perm1)
-            flipsCount = 1
-            kk = perm[k]
-            during kk != 0 {
-                perm = reverse(perm, 0, kk)
-                flipsCount = flipsCount + 1
-                k = kk
-                kk = perm[kk]
-            }
-            when maxFlipsCount < flipsCount {
-                maxFlipsCount = flipsCount
-            }
-            when permSign == 1 {
-                checksum = checksum + flipsCount
-            }
-            when permSign == 0 {
-                checksum = checksum - flipsCount
-            }
-        }
+    method showName(){
+        show(name)
+    }
 
-        when permSign == 1 {
-            temp = perm1[0]
-            perm1[0] = perm1[1]
-            perm1[1] = temp
-            permSign = 0
-            proceed
-        }
+    method showAge(){
+        show(age)
+    }
 
-        temp = perm1[1]
-        perm1[1] = perm1[2]
-        perm1[2] = temp
-        permSign = 1
+    method showWeight(){
+        show(weight)
+    }
 
-        r = 2
-        for_else = 1
-        during r < nm {
-            when count[r] != 0 {
-                for_else = 0
-                escape
-            }
-            count[r] = r
-            perm0 = perm1[0]
-            cycle i = 0 : (r) {
-                perm1[i] = perm1[i + 1]
-            }
-            perm1[r + 1] = perm0
-            r = r + 1
-        }
-        when for_else == 1 {
-            r = nm
-            when count[r] == 0 {
-                yield maxFlipsCount
-            }
-        }
-        count[r] = count[r] - 1
+    method showHeight(){
+        show(height)
     }
 }
 
-show(fannkuch(7))
+cat=Animal("Tom",5,"M",30)
+cat.showName()
+cat.showAge()
+show(cat.gender)
+cat.showWeight()
+cat.showHeight()
+
+model Car {
+    attr<engine, chassis>
+    attr<year, mascot>
+    attr<modelName, colour>
+
+    init(engine, modelName, year, colour, mascot) {
+        engine: "E+" + engine, year: "'" + String(year<2000?year-1900:year-2000)
+        colour: colour
+        modelName: modelName + " " + String(year) + " " + colour
+        mascot: mascot
+    }
+    method showE(){
+        show(engine)
+    }
+    method showY(){
+        show(year)
+    }
+    method showC(){
+        show(colour)
+    }
+    method showM(){
+        show(modelName)
+    }
+}
+
+test=Car("VTEC", "City", 2021, "Black", cat)
+test.showE()
+test.showC()
+test.showY()
+test.showM()
+test.mascot.showName()
+test.mascot.showAge()
+show(test.mascot.gender)
+test.mascot.showWeight()
+test.mascot.showHeight()

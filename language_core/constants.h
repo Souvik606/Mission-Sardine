@@ -39,14 +39,17 @@ const string T_COMMA = "COMMA";
 const string T_NEWLINE = "NEWLINE";
 const string T_EOF = "EOF";
 const string T_ERROR = "ERROR";
+const string T_DOT = "DOT";
 
 const vector<string> KEYWORDS = {
     "define", "and", "or", "not","when","orwhen","otherwise","cycle",
     "during","method","yield","escape","proceed", "menu", "choice", "fallback",
-    "risk", "trap", "clean"
+    "risk", "trap", "clean",
+    "model", "attr", "init"
 };
 
 const vector<string> ERROR_TYPES = {
     "RunTimeError", "IllegalOperationError", "DivisionByZeroError", "IndexOutOfBoundsError",
-    "NameError", "ArgumentError", "InvalidErrorTypeError", "DictKeyError", "NotImplementedError"
+    "NameError", "ArgumentError", "InvalidErrorTypeError", "DictKeyError", "NotImplementedError",
+    "AttributeError"
 };
