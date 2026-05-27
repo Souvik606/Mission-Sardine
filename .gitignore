@@ -3,8 +3,7 @@
 .vscode/
 
 # CMake build directories
-cmake-build-debug/
-cmake-build-release/
+build
 
 # Compiled executables and build artifacts
 *.exe
