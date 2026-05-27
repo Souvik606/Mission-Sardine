@@ -11,4 +11,6 @@ add_executable(MissionSardine
         data_types/string_type.h
         ast_nodes/list_nodes.h
         data_types/list_type.h
+        ast_nodes/dict_nodes.h
+        data_types/dict_type.h
         data_types/builtins.h)

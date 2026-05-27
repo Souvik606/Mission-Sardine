@@ -7,16 +7,7 @@
 
 using namespace std;
 
-inline RunTimeError illegal_op_for_list(const DataType* self, const DataType* other = nullptr) {
-    const auto pos_start = self->pos_start;
-    const auto pos_end = other ? other->pos_end : self->pos_end;
-    return RunTimeError(
-        pos_start.value_or(Position()),
-        pos_end.value_or(Position()),
-        "Illegal Operation for type 'List'",
-        self->context
-    );
-}
+
 
 class List final : public DataType {
 public:
@@ -60,120 +51,180 @@ public:
     }
 
     [[nodiscard]] OperationResult getByIndex(const vector<shared_ptr<DataType>>& indexes) const override {
-        shared_ptr<DataType> temp = const_cast<List*>(this)->copy();
-
-        for (const auto& idx : indexes) {
-            auto num_idx = dynamic_cast<const Number*>(idx.get());
-            if (!num_idx || holds_alternative<double>(num_idx->value)) {
-                return std::make_pair(nullptr, RunTimeError(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Invalid Index Type", this->context));
-            }
-            long long i = get<long long>(num_idx->value);
-
-            if (auto list_temp = dynamic_cast<List*>(temp.get())) {
-                if (i < 0 || i >= list_temp->elements.size()) {
-                    return std::make_pair(nullptr, RunTimeError(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
+        // Fast path: single integer index into a List (by far the most common case)
+        if (indexes.size() == 1) {
+            if (const auto num_idx = dynamic_cast<const Number*>(indexes[0].get())) {
+                if (holds_alternative<long long>(num_idx->value)) {
+                    long long idx = get<long long>(num_idx->value);
+                    if (idx < 0 || idx >= static_cast<long long>(elements.size())) {
+                        return std::make_pair(nullptr, IndexOutOfBoundsError(
+                            indexes[0]->pos_start.value_or(Position()),
+                            indexes[0]->pos_end.value_or(Position()),
+                            "Index out of bounds", this->context));
+                    }
+                    return std::make_pair(elements[idx], std::nullopt);
                 }
-                temp = list_temp->elements[i];
-            } else if (auto str_temp = dynamic_cast<String*>(temp.get())) {
-                if (i < 0 || i >= str_temp->value.length()) {
-                    return std::make_pair(nullptr, RunTimeError(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
-                }
-                auto new_str = make_shared<String>(string(1, str_temp->value[i]));
-                new_str->set_context(this->context);
-                temp = new_str;
-            } else {
-                 return std::make_pair(nullptr, RunTimeError(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Can't index a data type which is not iterable", this->context));
             }
         }
-        return std::make_pair(std::static_pointer_cast<DataType>(temp), std::nullopt);
+
+        // General path: multi-level indexing (no upfront copy)
+        const DataType* cur = this;
+        shared_ptr<DataType> cur_owned;   // keeps ownership when we step into a child
+
+        try {
+            for (const auto& idx : indexes) {
+                if (cur->is_dict()) {
+                    if (dynamic_cast<const Number*>(idx.get()) || dynamic_cast<const String*>(idx.get())) {
+                        auto [next, error] = cur->getByIndex({ idx });
+                        if (error) return std::make_pair(nullptr, error);
+                        cur_owned = next;
+                        cur = cur_owned.get();
+                    }
+                    else {
+                        return std::make_pair(nullptr, DictKeyError(
+                            idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()),
+                            "Dictionary keys must be numbers or strings", this->context));
+                    }
+                }
+                else if (const auto num_idx = dynamic_cast<const Number*>(idx.get())) {
+                    if (holds_alternative<long long>(num_idx->value)) {
+                        long long i = get<long long>(num_idx->value);
+                        if (const auto list_cur = dynamic_cast<const List*>(cur)) {
+                            cur_owned = list_cur->elements.at(i);
+                            cur = cur_owned.get();
+                        }
+                        else if (const auto str_cur = dynamic_cast<const String*>(cur)) {
+                            cur_owned = make_shared<String>(string(1, str_cur->value.at(i)));
+                            cur_owned->set_context(this->context);
+                            cur = cur_owned.get();
+                        }
+                        else {
+                            return std::make_pair(nullptr, IllegalOperationError(
+                                idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()),
+                                "Can't index a data type which is not iterable", this->context));
+                        }
+                    }
+                    else {
+                        return std::make_pair(nullptr, IllegalOperationError(
+                            idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()),
+                            "Invalid Index Type", this->context));
+                    }
+                }
+                else {
+                    return std::make_pair(nullptr, IllegalOperationError(
+                        idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()),
+                        "Invalid Index Type", this->context));
+                }
+            }
+            return std::make_pair(cur_owned, std::nullopt);
+        }
+        catch (const out_of_range&) {
+            auto bad_idx = indexes.back();
+            return std::make_pair(nullptr, IndexOutOfBoundsError(
+                bad_idx->pos_start.value_or(Position()), bad_idx->pos_end.value_or(Position()),
+                "Index out of bounds", this->context));
+        }
     }
 
     [[nodiscard]] OperationResult assignIndex(const vector<shared_ptr<DataType>>& indexes, const shared_ptr<DataType>& val) const override {
-        if (indexes.empty()) return std::make_pair(nullptr, RunTimeError(this->pos_start.value_or(Position()), this->pos_end.value_or(Position()), "Index out of bounds", this->context));
+        if (indexes.empty()) return std::make_pair(nullptr, IndexOutOfBoundsError(this->pos_start.value_or(Position()), this->pos_end.value_or(Position()), "Index out of bounds", this->context));
 
         auto new_list = make_shared<List>(this->elements);
         new_list->set_pos(this->pos_start, this->pos_end);
         new_list->set_context(this->context);
 
-        shared_ptr<DataType> temp = new_list;
-
         try {
-            for (size_t k = 0; k < indexes.size() - 1; ++k) {
-                auto num_idx = dynamic_cast<const Number*>(indexes[k].get());
-                if (!num_idx || holds_alternative<double>(num_idx->value)) {
-                    return std::make_pair(nullptr, RunTimeError(indexes[k]->pos_start.value_or(Position()), indexes[k]->pos_end.value_or(Position()), "Invalid Index Type", this->context));
-                }
-                long long i = get<long long>(num_idx->value);
+            vector<shared_ptr<DataType>> parent_chain;
+            vector<shared_ptr<DataType>> parent_indexes;
+            shared_ptr<DataType> current = new_list;
 
-                if (auto list_temp = dynamic_cast<List*>(temp.get())) {
-                    if (i < 0 || i >= list_temp->elements.size()) {
-                        return std::make_pair(nullptr, RunTimeError(indexes[k]->pos_start.value_or(Position()), indexes[k]->pos_end.value_or(Position()), "Index out of bounds", this->context));
+            for (size_t i = 0; i + 1 < indexes.size(); ++i) {
+                parent_chain.push_back(current);
+                parent_indexes.push_back(indexes[i]);
+
+                const auto& idx = indexes[i];
+                if (current->is_dict()) {
+                    if (dynamic_cast<const Number*>(idx.get()) || dynamic_cast<const String*>(idx.get())) {
+                        auto [next_current, error] = current->getByIndex({ idx });
+                        if (error) return std::make_pair(nullptr, error);
+                        current = next_current;
                     }
-
-                    auto next_element = list_temp->elements[i];
-
-                    if (auto next_as_list = dynamic_pointer_cast<List>(next_element)) {
-                        auto copied_sublist = make_shared<List>(next_as_list->elements);
-                        list_temp->elements[i] = copied_sublist;
-                        temp = copied_sublist;
-                    } else {
-                        temp = next_element;
+                    else {
+                        return std::make_pair(nullptr, DictKeyError(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Dictionary keys must be numbers or strings", this->context));
                     }
-                } else if (dynamic_cast<String*>(temp.get())) {
-                    return std::make_pair(nullptr, RunTimeError(indexes[k]->pos_start.value_or(Position()), indexes[k]->pos_end.value_or(Position()), "Can't assign inside string beyond one level", this->context));
-                } else {
-                    return std::make_pair(nullptr, RunTimeError(indexes[k]->pos_start.value_or(Position()), indexes[k]->pos_end.value_or(Position()), "Can't index a data type which is not iterable", this->context));
+                }
+                else if (const auto num_idx = dynamic_cast<const Number*>(idx.get())) {
+                    if (holds_alternative<long long>(num_idx->value)) {
+                        if (const auto list_temp = dynamic_cast<List*>(current.get())) {
+                            current = list_temp->elements.at(get<long long>(num_idx->value));
+                        }
+                        else if (dynamic_cast<String*>(current.get())) {
+                            return std::make_pair(nullptr, IllegalOperationError(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Can't assign inside string beyond one level", this->context));
+                        }
+                        else {
+                            return std::make_pair(nullptr, IllegalOperationError(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Can't index a data type which is not iterable", this->context));
+                        }
+                    }
+                    else {
+                        return std::make_pair(nullptr, IllegalOperationError(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Invalid Index Type", this->context));
+                    }
+                }
+                else {
+                    return std::make_pair(nullptr, IllegalOperationError(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Invalid Index Type", this->context));
                 }
             }
 
-            auto last_idx = indexes.back();
-            auto num_idx = dynamic_cast<const Number*>(last_idx.get());
-            if (!num_idx || holds_alternative<double>(num_idx->value)) {
-                return std::make_pair(nullptr, RunTimeError(last_idx->pos_start.value_or(Position()), last_idx->pos_end.value_or(Position()), "Invalid Index Type", this->context));
+            shared_ptr<DataType> updated_current;
+            optional<RunTimeError> leaf_error;
+
+            if (current->is_dict()) {
+                tie(updated_current, leaf_error) = current->assignIndex({ indexes.back() }, val);
             }
-            long long i = get<long long>(num_idx->value);
+            else if (dynamic_cast<List*>(current.get())) {
+                auto list_current = dynamic_pointer_cast<List>(current);
+                updated_current = dynamic_pointer_cast<DataType>(list_current->copy());
 
-            if (auto list_temp = dynamic_cast<List*>(temp.get())) {
-                if (i < 0 || i >= list_temp->elements.size()) {
-                     return std::make_pair(nullptr, RunTimeError(last_idx->pos_start.value_or(Position()), last_idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
-                }
-                list_temp->elements[i] = val;
-                return std::make_pair(std::static_pointer_cast<DataType>(new_list), std::nullopt);
-            } else if (auto str_temp = dynamic_cast<String*>(temp.get())) {
-                auto str_val = dynamic_cast<const String*>(val.get());
-                if (!str_val || str_val->value.length() != 1) {
-                    return std::make_pair(nullptr, RunTimeError(val->pos_start.value_or(Position()), val->pos_end.value_or(Position()), "Assigned value must be a single character string", this->context));
-                }
-                if (i < 0 || i >= str_temp->value.length()) {
-                     return std::make_pair(nullptr, RunTimeError(last_idx->pos_start.value_or(Position()), last_idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
+                auto last_idx = indexes.back();
+                auto num_last_idx = dynamic_cast<const Number*>(last_idx.get());
+                if (!num_last_idx || !holds_alternative<long long>(num_last_idx->value)) {
+                    return std::make_pair(nullptr, IllegalOperationError(last_idx->pos_start.value_or(Position()), last_idx->pos_end.value_or(Position()), "Invalid Index Type", this->context));
                 }
 
-                string s = str_temp->value;
-                s[i] = str_val->value[0];
-                auto replaced = make_shared<String>(s);
-                replaced->set_context(this->context);
-
-                shared_ptr<List> parent = new_list;
-                for (size_t k = 0; k < indexes.size() - 2; ++k) {
-                    long long p_i = get<long long>(dynamic_pointer_cast<Number>(indexes[k])->value);
-                    parent = dynamic_pointer_cast<List>(parent->elements[p_i]);
+                try {
+                    dynamic_pointer_cast<List>(updated_current)->elements.at(get<long long>(num_last_idx->value)) = val;
                 }
-                long long p_i = get<long long>(dynamic_pointer_cast<Number>(indexes[indexes.size() - 2])->value);
-                parent->elements[p_i] = replaced;
-
-                return std::make_pair(std::static_pointer_cast<DataType>(new_list), std::nullopt);
-            } else {
-                return std::make_pair(nullptr, RunTimeError(last_idx->pos_start.value_or(Position()), last_idx->pos_end.value_or(Position()), "Can't index a data type which is not iterable", this->context));
+                catch (const out_of_range&) {
+                    return std::make_pair(nullptr, IndexOutOfBoundsError(last_idx->pos_start.value_or(Position()), last_idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
+                }
             }
-        } catch (...) {
+            else if (dynamic_cast<String*>(current.get())) {
+                tie(updated_current, leaf_error) = current->assignIndex({ indexes.back() }, val);
+            }
+            else {
+                auto bad_idx = indexes.back();
+                return std::make_pair(nullptr, IllegalOperationError(bad_idx->pos_start.value_or(Position()), bad_idx->pos_end.value_or(Position()), "Can't index a data type which is not iterable", this->context));
+            }
+
+            if (leaf_error) return std::make_pair(nullptr, leaf_error);
+
+            shared_ptr<DataType> rebuilt = updated_current;
+            for (size_t i = parent_chain.size(); i-- > 0;) {
+                auto [updated_parent, error] = parent_chain[i]->assignIndex({ parent_indexes[i] }, rebuilt);
+                if (error) return std::make_pair(nullptr, error);
+                rebuilt = updated_parent;
+            }
+
+            return std::make_pair(rebuilt, std::nullopt);
+        }
+        catch (const out_of_range&) {
             auto bad_idx = indexes.back();
-            return std::make_pair(nullptr, RunTimeError(bad_idx->pos_start.value_or(Position()), bad_idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
+            return std::make_pair(nullptr, IndexOutOfBoundsError(bad_idx->pos_start.value_or(Position()), bad_idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
         }
     }
 
     [[nodiscard]] OperationResult add(const shared_ptr<DataType>& operand) const override {
         auto new_list = make_shared<List>(this->elements);
-        if (dynamic_cast<const Number*>(operand.get()) || dynamic_cast<const String*>(operand.get())) {
+        if (dynamic_cast<const Number*>(operand.get()) || dynamic_cast<const String*>(operand.get()) || operand->is_dict()) {
             new_list->elements.push_back(operand);
             new_list->set_context(this->context);
             return std::make_pair(std::static_pointer_cast<DataType>(new_list), std::nullopt);
@@ -187,7 +238,7 @@ public:
             new_list->set_context(this->context);
             return std::make_pair(std::static_pointer_cast<DataType>(new_list), std::nullopt);
         }
-        return std::make_pair(nullptr, illegal_op_for_list(this, operand.get()));
+        return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Cannot add List and " + operand->to_string(), context));
     }
 
     [[nodiscard]] OperationResult subtract(const shared_ptr<DataType>& operand) const override {
@@ -203,19 +254,18 @@ public:
                     return std::make_pair(std::static_pointer_cast<DataType>(new_list), std::nullopt);
                 }
                 catch (...) {
-                    return std::make_pair(nullptr, RunTimeError(num->pos_start.value_or(Position()), num->pos_end.value_or(Position()), "Index out of bounds", this->context));
+                    return std::make_pair(nullptr, IndexOutOfBoundsError(num->pos_start.value_or(Position()), num->pos_end.value_or(Position()), "Index out of bounds", this->context));
                 }
             }
-            return std::make_pair(nullptr, RunTimeError(num->pos_start.value_or(Position()), num->pos_end.value_or(Position()), "Index must be of an integer Number type", this->context));
         }
-        return std::make_pair(nullptr, illegal_op_for_list(this, operand.get()));
+        return std::make_pair(nullptr, IllegalOperationError(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Index must be of an integer Number type", this->context));
     }
 
     [[nodiscard]] OperationResult multiply(const shared_ptr<DataType>& operand) const override {
         if (const auto num = dynamic_cast<const Number*>(operand.get())) {
             if (const auto int_val = std::get_if<long long>(&num->value)) {
                 if (*int_val < 0) {
-                     return std::make_pair(nullptr, RunTimeError(num->pos_start.value_or(Position()), num->pos_end.value_or(Position()), "List repetition cannot be negative", this->context));
+                    return std::make_pair(nullptr, IllegalOperationError(num->pos_start.value_or(Position()), num->pos_end.value_or(Position()), "List repetition cannot be negative", this->context));
                 }
                 vector<shared_ptr<DataType>> new_elements;
                 for (long long i = 0; i < *int_val; ++i) {
@@ -225,9 +275,8 @@ public:
                 new_list->set_context(this->context);
                 return std::make_pair(std::static_pointer_cast<DataType>(new_list), std::nullopt);
             }
-            return std::make_pair(nullptr, RunTimeError(num->pos_start.value_or(Position()), num->pos_end.value_or(Position()), "Expected an integer Number type", this->context));
         }
-        return std::make_pair(nullptr, illegal_op_for_list(this, operand.get()));
+        return std::make_pair(nullptr, IllegalOperationError(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected an integer Number type", this->context));
     }
 
     [[nodiscard]] OperationResult divide(const shared_ptr<DataType>& other) const override {
@@ -243,7 +292,8 @@ public:
                         break;
                     }
                 }
-            } else if (!dynamic_cast<List*>(el.get())) {
+            }
+            else if (!dynamic_cast<List*>(el.get())) {
                 auto [is_eq, error] = el->get_comparison_eq(other);
                 if (is_eq && is_eq->is_truthy()) {
                     new_list->elements.erase(new_list->elements.begin() + i);
@@ -254,9 +304,9 @@ public:
         return std::make_pair(std::static_pointer_cast<DataType>(new_list), std::nullopt);
     }
 
-    [[nodiscard]] OperationResult modulus(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '%' to a List", context)); }
-    [[nodiscard]] OperationResult floor_divide(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '//' to a List", context)); }
-    [[nodiscard]] OperationResult exponent(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '**' to a List", context)); }
+    [[nodiscard]] OperationResult modulus(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '%' to a List", context)); }
+    [[nodiscard]] OperationResult floor_divide(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '//' to a List", context)); }
+    [[nodiscard]] OperationResult exponent(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '**' to a List", context)); }
 
     [[nodiscard]] OperationResult get_comparison_eq(const shared_ptr<DataType>& other) const override {
         if (const auto o = dynamic_cast<const List*>(other.get())) {
@@ -279,7 +329,7 @@ public:
             res->set_context(this->context);
             return std::make_pair(std::static_pointer_cast<DataType>(res), std::nullopt);
         }
-        return std::make_pair(nullptr, RunTimeError(other->pos_start.value_or(Position()), other->pos_end.value_or(Position()), "Expected a List", context));
+        return std::make_pair(nullptr, IllegalOperationError(other->pos_start.value_or(Position()), other->pos_end.value_or(Position()), "Expected a List", context));
     }
 
     [[nodiscard]] OperationResult get_comparison_neq(const shared_ptr<DataType>& other) const override {
@@ -291,11 +341,11 @@ public:
         return std::make_pair(std::static_pointer_cast<DataType>(res), std::nullopt);
     }
 
-    [[nodiscard]] OperationResult get_comparison_lt(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '<' to a List", context)); }
-    [[nodiscard]] OperationResult get_comparison_gt(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '>' to a List", context)); }
-    [[nodiscard]] OperationResult get_comparison_lte(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '<=' to a List", context)); }
-    [[nodiscard]] OperationResult get_comparison_gte(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '>=' to a List", context)); }
-    [[nodiscard]] OperationResult and_by(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply 'and' to a List", context)); }
-    [[nodiscard]] OperationResult or_by(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply 'or' to a List", context)); }
-    [[nodiscard]] OperationResult not_by() const override { return std::make_pair(nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply 'not' to a List", context)); }
+    [[nodiscard]] OperationResult get_comparison_lt(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '<' to a List", context)); }
+    [[nodiscard]] OperationResult get_comparison_gt(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '>' to a List", context)); }
+    [[nodiscard]] OperationResult get_comparison_lte(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '<=' to a List", context)); }
+    [[nodiscard]] OperationResult get_comparison_gte(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '>=' to a List", context)); }
+    [[nodiscard]] OperationResult and_by(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply 'and' to a List", context)); }
+    [[nodiscard]] OperationResult or_by(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply 'or' to a List", context)); }
+    [[nodiscard]] OperationResult not_by() const override { return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply 'not' to a List", context)); }
 };

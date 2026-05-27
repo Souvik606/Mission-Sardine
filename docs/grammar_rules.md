@@ -1,10 +1,10 @@
 multiline: NEWLINE* (singleline)* (NEWLINE* (singleline))* NEWLINE*
 
-singleline: function-call | statements | if-expression | for-expression | while-expression | switch-statement | function-definition
+singleline: function-call | statements | if-expression | for-expression | while-expression | switch-statement | function-definition | exception-handling
 
 yield-statement: KEYWORD:yield expression
 
-jump-statements: KEYWORD:proceed | KEYWORD:escape
+jump-statements: KEYWORD:proceed | KEYWORD:escape | KEYWORD:yield expression
 
 statements: IDENTIFIER (LPAREN3 expression RPAREN3)* (COMMA IDENTIFIER (LPAREN3 expression RPAREN3)*)* EQUAL expression (COMMA expression)*
 
@@ -30,13 +30,23 @@ unary: (PLUS | MINUS) unary | exponent
 
 exponent: factor (EXP unary)*
 
-factor: INT | FLOAT | STRING | IDENTIFIER (LPAREN3 expression RPAREN3)* | LPAREN expression RPAREN | list-expression | function-call
+factor: INT | FLOAT | STRING | IDENTIFIER (LPAREN3 expression RPAREN3)* | LPAREN expression RPAREN | list-expression | dict-expression | function-call
 
 function-call: IDENTIFIER LPAREN (expression(COMMA expression)*)? RPAREN
 
 list-expression: LPAREN3 (expression(COMMA expression)*)? RPAREN3
 
-while-expression: KEYWORD:whenever expression LPAREN2 (multiline | jump-statements)* RPAREN2
+dict-expression: LPAREN2 (expression COLON expression(COMMA expression COLON expression)*)? RPAREN2
+
+exception-handling: try-expression NEWLINE* ( trap-block NEWLINE* (trap-block)* NEWLINE* clean-block? | clean-block)
+
+try-expression: KEYWORD:risk LPAREN2 (multiline | jump-statements)* RPAREN2
+
+trap-block: KEYWORD:trap (ERROR (IDENTIFIER)?)? LPAREN2 (multiline | jump-statements)* RPAREN2
+
+clean-block: KEYWORD:clean LPAREN2 (multiline | jump-statements)* RPAREN2
+
+while-expression: KEYWORD:during expression LPAREN2 (multiline | jump-statements)* RPAREN2
 
 for-expression: KEYWORD:Cycle IDENTIFIER EQUAL expression COLON expression (COLON expression)? LPAREN2 (multiline | jump-statements)* RPAREN2
 

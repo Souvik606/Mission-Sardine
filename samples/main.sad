@@ -1,7 +1,71 @@
-matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
-cycle i = 0 : 2 {
-    cycle j = 0 : 2 {
-        matrix[i][j] = matrix[i][j] ** 2
+method fannkuch(n) {
+    maxFlipsCount = 0
+    permSign = 1
+    checksum = 0
+
+    perm1 = range(n)
+    count = copy(perm1)
+    nm = size(perm1) - 1
+
+    during 1 {
+        k = perm1[0]
+        when k != 0 {
+            perm = copy(perm1)
+            flipsCount = 1
+            kk = perm[k]
+            during kk != 0 {
+                perm = reverse(perm, 0, kk)
+                flipsCount = flipsCount + 1
+                k = kk
+                kk = perm[kk]
+            }
+            when maxFlipsCount < flipsCount {
+                maxFlipsCount = flipsCount
+            }
+            when permSign == 1 {
+                checksum = checksum + flipsCount
+            }
+            when permSign == 0 {
+                checksum = checksum - flipsCount
+            }
+        }
+
+        when permSign == 1 {
+            temp = perm1[0]
+            perm1[0] = perm1[1]
+            perm1[1] = temp
+            permSign = 0
+            proceed
+        }
+
+        temp = perm1[1]
+        perm1[1] = perm1[2]
+        perm1[2] = temp
+        permSign = 1
+
+        r = 2
+        for_else = 1
+        during r < nm {
+            when count[r] != 0 {
+                for_else = 0
+                escape
+            }
+            count[r] = r
+            perm0 = perm1[0]
+            cycle i = 0 : (r) {
+                perm1[i] = perm1[i + 1]
+            }
+            perm1[r + 1] = perm0
+            r = r + 1
+        }
+        when for_else == 1 {
+            r = nm
+            when count[r] == 0 {
+                yield maxFlipsCount
+            }
+        }
+        count[r] = count[r] - 1
     }
 }
-show(matrix)
+
+show(fannkuch(7))

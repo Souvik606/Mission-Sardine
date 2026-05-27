@@ -6,17 +6,6 @@
 
 using namespace std;
 
-inline RunTimeError illegal_op_for_string(const DataType* self, const DataType* other = nullptr) {
-    const auto pos_start = self->pos_start;
-    const auto pos_end = other ? other->pos_end : self->pos_end;
-    return RunTimeError(
-        pos_start.value_or(Position()),
-        pos_end.value_or(Position()),
-        "Illegal Operation for type 'String'",
-        self->context
-    );
-}
-
 inline string repeat_string(const string& str, const long long n) {
     if (n < 0) return "";
     string result;
@@ -60,16 +49,17 @@ public:
         for (const auto& idx : indexes) {
             if (const auto num_idx = dynamic_cast<const Number*>(idx.get())) {
                 if (holds_alternative<double>(num_idx->value)) {
-                    return std::make_pair(nullptr, RunTimeError(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Invalid Index Type", this->context));
+                    return std::make_pair(nullptr, IllegalOperationError(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Invalid Index Type", this->context));
                 }
                 long long i = get<long long>(num_idx->value);
                 if (i < 0 || i >= temp.length()) {
                     auto bad_idx = indexes.back();
-                    return std::make_pair(nullptr, RunTimeError(bad_idx->pos_start.value_or(Position()), bad_idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
+                    return std::make_pair(nullptr, IndexOutOfBoundsError(bad_idx->pos_start.value_or(Position()), bad_idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
                 }
                 temp = string(1, temp[i]);
-            } else {
-                return std::make_pair(nullptr, RunTimeError(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Invalid Index Type", this->context));
+            }
+            else {
+                return std::make_pair(nullptr, IllegalOperationError(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Invalid Index Type", this->context));
             }
         }
         auto result = make_shared<String>(temp);
@@ -80,23 +70,23 @@ public:
     [[nodiscard]] OperationResult assignIndex(const vector<shared_ptr<DataType>>& indexes, const shared_ptr<DataType>& val) const override {
         auto str_val = dynamic_cast<const String*>(val.get());
         if (!str_val || str_val->value.length() != 1) {
-            return std::make_pair(nullptr, RunTimeError(val->pos_start.value_or(Position()), val->pos_end.value_or(Position()), "Assigned value must be a single character string", this->context));
+            return std::make_pair(nullptr, IllegalOperationError(val->pos_start.value_or(Position()), val->pos_end.value_or(Position()), "Assigned value must be a single character string", this->context));
         }
 
         if (indexes.size() > 1) {
             auto idx = indexes[0];
-            return std::make_pair(nullptr, RunTimeError(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Can't index beyond one dimension in string", this->context));
+            return std::make_pair(nullptr, IllegalOperationError(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Can't index beyond one dimension in string", this->context));
         }
 
         auto last_idx = indexes.back();
         auto num_idx = dynamic_cast<const Number*>(last_idx.get());
         if (!num_idx || holds_alternative<double>(num_idx->value)) {
-            return std::make_pair(nullptr, RunTimeError(last_idx->pos_start.value_or(Position()), last_idx->pos_end.value_or(Position()), "Invalid Index Type", this->context));
+            return std::make_pair(nullptr, IllegalOperationError(last_idx->pos_start.value_or(Position()), last_idx->pos_end.value_or(Position()), "Invalid Index Type", this->context));
         }
 
         long long i = get<long long>(num_idx->value);
         if (i < 0 || i >= this->value.length()) {
-            return std::make_pair(nullptr, RunTimeError(last_idx->pos_start.value_or(Position()), last_idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
+            return std::make_pair(nullptr, IndexOutOfBoundsError(last_idx->pos_start.value_or(Position()), last_idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
         }
 
         string new_str = this->value;
@@ -113,7 +103,7 @@ public:
             result->set_context(this->context);
             return std::make_pair(std::static_pointer_cast<DataType>(result), std::nullopt);
         }
-        return std::make_pair(nullptr, illegal_op_for_string(this, operand.get()));
+        return std::make_pair(nullptr, IllegalOperationError(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a String type", this->context));
     }
 
     [[nodiscard]] OperationResult multiply(const shared_ptr<DataType>& operand) const override {
@@ -123,52 +113,52 @@ public:
                 result->set_context(this->context);
                 return std::make_pair(std::static_pointer_cast<DataType>(result), std::nullopt);
             }
-            return std::make_pair(nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Expected an integer Number type", context));
+            return std::make_pair(nullptr, IllegalOperationError(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected an integer Number type", this->context));
         }
-        return std::make_pair(nullptr, illegal_op_for_string(this, operand.get()));
+        return std::make_pair(nullptr, IllegalOperationError(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected an integer Number type", this->context));
     }
 
-    [[nodiscard]] OperationResult subtract(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_string(this, other.get())); }
-    [[nodiscard]] OperationResult divide(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_string(this, other.get())); }
-    [[nodiscard]] OperationResult modulus(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_string(this, other.get())); }
-    [[nodiscard]] OperationResult floor_divide(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_string(this, other.get())); }
-    [[nodiscard]] OperationResult exponent(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_string(this, other.get())); }
+    [[nodiscard]] OperationResult subtract(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '-' to a String type", context)); }
+    [[nodiscard]] OperationResult divide(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '/' to a String type", context)); }
+    [[nodiscard]] OperationResult modulus(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '%' to a String type", context)); }
+    [[nodiscard]] OperationResult floor_divide(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '//' to a String type", context)); }
+    [[nodiscard]] OperationResult exponent(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, IllegalOperationError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '**' to a String type", context)); }
 
     [[nodiscard]] OperationResult get_comparison_eq(const shared_ptr<DataType>& other) const override {
         if (const auto o = dynamic_cast<const String*>(other.get())) return std::make_pair(std::static_pointer_cast<DataType>(make_shared<Number>(static_cast<long long>(this->value == o->value))), std::nullopt);
-        return std::make_pair(nullptr, illegal_op_for_string(this, other.get()));
+        return std::make_pair(nullptr, IllegalOperationError(other->pos_start.value_or(Position()), other->pos_end.value_or(Position()), "Expected a String type", this->context));
     }
     [[nodiscard]] OperationResult get_comparison_neq(const shared_ptr<DataType>& other) const override {
         if (const auto o = dynamic_cast<const String*>(other.get())) return std::make_pair(std::static_pointer_cast<DataType>(make_shared<Number>(static_cast<long long>(this->value != o->value))), std::nullopt);
-        return std::make_pair(nullptr, illegal_op_for_string(this, other.get()));
+        return std::make_pair(nullptr, IllegalOperationError(other->pos_start.value_or(Position()), other->pos_end.value_or(Position()), "Expected a String type", this->context));
     }
     [[nodiscard]] OperationResult get_comparison_lt(const shared_ptr<DataType>& other) const override {
         if (const auto o = dynamic_cast<const String*>(other.get())) return std::make_pair(std::static_pointer_cast<DataType>(make_shared<Number>(static_cast<long long>(this->value < o->value))), std::nullopt);
-        return std::make_pair(nullptr, illegal_op_for_string(this, other.get()));
+        return std::make_pair(nullptr, IllegalOperationError(other->pos_start.value_or(Position()), other->pos_end.value_or(Position()), "Expected a String type", this->context));
     }
     [[nodiscard]] OperationResult get_comparison_gt(const shared_ptr<DataType>& other) const override {
         if (const auto o = dynamic_cast<const String*>(other.get())) return std::make_pair(std::static_pointer_cast<DataType>(make_shared<Number>(static_cast<long long>(this->value > o->value))), std::nullopt);
-        return std::make_pair(nullptr, illegal_op_for_string(this, other.get()));
+        return std::make_pair(nullptr, IllegalOperationError(other->pos_start.value_or(Position()), other->pos_end.value_or(Position()), "Expected a String type", this->context));
     }
     [[nodiscard]] OperationResult get_comparison_lte(const shared_ptr<DataType>& other) const override {
         if (const auto o = dynamic_cast<const String*>(other.get())) return std::make_pair(std::static_pointer_cast<DataType>(make_shared<Number>(static_cast<long long>(this->value <= o->value))), std::nullopt);
-        return std::make_pair(nullptr, illegal_op_for_string(this, other.get()));
+        return std::make_pair(nullptr, IllegalOperationError(other->pos_start.value_or(Position()), other->pos_end.value_or(Position()), "Expected a String type", this->context));
     }
     [[nodiscard]] OperationResult get_comparison_gte(const shared_ptr<DataType>& other) const override {
         if (const auto o = dynamic_cast<const String*>(other.get())) return std::make_pair(std::static_pointer_cast<DataType>(make_shared<Number>(static_cast<long long>(this->value >= o->value))), std::nullopt);
-        return std::make_pair(nullptr, illegal_op_for_string(this, other.get()));
+        return std::make_pair(nullptr, IllegalOperationError(other->pos_start.value_or(Position()), other->pos_end.value_or(Position()), "Expected a String type", this->context));
     }
     [[nodiscard]] OperationResult and_by(const shared_ptr<DataType>& other) const override {
         if (const auto o = dynamic_cast<const String*>(other.get())) {
             return std::make_pair(std::static_pointer_cast<DataType>(make_shared<Number>(static_cast<long long>(is_truthy() && o->is_truthy()))), std::nullopt);
         }
-        return std::make_pair(nullptr, illegal_op_for_string(this, other.get()));
+        return std::make_pair(nullptr, IllegalOperationError(other->pos_start.value_or(Position()), other->pos_end.value_or(Position()), "Expected a String type", this->context));
     }
     [[nodiscard]] OperationResult or_by(const shared_ptr<DataType>& other) const override {
-         if (const auto o = dynamic_cast<const String*>(other.get())) {
+        if (const auto o = dynamic_cast<const String*>(other.get())) {
             return std::make_pair(std::static_pointer_cast<DataType>(make_shared<Number>(static_cast<long long>(is_truthy() || o->is_truthy()))), std::nullopt);
         }
-        return std::make_pair(nullptr, illegal_op_for_string(this, other.get()));
+        return std::make_pair(nullptr, IllegalOperationError(other->pos_start.value_or(Position()), other->pos_end.value_or(Position()), "Expected a String type", this->context));
     }
     [[nodiscard]] OperationResult not_by() const override {
         return std::make_pair(std::static_pointer_cast<DataType>(make_shared<Number>(static_cast<long long>(!is_truthy()))), std::nullopt);
