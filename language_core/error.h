@@ -141,3 +141,10 @@ public:
         : RunTimeError(pos_start, pos_end, details, context, "DictKeyError") {
     }
 };
+
+class AttributeError final : public RunTimeError {
+public:
+    AttributeError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context)
+        : RunTimeError(pos_start, pos_end, details, context, "AttributeError") {
+    }
+};

@@ -330,6 +330,10 @@ public:
                 tokens.push_back(Token(T_COMMA, {}, pos));
                 advance();
             }
+            else if (c == '.') {
+                tokens.push_back(Token(T_DOT, {}, pos));
+                advance();
+            }
             else {
                 const Position pos_start = pos.copy();
                 const char illegal_char = c;

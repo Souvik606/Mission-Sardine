@@ -7,10 +7,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_executable(MissionSardine
         shell.cpp
         data_types/user_function_type.cpp
+        data_types/model_type.cpp
         ast_nodes/string_nodes.h
         data_types/string_type.h
         ast_nodes/list_nodes.h
         data_types/list_type.h
         ast_nodes/dict_nodes.h
         data_types/dict_type.h
-        data_types/builtins.h)
+        data_types/builtins.h)
