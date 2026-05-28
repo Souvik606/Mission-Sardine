@@ -1711,12 +1711,33 @@ private:
             advance();
         }
 
+        optional<Token> op = nullopt;
         if (!current_tok.has_value() || current_tok->type != T_EQ)
         {
-            return res.failure(InvalidSyntaxError(
-                current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
-                current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
-                "Expected '='"));
+            if (current_tok.has_value() &&
+                (current_tok->type == T_PLUSEQUAL || current_tok->type == T_MINUSEQUAL ||
+                 current_tok->type == T_MULEQUAL || current_tok->type == T_DIVIDEEQUAL ||
+                 current_tok->type == T_MODULUSEQUAL || current_tok->type == T_FLOOREQUAL ||
+                 current_tok->type == T_EXPEQUAL))
+            {
+                string op_type;
+                if (current_tok->type == T_PLUSEQUAL) op_type = T_PLUS;
+                else if (current_tok->type == T_MINUSEQUAL) op_type = T_MINUS;
+                else if (current_tok->type == T_MULEQUAL) op_type = T_MUL;
+                else if (current_tok->type == T_DIVIDEEQUAL) op_type = T_DIVIDE;
+                else if (current_tok->type == T_MODULUSEQUAL) op_type = T_MODULUS;
+                else if (current_tok->type == T_FLOOREQUAL) op_type = T_FLOOR;
+                else if (current_tok->type == T_EXPEQUAL) op_type = T_EXP;
+
+                op = Token(op_type, {}, current_tok->pos_start, current_tok->pos_end);
+            }
+            else
+            {
+                return res.failure(InvalidSyntaxError(
+                    current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
+                    current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
+                    "Expected '=' or '+=' or '-=' or '*=' or '/=' or '%=' or '//=' or '**='"));
+            }
         }
         res.register_advancement();
         advance();
@@ -1726,7 +1747,18 @@ private:
             auto expr = res.register_node(expression());
             if (res.error)
                 return res;
-            value_nodes.push_back(expr);
+
+            if (!op.has_value())
+            {
+                value_nodes.push_back(expr);
+            }
+            else
+            {
+                size_t idx = value_nodes.size();
+                auto var_node = make_shared<VariableUseNode>(var_name_toks[idx], index_nodes[idx]);
+                auto bin_op = make_shared<BinaryOperationNode>(var_node, op.value(), expr);
+                value_nodes.push_back(bin_op);
+            }
 
             if (!current_tok.has_value() || current_tok->type != T_COMMA)
             {

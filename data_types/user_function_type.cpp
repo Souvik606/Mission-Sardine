@@ -55,7 +55,7 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>> &pos_args, co
 
     if (pos_args.size() > this->arg_nodes.size())
     {
-        return res.failure(RunTimeError(
+        return res.failure(ArgumentError(
             this->pos_start.value_or(Position()), this->pos_end.value_or(Position()),
             std::to_string(pos_args.size() - this->arg_nodes.size()) + " too many arguments passed into '" + this->name + "'",
             this->context));
@@ -79,14 +79,14 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>> &pos_args, co
         }
         if (!found)
         {
-            return res.failure(RunTimeError(
+            return res.failure(ArgumentError(
                 this->pos_start.value_or(Position()), this->pos_end.value_or(Position()),
                 "Unexpected keyword argument '" + kw_name + "' passed to '" + this->name + "'",
                 this->context));
         }
         if (final_args.count(kw_name))
         {
-            return res.failure(RunTimeError(
+            return res.failure(ArgumentError(
                 this->pos_start.value_or(Position()), this->pos_end.value_or(Position()),
                 "Multiple values for argument '" + kw_name + "' passed to '" + this->name + "'",
                 this->context));
@@ -106,7 +106,7 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>> &pos_args, co
             }
             else
             {
-                return res.failure(RunTimeError(
+                return res.failure(ArgumentError(
                     this->pos_start.value_or(Position()), this->pos_end.value_or(Position()),
                     "Missing required argument '" + p_name + "' for function '" + this->name + "'",
                     this->context));

@@ -190,6 +190,32 @@ public:
         return Token(token_type, {}, pos_start, pos);
     }
 
+    Token make_plus() {
+        Position pos_start = pos.copy();
+        advance();
+        string token_type = T_PLUS;
+        if (current_char.has_value() && current_char.value() == '=') {
+            advance();
+            token_type = T_PLUSEQUAL;
+        }
+        return Token(token_type, {}, pos_start, pos);
+    }
+
+    Token make_sub() {
+        Position pos_start = pos.copy();
+        advance();
+        string token_type = T_MINUS;
+        if (current_char.has_value() && current_char.value() == '>') {
+            advance();
+            token_type = T_ARROW;
+        }
+        else if (current_char.has_value() && current_char.value() == '=') {
+            advance();
+            token_type = T_MINUSEQUAL;
+        }
+        return Token(token_type, {}, pos_start, pos);
+    }
+
     Token make_mul() {
         Position pos_start = pos.copy();
         advance();
@@ -197,6 +223,14 @@ public:
         if (current_char.has_value() && current_char.value() == '*') {
             advance();
             token_type = T_EXP;
+            if (current_char.has_value() && current_char.value() == '=') {
+                advance();
+                token_type = T_EXPEQUAL;
+            }
+        }
+        else if (current_char.has_value() && current_char.value() == '=') {
+            advance();
+            token_type = T_MULEQUAL;
         }
         return Token(token_type, {}, pos_start, pos);
     }
@@ -208,6 +242,25 @@ public:
         if (current_char.has_value() && current_char.value() == '/') {
             advance();
             token_type = T_FLOOR;
+            if (current_char.has_value() && current_char.value() == '=') {
+                advance();
+                token_type = T_FLOOREQUAL;
+            }
+        }
+        else if (current_char.has_value() && current_char.value() == '=') {
+            advance();
+            token_type = T_DIVIDEEQUAL;
+        }
+        return Token(token_type, {}, pos_start, pos);
+    }
+
+    Token make_mod() {
+        Position pos_start = pos.copy();
+        advance();
+        string token_type = T_MODULUS;
+        if (current_char.has_value() && current_char.value() == '=') {
+            advance();
+            token_type = T_MODULUSEQUAL;
         }
         return Token(token_type, {}, pos_start, pos);
     }
@@ -261,12 +314,10 @@ public:
                 tokens.push_back(make_string());
             }
             else if (c == '+') {
-                tokens.push_back(Token(T_PLUS, {}, pos));
-                advance();
+                tokens.push_back(make_plus());
             }
             else if (c == '-') {
-                tokens.push_back(Token(T_MINUS, {}, pos));
-                advance();
+                tokens.push_back(make_sub());
             }
             else if (c == '*') {
                 tokens.push_back(make_mul());
@@ -275,8 +326,7 @@ public:
                 tokens.push_back(make_div());
             }
             else if (c == '%') {
-                tokens.push_back(Token(T_MODULUS, {}, pos));
-                advance();
+                tokens.push_back(make_mod());
             }
             else if (c == '=') {
                 tokens.push_back(make_equals());

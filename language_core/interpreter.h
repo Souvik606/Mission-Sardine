@@ -954,9 +954,9 @@ private:
             auto parent_model = dynamic_pointer_cast<ModelType>(parent_val);
             if (!parent_model)
             {
-                return res.failure(RunTimeError(
+                return res.failure(TypeError(
                     parent_tok.pos_start.value_or(Position()), parent_tok.pos_end.value_or(Position()),
-                    "'" + pname + "' is not a model", context));
+                    "'" + pname + "' is not a class and cannot be inherited from", context));
             }
             parents.push_back(parent_model);
         }

@@ -203,4 +203,15 @@ public:
     [[nodiscard]] shared_ptr<Error> clone() const override {
         return make_shared<AttributeError>(*this);
     }
+};
+
+class TypeError final : public RunTimeError {
+public:
+    TypeError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context)
+        : RunTimeError(pos_start, pos_end, details, context, "TypeError") {
+    }
+
+    [[nodiscard]] shared_ptr<Error> clone() const override {
+        return make_shared<TypeError>(*this);
+    }
 };

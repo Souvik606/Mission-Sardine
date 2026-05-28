@@ -1,0 +1,209 @@
+show("=== STRESS TEST: Error Tracebacks ===")
+
+show("--- Test 1: Basic error traceback ---")
+risk {
+    x = 10 / 0
+} trap DivisionByZeroError e {
+    show("PASS: Caught DivisionByZeroError")
+    show("Details: " + e)
+}
+
+show("--- Test 2: Nested function traceback ---")
+method inner() {
+    y = 1 / 0
+}
+method outer() {
+    inner()
+}
+risk {
+    outer()
+} trap DivisionByZeroError e {
+    show("PASS: Caught from nested call")
+}
+
+show("--- Test 3: Deep recursion traceback ---")
+method recurse(n) {
+    when n == 0 {
+        z = 1 / 0
+    }
+    recurse(n - 1)
+}
+risk {
+    recurse(3)
+} trap DivisionByZeroError e {
+    show("PASS: Caught from recursive depth")
+}
+
+show("--- Test 4: NameError ---")
+risk {
+    show(undefined_var)
+} trap NameError e {
+    show("PASS: Caught NameError")
+}
+
+show("--- Test 5: IndexOutOfBoundsError ---")
+arr = [1, 2, 3]
+risk {
+    val = arr[10]
+} trap IndexOutOfBoundsError e {
+    show("PASS: Caught IndexOutOfBoundsError")
+}
+
+show("--- Test 6: IllegalOperationError ---")
+risk {
+    bad = "hello" - "world"
+} trap IllegalOperationError e {
+    show("PASS: Caught IllegalOperationError")
+}
+
+show("--- Test 7: ArgumentError ---")
+method takes_one(x) {
+    yield x
+}
+risk {
+    takes_one(1, 2, 3)
+} trap ArgumentError e {
+    show("PASS: Caught ArgumentError")
+}
+
+show("--- Test 8: DictKeyError ---")
+d = {"a": 1, "b": 2}
+risk {
+    val = d["missing"]
+} trap DictKeyError e {
+    show("PASS: Caught DictKeyError")
+}
+
+show("--- Test 9: Wildcard trap (catch all) ---")
+risk {
+    bad = 1 / 0
+} trap {
+    show("PASS: Wildcard trap caught error")
+}
+
+show("--- Test 9b: Catch all with variable using RunTimeError ---")
+risk {
+    bad = 1 / 0
+} trap RunTimeError e {
+    show("PASS: Wildcard trap with variable caught error: " + e)
+}
+
+show("--- Test 10: Clean block runs on success ---")
+clean_ran = 0
+risk {
+    x = 42
+} clean {
+    clean_ran = 1
+}
+show("PASS: clean_ran = " + String(clean_ran))
+
+show("--- Test 11: Clean block runs on error ---")
+clean_ran2 = 0
+risk {
+    y = 1 / 0
+} trap DivisionByZeroError e {
+    show("PASS: Caught in trap before clean")
+} clean {
+    clean_ran2 = 1
+}
+show("PASS: clean_ran2 = " + String(clean_ran2))
+
+show("--- Test 12: Nested try blocks ---")
+risk {
+    risk {
+        bad = 1 / 0
+    } trap DivisionByZeroError e {
+        show("PASS: Inner trap caught error")
+        also_bad = "x" - "y"
+    }
+} trap IllegalOperationError e {
+    show("PASS: Outer trap caught error from inner trap body")
+}
+
+show("--- Test 13: Unmatched error propagates ---")
+risk {
+    risk {
+        bad = 1 / 0
+    } trap NameError e {
+        show("FAIL: Wrong trap matched")
+    }
+} trap DivisionByZeroError e {
+    show("PASS: Error propagated to outer trap")
+}
+
+show("--- Test 14: Model access control ---")
+model Secret {
+    secret attr<hidden_val>
+    open attr<public_val>
+    
+    init(h, p) {
+        hidden_val: h
+        public_val: p
+    }
+    
+    open method get_hidden() {
+        yield hidden_val
+    }
+}
+
+s = Secret(42, 100)
+show("Public: " + String(s.public_val))
+show("Via method: " + String(s.get_hidden()))
+
+risk {
+    show(s.hidden_val)
+} trap AttributeError e {
+    show("PASS: Cannot access secret attribute from outside")
+}
+
+show("--- Test 15: Model inheritance ---")
+model Base {
+    open attr<base_val>
+    init(v) {
+        base_val: v
+    }
+    open method describe() {
+        show("Base value: " + String(base_val))
+    }
+}
+
+model Child: Base {
+    open attr<child_val>
+    init(bv, cv) {
+        base_val: bv
+        child_val: cv
+    }
+    open method describe_all() {
+        describe()
+        show("Child value: " + String(child_val))
+    }
+}
+
+c = Child(10, 20)
+c.describe_all()
+show("PASS: Inheritance works")
+
+show("--- Test 16: Augmented assignments ---")
+aug = 10
+aug += 5
+show("aug += 5 -> " + String(aug))
+aug -= 3
+show("aug -= 3 -> " + String(aug))
+aug *= 2
+show("aug *= 2 -> " + String(aug))
+aug /= 4
+show("aug /= 4 -> " + String(aug))
+show("PASS: Augmented assignments work")
+
+show("--- Test 17: Inheritance TypeError ---")
+not_a_model = 42
+risk {
+    model InvalidInheritance: not_a_model {
+        init() {}
+    }
+} trap TypeError e {
+    show("PASS: Caught TypeError for invalid inheritance")
+    show("Details: " + e)
+}
+
+show("=== ALL STRESS TESTS COMPLETE ===")

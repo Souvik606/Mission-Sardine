@@ -23,7 +23,7 @@ initializer-item: IDENTIFIER COLON expression
 
 jump-statements: KEYWORD:proceed | KEYWORD:escape |KEYWORD:yield expression
 
-statements: IDENTIFIER (LPAREN3 expression RPAREN3)* (COMMA IDENTIFIER (LPAREN3 expression RPAREN3)*)* (EQUAL | PLUSEQUAL | MINUSEQUAL | MULEQUAL | DIVEQUAL | MODEQUAL | FLOOREQUAL) expression (COMMA expression)*
+statements: IDENTIFIER (LPAREN3 expression RPAREN3)* (COMMA IDENTIFIER (LPAREN3 expression RPAREN3)*)* (EQUAL | PLUSEQUAL | MINUSEQUAL | MULEQUAL | DIVIDEEQUAL | MODULUSEQUAL | FLOOREQUAL | EXPEQUAL) expression (COMMA expression)*
 
 switch-statement: KEYWORD:menu ternary-expression LPAREN2 NEWLINE* (case-statement* NEWLINE*)* default-statement? NEWLINE* (case-statement* NEWLINE*)* RPAREN2
 
