@@ -45,7 +45,8 @@ const vector<string> KEYWORDS = {
     "define", "and", "or", "not","when","orwhen","otherwise","cycle",
     "during","method","yield","escape","proceed", "menu", "choice", "fallback",
     "risk", "trap", "clean",
-    "model", "attr", "init"
+    "model", "attr", "init",
+    "open", "secret", "guarded"
 };
 
 const vector<string> ERROR_TYPES = {

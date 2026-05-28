@@ -3,10 +3,14 @@
 #include "number_type.h"
 #include "../language_core/interpreter.h"
 #include "../language_core/symbol_table.h"
+#include "../language_core/context.h"
 #include "../ast_nodes/class_nodes.h"
 #include "../ast_nodes/function_nodes.h"
 #include "../ast_nodes/list_nodes.h"
 
+// ── ModelType::execute ────────────────────────────────────────────────────────
+// Instantiates a ModelInstance: initialises all attributes (from all ancestors),
+// then runs the init constructor with the supplied args.
 RunTimeResult ModelType::execute(const vector<shared_ptr<DataType>> &args, Interpreter &interp)
 {
     RunTimeResult res;
@@ -16,7 +20,9 @@ RunTimeResult ModelType::execute(const vector<shared_ptr<DataType>> &args, Inter
     instance->set_context(context).set_pos(pos_start, pos_end);
     instance->symbol_table->parent = context->symbol_table;
 
-    for (const auto &attr_n : attr_node_list)
+    auto all_attrs = all_attr_nodes();
+
+    for (const auto &attr_n : all_attrs)
     {
         auto *attr_node = dynamic_cast<AttrNode *>(attr_n.get());
         if (!attr_node)
@@ -62,6 +68,7 @@ RunTimeResult ModelType::execute(const vector<shared_ptr<DataType>> &args, Inter
             auto exec_context = make_shared<Context>("init", context, pos_start);
             exec_context->symbol_table = instance->symbol_table;
             exec_context->symbol_table->set("this", instance);
+            exec_context->owner_class = static_pointer_cast<ModelType>(shared_from_this());
 
             if (args.size() > param_names.size())
             {
@@ -95,18 +102,82 @@ RunTimeResult ModelType::execute(const vector<shared_ptr<DataType>> &args, Inter
     return res.success(instance);
 }
 
-DataType::OperationResult ModelInstance::get_attr(const string &attr_name, Interpreter &interp) const
+DataType::OperationResult ModelInstance::get_attr(const string &attr_name,
+                                                   Interpreter &interp,
+                                                   const shared_ptr<Context> &calling_context) const
 {
     auto value = symbol_table->get(attr_name);
     if (value)
     {
+        const AttrInfo *ai = model->find_attribute(attr_name);
+        if (ai)
+        {
+            const string &access = ai->access_modifier;
+
+            if (access == "secret")
+            {
+                // Only accessible from within the exact class that declared it
+                auto attr_owner = model->find_attribute_owner(attr_name);
+                auto this_val = calling_context->symbol_table->get("this");
+                auto caller_inst = dynamic_pointer_cast<ModelInstance>(this_val);
+                if (!caller_inst || caller_inst->model != attr_owner)
+                {
+                    return {nullptr, AttributeError(
+                        pos_start.value_or(Position()), pos_end.value_or(Position()),
+                        "Cannot access secret attribute '" + attr_name + "'",
+                        calling_context)};
+                }
+            }
+            else if (access == "guarded")
+            {
+                // Accessible from the declaring class or any subclass
+                auto attr_owner = model->find_attribute_owner(attr_name);
+                auto caller_class = calling_context->owner_class;
+                if (!caller_class || !caller_class->is_descendant_of(attr_owner))
+                {
+                    return {nullptr, AttributeError(
+                        pos_start.value_or(Position()), pos_end.value_or(Position()),
+                        "Cannot access guarded attribute '" + attr_name + "'",
+                        calling_context)};
+                }
+            }
+            // "open" or "" → always accessible
+        }
+
         return {value, nullopt};
     }
 
-    auto it = model->method_nodes.find(attr_name);
-    if (it != model->method_nodes.end())
+    const MethodInfo *mi = model->find_method(attr_name);
+    if (mi)
     {
-        auto *func_def = dynamic_cast<FunctionDefinitionNode *>(it->second.get());
+        const string &access = mi->access_modifier;
+
+        if (access == "secret")
+        {
+            auto method_owner = model->find_method_owner(attr_name);
+            auto caller_class = calling_context->owner_class;
+            if (!caller_class || caller_class != method_owner)
+            {
+                return {nullptr, AttributeError(
+                    pos_start.value_or(Position()), pos_end.value_or(Position()),
+                    "Cannot access secret method '" + attr_name + "'",
+                    calling_context)};
+            }
+        }
+        else if (access == "guarded")
+        {
+            auto method_owner = model->find_method_owner(attr_name);
+            auto caller_class = calling_context->owner_class;
+            if (!caller_class || !caller_class->is_descendant_of(method_owner))
+            {
+                return {nullptr, AttributeError(
+                    pos_start.value_or(Position()), pos_end.value_or(Position()),
+                    "Cannot access guarded method '" + attr_name + "'",
+                    calling_context)};
+            }
+        }
+
+        auto *func_def = dynamic_cast<FunctionDefinitionNode *>(mi->node.get());
         if (func_def)
         {
             vector<string> arg_names;
@@ -116,6 +187,9 @@ DataType::OperationResult ModelInstance::get_attr(const string &attr_name, Inter
             }
 
             auto self_ptr = const_cast<ModelInstance *>(this)->shared_from_this();
+
+            auto method_owner = model->find_method_owner(attr_name);
+
             auto method = make_shared<Function>(
                 attr_name,
                 func_def->body_node,
@@ -123,6 +197,7 @@ DataType::OperationResult ModelInstance::get_attr(const string &attr_name, Inter
                 false,
                 self_ptr);
             method->set_context(context).set_pos(pos_start, pos_end);
+            method->access_modifier_owner = method_owner;
             return {method, nullopt};
         }
     }

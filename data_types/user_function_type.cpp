@@ -37,6 +37,8 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>> &args, Interp
             exec_context->symbol_table = make_shared<SymbolTable>(inst_sym);
             exec_context->symbol_table->set("this", instance);
         }
+        
+        exec_context->owner_class = this->access_modifier_owner;
     }
     else
     {

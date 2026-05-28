@@ -13,12 +13,14 @@ public:
     vector<Token> arg_name_toks;
     shared_ptr<Node> body_node;
     bool return_null;
+    string access_modifier; 
 
     explicit FunctionDefinitionNode(
         optional<Token> var_name,
         vector<Token> arg_names,
         shared_ptr<Node> body,
-        bool return_null
+        bool return_null,
+        string access_mod = ""
     )
         : Node(
             [&]() {
@@ -31,7 +33,8 @@ public:
         var_name_tok(std::move(var_name)),
         arg_name_toks(std::move(arg_names)),
         body_node(std::move(body)),
-        return_null(return_null)
+        return_null(return_null),
+        access_modifier(std::move(access_mod))
     {
     }
 

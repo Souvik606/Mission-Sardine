@@ -522,6 +522,12 @@ private:
             if (auto inst = dynamic_pointer_cast<ModelInstance>(this_val))
             {
                 value = inst->symbol_table->get(var_name);
+                if (!value)
+                {
+                    auto [method_val, err] = inst->get_attr(var_name, *this, context);
+                    if (!err && method_val)
+                        value = method_val;
+                }
             }
         }
 
@@ -637,22 +643,7 @@ private:
                         bool is_attr = inst->symbol_table->get(var_name) != nullptr;
                         if (!is_attr)
                         {
-                            for (const auto &attr_n : inst->model->attr_node_list)
-                            {
-                                if (auto *an = dynamic_cast<AttrNode *>(attr_n.get()))
-                                {
-                                    for (auto &[tok, _] : an->declarations)
-                                    {
-                                        if (any_cast<string>(tok.value) == var_name)
-                                        {
-                                            is_attr = true;
-                                            break;
-                                        }
-                                    }
-                                }
-                                if (is_attr)
-                                    break;
-                            }
+                            is_attr = inst->model->find_attribute(var_name) != nullptr;
                         }
                         if (is_attr)
                         {
@@ -941,34 +932,64 @@ private:
 
         const string &model_name = any_cast<string>(node->name_tok.value);
 
+        vector<shared_ptr<ModelType>> parents;
+        for (const auto &parent_tok : node->parent_name_toks)
+        {
+            const string &pname = any_cast<string>(parent_tok.value);
+            auto parent_val = context->symbol_table->get(pname);
+            if (!parent_val)
+            {
+                return res.failure(NameError(
+                    parent_tok.pos_start.value_or(Position()), parent_tok.pos_end.value_or(Position()),
+                    "Parent class '" + pname + "' is not defined", context));
+            }
+            auto parent_model = dynamic_pointer_cast<ModelType>(parent_val);
+            if (!parent_model)
+            {
+                return res.failure(RunTimeError(
+                    parent_tok.pos_start.value_or(Position()), parent_tok.pos_end.value_or(Position()),
+                    "'" + pname + "' is not a model", context));
+            }
+            parents.push_back(parent_model);
+        }
+
+        vector<AttrInfo> own_attributes;
         vector<shared_ptr<Node>> attr_nodes;
         shared_ptr<Node> init_node = nullptr;
-        unordered_map<string, shared_ptr<Node>> method_nodes;
+        unordered_map<string, MethodInfo> method_nodes;
 
         for (const auto &member : node->body_nodes)
         {
-            if (dynamic_cast<FunctionDefinitionNode *>(member.get()))
+            if (auto *func = dynamic_cast<FunctionDefinitionNode *>(member.get()))
             {
-                auto *func = static_cast<FunctionDefinitionNode *>(member.get());
-                string name = func->var_name_tok.has_value()
-                                  ? any_cast<string>(func->var_name_tok->value)
-                                  : "";
-                if (!name.empty())
+                string mname = func->var_name_tok.has_value()
+                                   ? any_cast<string>(func->var_name_tok->value)
+                                   : "";
+                if (!mname.empty())
                 {
-                    method_nodes[name] = member;
+                    method_nodes[mname] = MethodInfo{member, func->access_modifier};
                 }
             }
             else if (dynamic_cast<InitNode *>(member.get()))
             {
                 init_node = member;
             }
-            else if (dynamic_cast<AttrNode *>(member.get()))
+            else if (auto *an = dynamic_cast<AttrNode *>(member.get()))
             {
                 attr_nodes.push_back(member);
+                for (auto &[name_tok, default_node] : an->declarations)
+                {
+                    own_attributes.push_back(AttrInfo{
+                        any_cast<string>(name_tok.value),
+                        default_node,
+                        an->access_modifier
+                    });
+                }
             }
         }
 
-        auto model = make_shared<ModelType>(model_name, attr_nodes, init_node, method_nodes);
+        auto model = make_shared<ModelType>(model_name, own_attributes, attr_nodes,
+                                            init_node, method_nodes, parents);
         model->set_context(context).set_pos(node->pos_start, node->pos_end);
 
         context->symbol_table->set(model_name, model);
@@ -988,7 +1009,7 @@ private:
         shared_ptr<DataType> value;
         if (auto inst = dynamic_pointer_cast<ModelInstance>(object_val))
         {
-            auto [v, err] = inst->get_attr(attr_name, *this);
+            auto [v, err] = inst->get_attr(attr_name, *this, context);
             if (err)
                 return res.failure(*err);
             value = v;

@@ -1,70 +1,63 @@
-model Animal{
-    attr<name>
-    attr<age,gender>
-    attr<weight=20,height>
+model Flyable {
+    open attr<max_altitude>
 
-    init(name,age,gender,weight) {
-        name:name,age:2*age
-        gender:gender
-        weight:weight
+    init(alt) {
+        max_altitude: alt
     }
 
-    method showName(){
-        show(name)
-    }
-
-    method showAge(){
-        show(age)
-    }
-
-    method showWeight(){
-        show(weight)
-    }
-
-    method showHeight(){
-        show(height)
+    open method fly() {
+        show("Flying up to " + String(max_altitude) + " metres!")
     }
 }
 
-cat=Animal("Tom",5,"M",30)
-cat.showName()
-cat.showAge()
-show(cat.gender)
-cat.showWeight()
-cat.showHeight()
+model Swimmable {
+    open attr<max_depth>
 
-model Car {
-    attr<engine, chassis>
-    attr<year, mascot>
-    attr<modelName, colour>
+    init(depth) {
+        max_depth: depth
+    }
 
-    init(engine, modelName, year, colour, mascot) {
-        engine: "E+" + engine, year: "'" + String(year<2000?year-1900:year-2000)
-        colour: colour
-        modelName: modelName + " " + String(year) + " " + colour
-        mascot: mascot
-    }
-    method showE(){
-        show(engine)
-    }
-    method showY(){
-        show(year)
-    }
-    method showC(){
-        show(colour)
-    }
-    method showM(){
-        show(modelName)
+    open method swim() {
+        show("Diving down to " + String(max_depth) + " metres!")
     }
 }
 
-test=Car("VTEC", "City", 2021, "Black", cat)
-test.showE()
-test.showC()
-test.showY()
-test.showM()
-test.mascot.showName()
-test.mascot.showAge()
-show(test.mascot.gender)
-test.mascot.showWeight()
-test.mascot.showHeight()
+model Runnable {
+    open attr<top_speed>
+
+    init(speed) {
+        top_speed: speed
+    }
+
+    open method run() {
+        show("Sprinting at " + String(top_speed) + " km/h!")
+    }
+}
+
+model Duck: Flyable, Swimmable, Runnable {
+    open attr<name>
+
+    init(name, alt, depth, speed) {
+        name: name
+        max_altitude: alt
+        max_depth: depth
+        top_speed: speed
+    }
+
+    open method introduce() {
+        show("Hi, I am " + name + " the duck!")
+    }
+
+    open method show_all() {
+        introduce()
+        fly()
+        swim()
+        run()
+    }
+}
+
+donald = Duck("Donald", 120, 5, 12)
+donald.show_all()
+show("Max altitude : " + String(donald.max_altitude))
+show("Max depth    : " + String(donald.max_depth))
+show("Top speed    : " + String(donald.top_speed))
