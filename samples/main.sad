@@ -61,3 +61,32 @@ donald.show_all()
 show("Max altitude : " + String(donald.max_altitude))
 show("Max depth    : " + String(donald.max_depth))
 show("Top speed    : " + String(donald.top_speed))
+
+model Greeter {
+    open attr<greeting>
+    init(g = "Hello") {
+        greeting: g
+    }
+    open method greet(name, suffix = "!") {
+        show(greeting + ", " + name + suffix)
+    }
+}
+
+show("--- Testing Constructors with Defaults ---")
+g1 = Greeter()
+show("g1 greeting: " + g1.greeting)
+
+g2 = Greeter("Welcome")
+show("g2 greeting: " + g2.greeting)
+
+show("--- Testing Methods with Defaults ---")
+g1.greet("World")
+g1.greet("Alice", "?")
+
+show("--- Testing Keyword Arguments ---")
+g1.greet(suffix = "...", name = "Charlie")
+g1.greet(name = "David")
+
+show("--- Testing Variadic show with sep/end ---")
+show("A", "B", "C", sep = " -> ", end = " [DONE]\n")
+show("X", "Y")

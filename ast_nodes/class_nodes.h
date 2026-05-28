@@ -49,12 +49,12 @@ public:
 class InitNode final : public Node
 {
 public:
-    vector<Token> param_name_toks;
+    vector<pair<Token, shared_ptr<Node>>> param_nodes;
     shared_ptr<Node> body_node;
 
-    InitNode(vector<Token> params, shared_ptr<Node> body, Position ps, Position pe)
+    InitNode(vector<pair<Token, shared_ptr<Node>>> params, shared_ptr<Node> body, Position ps, Position pe)
         : Node(ps, pe),
-          param_name_toks(std::move(params)),
+          param_nodes(std::move(params)),
           body_node(std::move(body)) {}
 
     [[nodiscard]] string to_string() const override

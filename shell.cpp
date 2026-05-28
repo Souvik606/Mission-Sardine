@@ -24,33 +24,74 @@ using namespace std;
 
 auto global_symbol_table = make_shared<SymbolTable>();
 
-RunTimeResult builtin_show(const vector<shared_ptr<DataType>>& args) {
-    if (args.size() != 1) {
-        return RunTimeResult().failure(RunTimeError(
-            Position(), Position(),
-            "show() takes exactly 1 argument (got " + std::to_string(args.size()) + ")",
-            nullptr
-        ));
-    }
-    cout << args[0]->to_string() << endl;
-    return RunTimeResult().success(make_shared<Number>(0LL));
-};
+RunTimeResult builtin_show(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args) {
+    string separator = " ";
+    string end_char = "\n";
 
-RunTimeResult builtin_listen(const vector<shared_ptr<DataType>>& args) {
-    if (!args.empty()) {
+    for (const auto &[name, value] : kw_args) {
+        if (name == "sep") {
+            auto str_val = dynamic_pointer_cast<String>(value);
+            if (!str_val) {
+                return RunTimeResult().failure(RunTimeError(
+                    Position(), Position(),
+                    "'sep' must be a string",
+                    nullptr
+                ));
+            }
+            separator = str_val->value;
+        }
+        else if (name == "end") {
+            auto str_val = dynamic_pointer_cast<String>(value);
+            if (!str_val) {
+                return RunTimeResult().failure(RunTimeError(
+                    Position(), Position(),
+                    "'end' must be a string",
+                    nullptr
+                ));
+            }
+            end_char = str_val->value;
+        }
+        else {
+            return RunTimeResult().failure(RunTimeError(
+                Position(), Position(),
+                "Unexpected keyword argument '" + name + "' for show",
+                nullptr
+            ));
+        }
+    }
+
+    stringstream ss;
+    for (size_t i = 0; i < args.size(); ++i) {
+        if (auto str_val = dynamic_pointer_cast<String>(args[i])) {
+            ss << str_val->value;
+        } else {
+            ss << args[i]->to_string();
+        }
+        if (i < args.size() - 1) {
+            ss << separator;
+        }
+    }
+    ss << end_char;
+    cout << ss.str();
+    cout.flush();
+    return RunTimeResult().success(make_shared<Number>(0LL));
+}
+
+RunTimeResult builtin_listen(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args) {
+    if (!args.empty() || !kw_args.empty()) {
         return RunTimeResult().failure(RunTimeError(
             Position(), Position(),
-            "listen() takes 0 arguments (got " + std::to_string(args.size()) + ")",
+            "listen() takes 0 arguments",
             nullptr
         ));
     }
     string text;
     getline(cin, text);
     return RunTimeResult().success(make_shared<String>(text));
-};
+}
 
-RunTimeResult builtin_type(const vector<shared_ptr<DataType>>& args) {
-    if (args.size() != 1) {
+RunTimeResult builtin_type(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args) {
+    if (args.size() != 1 || !kw_args.empty()) {
         return RunTimeResult().failure(RunTimeError(
             Position(), Position(),
             "type() takes exactly 1 argument (got " + std::to_string(args.size()) + ")",
@@ -78,10 +119,10 @@ RunTimeResult builtin_type(const vector<shared_ptr<DataType>>& args) {
 
     cout << type_name << endl;
     return RunTimeResult().success(make_shared<Number>(0LL));
-};
+}
 
-RunTimeResult builtin_integer(const vector<shared_ptr<DataType>>& args) {
-    if (args.size() != 1) {
+RunTimeResult builtin_integer(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args) {
+    if (args.size() != 1 || !kw_args.empty()) {
         return RunTimeResult().failure(RunTimeError(
             Position(), Position(),
             "Integer() takes exactly 1 argument (got " + std::to_string(args.size()) + ")",
@@ -117,8 +158,8 @@ RunTimeResult builtin_integer(const vector<shared_ptr<DataType>>& args) {
     ));
 }
 
-RunTimeResult builtin_string(const vector<shared_ptr<DataType>>& args) {
-    if (args.size() != 1) {
+RunTimeResult builtin_string(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args) {
+    if (args.size() != 1 || !kw_args.empty()) {
         return RunTimeResult().failure(RunTimeError(
             Position(), Position(),
             "String() takes exactly 1 argument (got " + std::to_string(args.size()) + ")",
@@ -139,8 +180,8 @@ RunTimeResult builtin_string(const vector<shared_ptr<DataType>>& args) {
     return RunTimeResult().success(make_shared<String>(str_val));
 }
 
-RunTimeResult builtin_size(const vector<shared_ptr<DataType>>& args) {
-    if (args.size() != 1) {
+RunTimeResult builtin_size(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args) {
+    if (args.size() != 1 || !kw_args.empty()) {
         return RunTimeResult().failure(RunTimeError(
             Position(), Position(),
             "size() takes exactly 1 argument (got " + std::to_string(args.size()) + ")",
@@ -164,8 +205,8 @@ RunTimeResult builtin_size(const vector<shared_ptr<DataType>>& args) {
     ));
 }
 
-RunTimeResult builtin_range(const vector<shared_ptr<DataType>>& args) {
-    if (args.size() != 1) {
+RunTimeResult builtin_range(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args) {
+    if (args.size() != 1 || !kw_args.empty()) {
         return RunTimeResult().failure(RunTimeError(
             Position(), Position(),
             "range() takes exactly 1 argument (got " + std::to_string(args.size()) + ")",
@@ -188,8 +229,8 @@ RunTimeResult builtin_range(const vector<shared_ptr<DataType>>& args) {
     return RunTimeResult().success(make_shared<List>(std::move(elems)));
 }
 
-RunTimeResult builtin_copy(const vector<shared_ptr<DataType>>& args) {
-    if (args.size() != 1) {
+RunTimeResult builtin_copy(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args) {
+    if (args.size() != 1 || !kw_args.empty()) {
         return RunTimeResult().failure(RunTimeError(
             Position(), Position(),
             "copy() takes exactly 1 argument (got " + std::to_string(args.size()) + ")",
@@ -211,8 +252,8 @@ RunTimeResult builtin_copy(const vector<shared_ptr<DataType>>& args) {
     return RunTimeResult().success(new_list);
 }
 
-RunTimeResult builtin_reverse(const vector<shared_ptr<DataType>>& args) {
-    if (args.size() != 3) {
+RunTimeResult builtin_reverse(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args) {
+    if (args.size() != 3 || !kw_args.empty()) {
         return RunTimeResult().failure(RunTimeError(
             Position(), Position(),
             "reverse() takes exactly 3 arguments (got " + std::to_string(args.size()) + ")",
@@ -252,8 +293,8 @@ RunTimeResult builtin_reverse(const vector<shared_ptr<DataType>>& args) {
     return RunTimeResult().success(new_list);
 }
 
-RunTimeResult builtin_irev(const vector<shared_ptr<DataType>>& args) {
-    if (args.size() != 3) {
+RunTimeResult builtin_irev(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args) {
+    if (args.size() != 3 || !kw_args.empty()) {
         return RunTimeResult().failure(RunTimeError(
             Position(), Position(),
             "irev() takes exactly 3 arguments (got " + std::to_string(args.size()) + ")",
@@ -289,8 +330,8 @@ RunTimeResult builtin_irev(const vector<shared_ptr<DataType>>& args) {
     return RunTimeResult().success(lst);
 }
 
-RunTimeResult builtin_swap(const vector<shared_ptr<DataType>>& args) {
-    if (args.size() != 3) {
+RunTimeResult builtin_swap(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args) {
+    if (args.size() != 3 || !kw_args.empty()) {
         return RunTimeResult().failure(RunTimeError(
             Position(), Position(),
             "swap() takes exactly 3 arguments (got " + std::to_string(args.size()) + ")",

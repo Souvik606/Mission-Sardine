@@ -198,13 +198,13 @@ private:
         RunTimeResult res;
         string func_name = node->var_name_tok.has_value() ? any_cast<string>(node->var_name_tok->value) : "";
         auto body_node = node->body_node;
-        vector<string> arg_names;
-        for (const auto &tok : node->arg_name_toks)
+        vector<pair<string, shared_ptr<Node>>> arg_nodes;
+        for (const auto &p : node->arg_nodes)
         {
-            arg_names.push_back(any_cast<string>(tok.value));
+            arg_nodes.push_back({any_cast<string>(p.first.value), p.second});
         }
 
-        auto func_value = make_shared<Function>(func_name, body_node, arg_names, node->return_null);
+        auto func_value = make_shared<Function>(func_name, body_node, arg_nodes, node->return_null);
         func_value->set_context(context).set_pos(node->pos_start, node->pos_end);
 
         if (node->var_name_tok.has_value())
@@ -218,7 +218,8 @@ private:
     RunTimeResult visit_FunctionCallNode(const shared_ptr<FunctionCallNode> &node, const shared_ptr<Context> &context)
     {
         RunTimeResult res;
-        vector<shared_ptr<DataType>> args;
+        vector<shared_ptr<DataType>> pos_args;
+        map<string, shared_ptr<DataType>> kw_args;
 
         auto call_value = res.register_result(visit(node->call_node, context));
         if (res.should_return())
@@ -226,25 +227,34 @@ private:
 
         call_value->set_pos(node->pos_start, node->pos_end);
 
-        for (const auto &arg_node : node->arg_nodes)
+        for (const auto &arg_node : node->positional_arg_nodes)
         {
-            args.push_back(res.register_result(visit(arg_node, context)));
+            pos_args.push_back(res.register_result(visit(arg_node, context)));
             if (res.should_return())
                 return res;
+        }
+
+        for (const auto &p : node->keyword_arg_nodes)
+        {
+            const string &name = any_cast<string>(p.first.value);
+            auto val = res.register_result(visit(p.second, context));
+            if (res.should_return())
+                return res;
+            kw_args[name] = val;
         }
 
         shared_ptr<DataType> return_value;
         if (auto func_to_call = dynamic_pointer_cast<Function>(call_value))
         {
-            return_value = res.register_result(func_to_call->execute(args, *this));
+            return_value = res.register_result(func_to_call->execute(pos_args, kw_args, *this));
         }
         else if (auto builtin_to_call = dynamic_pointer_cast<BuiltInFunction>(call_value))
         {
-            return_value = res.register_result(builtin_to_call->execute(args));
+            return_value = res.register_result(builtin_to_call->execute(pos_args, kw_args));
         }
         else if (auto model_to_call = dynamic_pointer_cast<ModelType>(call_value))
         {
-            return_value = res.register_result(model_to_call->execute(args, *this));
+            return_value = res.register_result(model_to_call->execute(pos_args, kw_args, *this));
         }
         else
         {
@@ -514,26 +524,24 @@ private:
     {
         RunTimeResult res;
         const string &var_name = any_cast<string>(node->var_name_tok.value);
-        shared_ptr<DataType> value;
-
-        auto this_val = context->symbol_table->get("this");
-        if (this_val)
-        {
-            if (auto inst = dynamic_pointer_cast<ModelInstance>(this_val))
-            {
-                value = inst->symbol_table->get(var_name);
-                if (!value)
-                {
-                    auto [method_val, err] = inst->get_attr(var_name, *this, context);
-                    if (!err && method_val)
-                        value = method_val;
-                }
-            }
-        }
+        shared_ptr<DataType> value = context->symbol_table->get(var_name);
 
         if (!value)
         {
-            value = context->symbol_table->get(var_name);
+            auto this_val = context->symbol_table->get("this");
+            if (this_val)
+            {
+                if (auto inst = dynamic_pointer_cast<ModelInstance>(this_val))
+                {
+                    value = inst->symbol_table->get(var_name);
+                    if (!value)
+                    {
+                        auto [method_val, err] = inst->get_attr(var_name, *this, context);
+                        if (!err && method_val)
+                            value = method_val;
+                    }
+                }
+            }
         }
 
         if (!value)

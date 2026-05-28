@@ -36,15 +36,15 @@ class Function final : public DataType
 public:
     string name;
     shared_ptr<Node> body_node;
-    vector<string> arg_names;
+    vector<pair<string, shared_ptr<Node>>> arg_nodes;
     bool return_null;
     shared_ptr<DataType> instance;
     shared_ptr<ModelType> access_modifier_owner; 
 
-    explicit Function(string name, shared_ptr<Node> body, vector<string> args, bool return_null,
+    explicit Function(string name, shared_ptr<Node> body, vector<pair<string, shared_ptr<Node>>> args, bool return_null,
                       shared_ptr<DataType> instance = nullptr);
 
-    RunTimeResult execute(const vector<shared_ptr<DataType>> &args, Interpreter &interpreter);
+    RunTimeResult execute(const vector<shared_ptr<DataType>> &pos_args, const map<string, shared_ptr<DataType>> &kw_args, Interpreter &interpreter);
 
     [[nodiscard]] bool is_truthy() const override
     {

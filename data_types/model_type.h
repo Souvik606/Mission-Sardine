@@ -145,7 +145,7 @@ public:
         return "<model " + name + ">";
     }
 
-    RunTimeResult execute(const vector<shared_ptr<DataType>> &args, Interpreter &interp);
+    RunTimeResult execute(const vector<shared_ptr<DataType>> &pos_args, const map<string, shared_ptr<DataType>> &kw_args, Interpreter &interp);
 
     [[nodiscard]] OperationResult add(const shared_ptr<DataType> &o) const override { return err("'+'"); }
     [[nodiscard]] OperationResult subtract(const shared_ptr<DataType> &o) const override { return err("'-'"); }
