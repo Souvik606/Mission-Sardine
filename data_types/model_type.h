@@ -14,26 +14,114 @@ class Interpreter;
 class ModelInstance;
 class FunctionDefinitionNode;
 
+struct AttrInfo {
+    string name;
+    shared_ptr<Node> default_node;
+    string access_modifier;
+};
+
+struct MethodInfo {
+    shared_ptr<Node> node;
+    string access_modifier;
+};
+
 class ModelType final : public DataType, public enable_shared_from_this<ModelType>
 {
 public:
     string name;
 
+    vector<AttrInfo> own_attributes;
+
     vector<shared_ptr<Node>> attr_node_list;
 
     shared_ptr<Node> init_node;
 
-    unordered_map<string, shared_ptr<Node>> method_nodes;
+    unordered_map<string, MethodInfo> own_method_nodes;
+    vector<shared_ptr<ModelType>> parents;
 
     ModelType(string n,
+              vector<AttrInfo> own_attrs,
               vector<shared_ptr<Node>> attr_ns,
               shared_ptr<Node> init_n,
-              unordered_map<string, shared_ptr<Node>> methods)
+              unordered_map<string, MethodInfo> methods,
+              vector<shared_ptr<ModelType>> parents = {})
         : name(std::move(n)),
+          own_attributes(std::move(own_attrs)),
           attr_node_list(std::move(attr_ns)),
           init_node(std::move(init_n)),
-          method_nodes(std::move(methods))
+          own_method_nodes(std::move(methods)),
+          parents(std::move(parents))
     {
+    }
+
+    const MethodInfo* find_method(const string& mname) const
+    {
+        auto it = own_method_nodes.find(mname);
+        if (it != own_method_nodes.end())
+            return &it->second;
+        for (const auto& p : parents)
+        {
+            const MethodInfo* found = p->find_method(mname);
+            if (found) return found;
+        }
+        return nullptr;
+    }
+
+    // Find which ModelType owns a method
+    shared_ptr<ModelType> find_method_owner(const string& mname)
+    {
+        if (own_method_nodes.count(mname))
+            return shared_from_this();
+        for (const auto& p : parents)
+        {
+            auto owner = p->find_method_owner(mname);
+            if (owner) return owner;
+        }
+        return nullptr;
+    }
+
+    const AttrInfo* find_attribute(const string& aname) const
+    {
+        for (const auto& ai : own_attributes)
+            if (ai.name == aname) return &ai;
+        for (const auto& p : parents)
+        {
+            const AttrInfo* found = p->find_attribute(aname);
+            if (found) return found;
+        }
+        return nullptr;
+    }
+
+    shared_ptr<ModelType> find_attribute_owner(const string& aname)
+    {
+        for (const auto& ai : own_attributes)
+            if (ai.name == aname) return shared_from_this();
+        for (const auto& p : parents)
+        {
+            auto owner = p->find_attribute_owner(aname);
+            if (owner) return owner;
+        }
+        return nullptr;
+    }
+
+    bool is_descendant_of(const shared_ptr<ModelType>& other_model) const
+    {
+        if (this == other_model.get()) return true;
+        for (const auto& p : parents)
+            if (p->is_descendant_of(other_model)) return true;
+        return false;
+    }
+
+    vector<shared_ptr<Node>> all_attr_nodes() const
+    {
+        vector<shared_ptr<Node>> result;
+        for (const auto& p : parents)
+        {
+            auto parent_attrs = p->all_attr_nodes();
+            result.insert(result.end(), parent_attrs.begin(), parent_attrs.end());
+        }
+        result.insert(result.end(), attr_node_list.begin(), attr_node_list.end());
+        return result;
     }
 
     [[nodiscard]] bool is_truthy() const override { return true; }
@@ -47,7 +135,7 @@ public:
 
     [[nodiscard]] shared_ptr<DataType> copy() const override
     {
-        auto c = make_shared<ModelType>(name, attr_node_list, init_node, method_nodes);
+        auto c = make_shared<ModelType>(name, own_attributes, attr_node_list, init_node, own_method_nodes, parents);
         c->set_context(context).set_pos(pos_start, pos_end);
         return c;
     }
@@ -96,7 +184,8 @@ public:
     {
     }
 
-    OperationResult get_attr(const string &attr_name, Interpreter &interp) const;
+    OperationResult get_attr(const string &attr_name, Interpreter &interp,
+                             const shared_ptr<Context> &calling_context) const;
 
     OperationResult set_attr(const string &attr_name, shared_ptr<DataType> value)
     {

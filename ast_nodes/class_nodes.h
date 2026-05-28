@@ -10,13 +10,15 @@ class ModelNode final : public Node
 {
 public:
     Token name_tok;
+    vector<Token> parent_name_toks;   // parent class names (inheritance)
     vector<shared_ptr<Node>> body_nodes;
 
-    ModelNode(Token name_tok, vector<shared_ptr<Node>> body)
+    ModelNode(Token name_tok, vector<Token> parents, vector<shared_ptr<Node>> body)
         : Node(name_tok.pos_start.value_or(Position()),
                body.empty() ? name_tok.pos_end.value_or(Position())
                             : body.back()->pos_end.value_or(Position())),
           name_tok(std::move(name_tok)),
+          parent_name_toks(std::move(parents)),
           body_nodes(std::move(body)) {}
 
     [[nodiscard]] string to_string() const override
@@ -31,13 +33,16 @@ class AttrNode final : public Node
 {
 public:
     vector<AttrDecl> declarations;
+    string access_modifier;  // "", "open", "secret", "guarded"
 
-    AttrNode(vector<AttrDecl> decls, Position ps, Position pe)
-        : Node(ps, pe), declarations(std::move(decls)) {}
+    AttrNode(vector<AttrDecl> decls, string access_mod, Position ps, Position pe)
+        : Node(ps, pe),
+          declarations(std::move(decls)),
+          access_modifier(std::move(access_mod)) {}
 
     [[nodiscard]] string to_string() const override
     {
-        return "(Attributes)";
+        return "(Attributes[" + access_modifier + "])";
     }
 };
 

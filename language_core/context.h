@@ -6,12 +6,15 @@
 
 using namespace std;
 
+class ModelType;
+
 class Context {
 public:
     string display_name;
     shared_ptr<Context> parent;
     optional<Position> parent_entry_pos;
     shared_ptr<SymbolTable> symbol_table;
+    shared_ptr<ModelType> owner_class;
 
     explicit Context(
         string display_name,
@@ -21,7 +24,8 @@ public:
         : display_name(std::move(display_name)),
           parent(std::move(parent)),
           parent_entry_pos(std::move(parent_entry_pos)),
-          symbol_table(nullptr)
+          symbol_table(nullptr),
+          owner_class(nullptr)
     {
     }
 };

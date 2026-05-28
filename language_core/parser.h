@@ -321,7 +321,7 @@ private:
         return res.success(make_shared<ListNode>(element_nodes, pos_start, pos_end));
     }
 
-    ParseResult function_definition()
+    ParseResult function_definition(const string &access_mod = "open")
     {
         ParseResult res;
         optional<Token> var_name_tok = nullopt;
@@ -474,7 +474,7 @@ private:
         res.register_advancement();
         advance();
 
-        return res.success(make_shared<FunctionDefinitionNode>(var_name_tok, arg_name_toks, body_node, false));
+        return res.success(make_shared<FunctionDefinitionNode>(var_name_tok, arg_name_toks, body_node, false, access_mod));
     }
 
     ParseResult function_call()
@@ -2302,6 +2302,37 @@ private:
         res.register_advancement();
         advance();
 
+        vector<Token> parent_name_toks;
+        if (current_tok.has_value() && current_tok->type == T_COLON)
+        {
+            res.register_advancement();
+            advance();
+
+            while (true)
+            {
+                if (!current_tok.has_value() || current_tok->type != T_IDENTIFIER)
+                {
+                    return res.failure(InvalidSyntaxError(
+                        current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
+                        current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
+                        "Expected parent class name"));
+                }
+                parent_name_toks.push_back(current_tok.value());
+                res.register_advancement();
+                advance();
+
+                if (current_tok.has_value() && current_tok->type == T_COMMA)
+                {
+                    res.register_advancement();
+                    advance();
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+
         if (!current_tok.has_value() || current_tok->type != T_LPAREN2)
         {
             return res.failure(InvalidSyntaxError(
@@ -2343,7 +2374,7 @@ private:
         res.register_advancement();
         advance();
 
-        return res.success(make_shared<ModelNode>(model_name_tok, body_nodes));
+        return res.success(make_shared<ModelNode>(model_name_tok, parent_name_toks, body_nodes));
     }
 
     ParseResult class_member()
@@ -2354,9 +2385,25 @@ private:
             return res.failure(InvalidSyntaxError(Position(), Position(), "Unexpected end of input"));
         }
 
+        string access_mod = "open";
+        if (current_tok->type == T_KEYWORD &&
+            (any_cast<string>(current_tok->value) == "open" ||
+             any_cast<string>(current_tok->value) == "secret" ||
+             any_cast<string>(current_tok->value) == "guarded"))
+        {
+            access_mod = any_cast<string>(current_tok->value);
+            res.register_advancement();
+            advance();
+        }
+
+        if (!current_tok.has_value())
+        {
+            return res.failure(InvalidSyntaxError(Position(), Position(), "Expected 'attr', 'init', or 'method' after access modifier"));
+        }
+
         if (current_tok->type == T_KEYWORD && any_cast<string>(current_tok->value) == "attr")
         {
-            return attr_declaration();
+            return attr_declaration(access_mod);
         }
         if (current_tok->type == T_KEYWORD && any_cast<string>(current_tok->value) == "init")
         {
@@ -2364,7 +2411,7 @@ private:
         }
         if (current_tok->type == T_KEYWORD && any_cast<string>(current_tok->value) == "method")
         {
-            return function_definition();
+            return function_definition(access_mod);
         }
 
         return res.failure(InvalidSyntaxError(
@@ -2373,7 +2420,7 @@ private:
             "Expected 'attr', 'init', or 'method'"));
     }
 
-    ParseResult attr_declaration()
+    ParseResult attr_declaration(const string &access_mod = "open")
     {
         ParseResult res;
         Position pos_start = current_tok->pos_start.value_or(Position());
@@ -2447,7 +2494,7 @@ private:
         res.register_advancement();
         advance();
 
-        return res.success(make_shared<AttrNode>(declarations, pos_start, pos_end));
+        return res.success(make_shared<AttrNode>(declarations, access_mod, pos_start, pos_end));
     }
 
     ParseResult constructor_definition()

@@ -29,6 +29,8 @@ inline RunTimeError illegal_op_error(const DataType *self)
         self->context);
 }
 
+class ModelType;
+
 class Function final : public DataType
 {
 public:
@@ -37,6 +39,7 @@ public:
     vector<string> arg_names;
     bool return_null;
     shared_ptr<DataType> instance;
+    shared_ptr<ModelType> access_modifier_owner; 
 
     explicit Function(string name, shared_ptr<Node> body, vector<string> args, bool return_null,
                       shared_ptr<DataType> instance = nullptr);
