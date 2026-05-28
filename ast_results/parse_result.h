@@ -7,7 +7,7 @@ using namespace std;
 
 class ParseResult {
 public:
-    optional<Error> error;
+    shared_ptr<Error> error = nullptr;
     shared_ptr<Node> node;
     int advance_count = 0;
 
@@ -35,7 +35,7 @@ public:
 
     ParseResult& failure(const Error& failure_error) {
         if (!this->error || this->advance_count == 0) {
-            this->error = failure_error;
+            this->error = failure_error.clone();
         }
         return *this;
     }

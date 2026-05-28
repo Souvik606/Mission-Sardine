@@ -728,7 +728,7 @@ private:
             return res;
 
         shared_ptr<DataType> result = nullptr;
-        optional<RunTimeError> error = nullopt;
+        shared_ptr<RunTimeError> error = nullptr;
 
         if (node->operator_token.type == T_PLUS)
             tie(result, error) = left->add(right);
@@ -810,7 +810,7 @@ private:
             return res;
 
         shared_ptr<DataType> result = nullptr;
-        optional<RunTimeError> error = nullopt;
+        shared_ptr<RunTimeError> error = nullptr;
 
         if (node->operator_token.type == T_MINUS)
         {
@@ -876,8 +876,8 @@ private:
             return res.success(try_result);
         }
 
-        auto error = *res.error;
-        res.error = nullopt;
+        auto error = res.error;
+        res.error = nullptr;
         bool handled = false;
 
         for (const auto &trap_node : node->trap_nodes)
@@ -890,7 +890,7 @@ private:
             else
             {
                 string caught_err = any_cast<string>(trap_node->error_type->value);
-                if (caught_err == "RunTimeError" || caught_err == error.error_name)
+                if (caught_err == "RunTimeError" || caught_err == error->error_name)
                 {
                     matches = true;
                 }
@@ -907,7 +907,7 @@ private:
 
                 if (trap_node->error_name)
                 {
-                    auto err_str = make_shared<String>(error.to_string());
+                    auto err_str = make_shared<String>(error->to_string());
                     err_str->set_pos(trap_node->pos_start.value_or(Position{}), trap_node->pos_end.value_or(Position{}));
                     err_str->set_context(trap_context);
                     trap_context->symbol_table->set(any_cast<string>(trap_node->error_name->value), err_str);
@@ -931,7 +931,7 @@ private:
         if (handled)
             return res.success(nullptr);
 
-        return res.failure(error);
+        return res.failure(*error);
     }
 
     RunTimeResult visit_ModelNode(const shared_ptr<ModelNode> &node, const shared_ptr<Context> &context)

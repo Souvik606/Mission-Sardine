@@ -94,7 +94,7 @@ DataType::OperationResult ModelInstance::get_attr(const string &attr_name,
                 auto caller_inst = dynamic_pointer_cast<ModelInstance>(this_val);
                 if (!caller_inst || caller_inst->model != attr_owner)
                 {
-                    return {nullptr, AttributeError(
+                    return {nullptr, make_shared<AttributeError>(
                         pos_start.value_or(Position()), pos_end.value_or(Position()),
                         "Cannot access secret attribute '" + attr_name + "'",
                         calling_context)};
@@ -107,7 +107,7 @@ DataType::OperationResult ModelInstance::get_attr(const string &attr_name,
                 auto caller_class = calling_context->owner_class;
                 if (!caller_class || !caller_class->is_descendant_of(attr_owner))
                 {
-                    return {nullptr, AttributeError(
+                    return {nullptr, make_shared<AttributeError>(
                         pos_start.value_or(Position()), pos_end.value_or(Position()),
                         "Cannot access guarded attribute '" + attr_name + "'",
                         calling_context)};
@@ -116,7 +116,7 @@ DataType::OperationResult ModelInstance::get_attr(const string &attr_name,
             // "open" or "" → always accessible
         }
 
-        return {value, nullopt};
+        return {value, nullptr};
     }
 
     const MethodInfo *mi = model->find_method(attr_name);
@@ -130,7 +130,7 @@ DataType::OperationResult ModelInstance::get_attr(const string &attr_name,
             auto caller_class = calling_context->owner_class;
             if (!caller_class || caller_class != method_owner)
             {
-                return {nullptr, AttributeError(
+                return {nullptr, make_shared<AttributeError>(
                     pos_start.value_or(Position()), pos_end.value_or(Position()),
                     "Cannot access secret method '" + attr_name + "'",
                     calling_context)};
@@ -142,7 +142,7 @@ DataType::OperationResult ModelInstance::get_attr(const string &attr_name,
             auto caller_class = calling_context->owner_class;
             if (!caller_class || !caller_class->is_descendant_of(method_owner))
             {
-                return {nullptr, AttributeError(
+                return {nullptr, make_shared<AttributeError>(
                     pos_start.value_or(Position()), pos_end.value_or(Position()),
                     "Cannot access guarded method '" + attr_name + "'",
                     calling_context)};
@@ -170,11 +170,11 @@ DataType::OperationResult ModelInstance::get_attr(const string &attr_name,
                 self_ptr);
             method->set_context(context).set_pos(pos_start, pos_end);
             method->access_modifier_owner = method_owner;
-            return {method, nullopt};
+            return {method, nullptr};
         }
     }
 
-    return {nullptr, AttributeError(
+    return {nullptr, make_shared<AttributeError>(
                          pos_start.value_or(Position()), pos_end.value_or(Position()),
                          "'" + model->name + "' instance has no attribute '" + attr_name + "'",
                          context)};

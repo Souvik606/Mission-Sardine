@@ -67,7 +67,7 @@ public:
     [[nodiscard]] OperationResult is_true() const override {
         return std::make_pair(
             std::static_pointer_cast<DataType>(Number::make_bool(is_truthy())),
-            std::nullopt
+            nullptr
         );
     }
 
@@ -86,9 +86,9 @@ public:
             else
                 result = make_shared<Number>(get<double>(new_value));
             result->set_context(this->context);
-            return std::make_pair(std::static_pointer_cast<DataType>(result), std::nullopt);
+            return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
         }
-        return std::make_pair(nullptr, IllegalOperationError(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
+        return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
     }
 
     [[nodiscard]] OperationResult subtract(const shared_ptr<DataType>& operand) const override {
@@ -106,9 +106,9 @@ public:
             else
                 result = make_shared<Number>(get<double>(new_value));
             result->set_context(this->context);
-            return std::make_pair(std::static_pointer_cast<DataType>(result), std::nullopt);
+            return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
         }
-        return std::make_pair(nullptr, IllegalOperationError(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
+        return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
     }
 
     [[nodiscard]] OperationResult multiply(const shared_ptr<DataType>& operand) const override {
@@ -126,15 +126,15 @@ public:
             else
                 result = make_shared<Number>(get<double>(new_value));
             result->set_context(this->context);
-            return std::make_pair(std::static_pointer_cast<DataType>(result), std::nullopt);
+            return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
         }
-        return std::make_pair(nullptr, IllegalOperationError(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
+        return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
     }
 
     [[nodiscard]] OperationResult divide(const shared_ptr<DataType>& operand) const override {
         if (const auto other = dynamic_cast<const Number*>(operand.get())) {
             if (std::visit([](auto val) { return val == 0; }, other->value)) {
-                return std::make_pair(nullptr, DivisionByZeroError(
+                return std::make_pair(nullptr, make_shared<DivisionByZeroError>(
                     other->pos_start.value_or(Position()),
                     other->pos_end.value_or(Position()),
                     "Division by zero",
@@ -146,15 +146,15 @@ public:
                 }, this->value, other->value);
             auto result = make_shared<Number>(new_value);
             result->set_context(this->context);
-            return std::make_pair(std::static_pointer_cast<DataType>(result), std::nullopt);
+            return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
         }
-        return std::make_pair(nullptr, IllegalOperationError(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
+        return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
     }
 
     [[nodiscard]] OperationResult modulus(const shared_ptr<DataType>& operand) const override {
         if (const auto other = dynamic_cast<const Number*>(operand.get())) {
             if (std::visit([](auto val) { return val == 0; }, other->value)) {
-                return std::make_pair(nullptr, DivisionByZeroError(
+                return std::make_pair(nullptr, make_shared<DivisionByZeroError>(
                     other->pos_start.value_or(Position()),
                     other->pos_end.value_or(Position()),
                     "Division by zero",
@@ -174,15 +174,15 @@ public:
             else
                 result = make_shared<Number>(get<double>(new_value));
             result->set_context(this->context);
-            return std::make_pair(std::static_pointer_cast<DataType>(result), std::nullopt);
+            return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
         }
-        return std::make_pair(nullptr, IllegalOperationError(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
+        return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
     }
 
     [[nodiscard]] OperationResult floor_divide(const shared_ptr<DataType>& operand) const override {
         if (const auto other = dynamic_cast<const Number*>(operand.get())) {
             if (std::visit([](auto val) { return val == 0; }, other->value)) {
-                return std::make_pair(nullptr, DivisionByZeroError(
+                return std::make_pair(nullptr, make_shared<DivisionByZeroError>(
                     other->pos_start.value_or(Position()),
                     other->pos_end.value_or(Position()),
                     "Division by zero",
@@ -202,9 +202,9 @@ public:
             else
                 result = make_shared<Number>(get<double>(new_value));
             result->set_context(this->context);
-            return std::make_pair(std::static_pointer_cast<DataType>(result), std::nullopt);
+            return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
         }
-        return std::make_pair(nullptr, IllegalOperationError(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
+        return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
     }
 
     [[nodiscard]] OperationResult exponent(const shared_ptr<DataType>& operand) const override {
@@ -230,80 +230,80 @@ public:
 
             const auto result = std::visit([](auto val) { return make_shared<Number>(val); }, new_value);
             result->set_context(this->context);
-            return std::make_pair(std::static_pointer_cast<DataType>(result), std::nullopt);
+            return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
         }
-        return std::make_pair(nullptr, IllegalOperationError(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
+        return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
     }
 
     [[nodiscard]] OperationResult get_comparison_eq(const shared_ptr<DataType>& operand) const override {
         if (const auto other = dynamic_cast<const Number*>(operand.get())) {
             const bool result = std::visit([](auto left, auto right) { return left == right; }, this->value, other->value);
-            return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(result)), std::nullopt);
+            return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(result)), nullptr);
         }
-        return std::make_pair(nullptr, IllegalOperationError(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
+        return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
     }
 
     [[nodiscard]] OperationResult get_comparison_neq(const shared_ptr<DataType>& operand) const override {
         if (const auto other = dynamic_cast<const Number*>(operand.get())) {
             const bool result = std::visit([](auto left, auto right) { return left != right; }, this->value, other->value);
-            return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(result)), std::nullopt);
+            return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(result)), nullptr);
         }
-        return std::make_pair(nullptr, IllegalOperationError(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
+        return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
     }
 
     [[nodiscard]] OperationResult get_comparison_lt(const shared_ptr<DataType>& operand) const override {
         if (const auto other = dynamic_cast<const Number*>(operand.get())) {
             const bool result = std::visit([](auto left, auto right) { return left < right; }, this->value, other->value);
-            return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(result)), std::nullopt);
+            return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(result)), nullptr);
         }
-        return std::make_pair(nullptr, IllegalOperationError(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
+        return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
     }
 
     [[nodiscard]] OperationResult get_comparison_gt(const shared_ptr<DataType>& operand) const override {
         if (const auto other = dynamic_cast<const Number*>(operand.get())) {
             const bool result = std::visit([](auto left, auto right) { return left > right; }, this->value, other->value);
-            return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(result)), std::nullopt);
+            return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(result)), nullptr);
         }
-        return std::make_pair(nullptr, IllegalOperationError(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
+        return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
     }
 
     [[nodiscard]] OperationResult get_comparison_lte(const shared_ptr<DataType>& operand) const override {
         if (const auto other = dynamic_cast<const Number*>(operand.get())) {
             const bool result = std::visit([](auto left, auto right) { return left <= right; }, this->value, other->value);
-            return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(result)), std::nullopt);
+            return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(result)), nullptr);
         }
-        return std::make_pair(nullptr, IllegalOperationError(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
+        return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
     }
 
     [[nodiscard]] OperationResult get_comparison_gte(const shared_ptr<DataType>& operand) const override {
         if (const auto other = dynamic_cast<const Number*>(operand.get())) {
             const bool result = std::visit([](auto left, auto right) { return left >= right; }, this->value, other->value);
-            return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(result)), std::nullopt);
+            return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(result)), nullptr);
         }
-        return std::make_pair(nullptr, IllegalOperationError(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
+        return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
     }
 
     [[nodiscard]] OperationResult and_by(const shared_ptr<DataType>& operand) const override {
         if (const auto other = dynamic_cast<const Number*>(operand.get())) {
             const bool self_truthy  = std::visit([](auto val) { return val != 0; }, this->value);
             const bool other_truthy = std::visit([](auto val) { return val != 0; }, other->value);
-            return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(self_truthy && other_truthy)), std::nullopt);
+            return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(self_truthy && other_truthy)), nullptr);
         }
-        return std::make_pair(nullptr, IllegalOperationError(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
+        return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
     }
 
     [[nodiscard]] OperationResult or_by(const shared_ptr<DataType>& operand) const override {
         if (const auto other = dynamic_cast<const Number*>(operand.get())) {
             const bool self_truthy  = std::visit([](auto val) { return val != 0; }, this->value);
             const bool other_truthy = std::visit([](auto val) { return val != 0; }, other->value);
-            return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(self_truthy || other_truthy)), std::nullopt);
+            return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(self_truthy || other_truthy)), nullptr);
         }
-        return std::make_pair(nullptr, IllegalOperationError(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
+        return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
     }
 
     [[nodiscard]] OperationResult not_by() const override {
         const bool is_truthy = std::visit([](auto val) { return val != 0; }, this->value);
-        return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(!is_truthy)), std::nullopt);
+        return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(!is_truthy)), nullptr);
     }
 
     [[nodiscard]] string to_string() const override {

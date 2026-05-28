@@ -365,8 +365,8 @@ RunTimeResult builtin_swap(const vector<shared_ptr<DataType>>& args, const map<s
 }
 
 struct RunPhaseResult {
-    shared_ptr<DataType> value;
-    optional<Error> error;
+    shared_ptr<DataType> value = nullptr;
+    shared_ptr<Error> error = nullptr;
     double lex_time   = 0.0;
     double parse_time = 0.0;
     double exec_time  = 0.0;

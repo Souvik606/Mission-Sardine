@@ -8,8 +8,8 @@ using namespace std;
 
 using BuiltInFuncType = std::function<RunTimeResult(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args)>;
 
-inline RunTimeError illegal_op_for_builtin(const DataType* self) {
-    return RunTimeError(
+inline shared_ptr<RunTimeError> illegal_op_for_builtin(const DataType* self) {
+    return make_shared<RunTimeError>(
         self->pos_start.value_or(Position()),
         self->pos_end.value_or(Position()),
         "Illegal Operation for built-in function",
@@ -38,7 +38,7 @@ public:
         auto result = make_shared<Number>(1LL);
         result->set_context(this->context);
         result->set_pos(this->pos_start, this->pos_end);
-        return std::make_pair(std::static_pointer_cast<DataType>(result), std::nullopt);
+        return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
     }
 
     [[nodiscard]] shared_ptr<DataType> copy() const override {

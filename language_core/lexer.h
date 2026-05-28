@@ -157,7 +157,7 @@ public:
         return Token(token_type, {}, pos_start, pos);
     }
 
-    variant<Token, Error> make_not_equals() {
+    variant<Token, shared_ptr<Error>> make_not_equals() {
         Position pos_start = pos.copy();
         advance();
         if (current_char.has_value() && current_char.value() == '=') {
@@ -165,7 +165,7 @@ public:
             return Token(T_NEQ, {}, pos_start, pos);
         }
         advance();
-        return ExpectedCharError(pos_start, pos, "'=' (after '!')");
+        return make_shared<ExpectedCharError>(pos_start, pos, "'=' (after '!')");
     }
 
     Token make_lesser() {
@@ -236,7 +236,7 @@ public:
         }
     }
 
-    pair<vector<Token>, optional<Error>> enumerate_tokens() {
+    pair<vector<Token>, shared_ptr<Error>> enumerate_tokens() {
         vector<Token> tokens;
         while (current_char.has_value()) {
             char c = current_char.value();
@@ -283,8 +283,8 @@ public:
             }
             else if (c == '!') {
                 auto result = make_not_equals();
-                if (std::holds_alternative<Error>(result)) {
-                    return { {}, std::get<Error>(result) };
+                if (std::holds_alternative<shared_ptr<Error>>(result)) {
+                    return { {}, std::get<shared_ptr<Error>>(result) };
                 }
                 tokens.push_back(std::get<Token>(result));
             }
@@ -341,10 +341,10 @@ public:
                 string details = "\"";
                 details += illegal_char;
                 details += "\"";
-                return { {}, IllegalCharError(pos_start, pos, details) };
+                return { {}, make_shared<IllegalCharError>(pos_start, pos, details) };
             }
         }
         tokens.push_back(Token(T_EOF, {}, pos));
-        return { tokens, nullopt };
+        return { tokens, nullptr };
     }
 };

@@ -28,12 +28,20 @@ public:
             << ", line " << (pos_start.line + 1);
         return ss.str();
     }
+
+    [[nodiscard]] virtual shared_ptr<Error> clone() const {
+        return make_shared<Error>(*this);
+    }
 };
 
 class IllegalCharError final : public Error {
 public:
     IllegalCharError(const Position& pos_start, const Position& pos_end, const string& details = "")
         : Error(pos_start, pos_end, "Illegal Character", details) {
+    }
+
+    [[nodiscard]] shared_ptr<Error> clone() const override {
+        return make_shared<IllegalCharError>(*this);
     }
 };
 
@@ -42,12 +50,20 @@ public:
     ExpectedCharError(const Position& pos_start, const Position& pos_end, const string& details = "")
         : Error(pos_start, pos_end, "Expected Character", details) {
     }
+
+    [[nodiscard]] shared_ptr<Error> clone() const override {
+        return make_shared<ExpectedCharError>(*this);
+    }
 };
 
 class InvalidSyntaxError final : public Error {
 public:
     InvalidSyntaxError(const Position& pos_start, const Position& pos_end, const string& details = "")
         : Error(pos_start, pos_end, "Invalid Syntax", details) {
+    }
+
+    [[nodiscard]] shared_ptr<Error> clone() const override {
+        return make_shared<InvalidSyntaxError>(*this);
     }
 };
 
@@ -84,12 +100,20 @@ public:
 
         return final_ss.str();
     }
+
+    [[nodiscard]] shared_ptr<Error> clone() const override {
+        return make_shared<RunTimeError>(*this);
+    }
 };
 
 class IllegalOperationError final : public RunTimeError {
 public:
     IllegalOperationError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context)
         : RunTimeError(pos_start, pos_end, details, context, "IllegalOperationError") {
+    }
+
+    [[nodiscard]] shared_ptr<Error> clone() const override {
+        return make_shared<IllegalOperationError>(*this);
     }
 };
 
@@ -98,12 +122,20 @@ public:
     DivisionByZeroError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context)
         : RunTimeError(pos_start, pos_end, details, context, "DivisionByZeroError") {
     }
+
+    [[nodiscard]] shared_ptr<Error> clone() const override {
+        return make_shared<DivisionByZeroError>(*this);
+    }
 };
 
 class IndexOutOfBoundsError final : public RunTimeError {
 public:
     IndexOutOfBoundsError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context)
         : RunTimeError(pos_start, pos_end, details, context, "IndexOutOfBoundsError") {
+    }
+
+    [[nodiscard]] shared_ptr<Error> clone() const override {
+        return make_shared<IndexOutOfBoundsError>(*this);
     }
 };
 
@@ -112,12 +144,20 @@ public:
     NameError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context)
         : RunTimeError(pos_start, pos_end, details, context, "NameError") {
     }
+
+    [[nodiscard]] shared_ptr<Error> clone() const override {
+        return make_shared<NameError>(*this);
+    }
 };
 
 class ArgumentError final : public RunTimeError {
 public:
     ArgumentError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context)
         : RunTimeError(pos_start, pos_end, details, context, "ArgumentError") {
+    }
+
+    [[nodiscard]] shared_ptr<Error> clone() const override {
+        return make_shared<ArgumentError>(*this);
     }
 };
 
@@ -126,12 +166,20 @@ public:
     NotImplementedError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context)
         : RunTimeError(pos_start, pos_end, details, context, "NotImplementedError") {
     }
+
+    [[nodiscard]] shared_ptr<Error> clone() const override {
+        return make_shared<NotImplementedError>(*this);
+    }
 };
 
 class InvalidErrorTypeError final : public RunTimeError {
 public:
     InvalidErrorTypeError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context)
         : RunTimeError(pos_start, pos_end, details, context, "InvalidErrorTypeError") {
+    }
+
+    [[nodiscard]] shared_ptr<Error> clone() const override {
+        return make_shared<InvalidErrorTypeError>(*this);
     }
 };
 
@@ -140,11 +188,19 @@ public:
     DictKeyError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context)
         : RunTimeError(pos_start, pos_end, details, context, "DictKeyError") {
     }
+
+    [[nodiscard]] shared_ptr<Error> clone() const override {
+        return make_shared<DictKeyError>(*this);
+    }
 };
 
 class AttributeError final : public RunTimeError {
 public:
     AttributeError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context)
         : RunTimeError(pos_start, pos_end, details, context, "AttributeError") {
+    }
+
+    [[nodiscard]] shared_ptr<Error> clone() const override {
+        return make_shared<AttributeError>(*this);
     }
 };
