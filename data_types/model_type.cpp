@@ -6,7 +6,6 @@
 #include "../language_core/context.h"
 #include "../ast_nodes/class_nodes.h"
 #include "../ast_nodes/function_nodes.h"
-#include "../ast_nodes/list_nodes.h"
 
 // ── ModelType::execute ────────────────────────────────────────────────────────
 // Instantiates a ModelInstance: initialises all attributes (from all ancestors),
