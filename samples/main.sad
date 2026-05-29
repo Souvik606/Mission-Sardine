@@ -1,92 +1,28 @@
-model Flyable {
-    open attr<max_altitude>
+model ServerConfig {
+    attr<user, host, port, debug_mode>
 
-    init(alt) {
-        max_altitude: alt
+    init(user, host = "127.0.0.1", port = 8080, debug_mode = False) {
+        user: user
+        host: host
+        port: port
+        debug_mode: debug_mode
     }
 
-    open method fly() {
-        show("Flying up to " + String(max_altitude) + " metres!")
-    }
-}
-
-model Swimmable {
-    open attr<max_depth>
-
-    init(depth) {
-        max_depth: depth
-    }
-
-    open method swim() {
-        show("Diving down to " + String(max_depth) + " metres!")
+    method display_config(prefix = "Config:") {
+        show(prefix, "User=" + user, "Host=" + host, "Port=" + String(port), sep=" | ", end="\n\n")
     }
 }
 
-model Runnable {
-    open attr<top_speed>
+show("--- Creating configurations ---", end="\n\n")
 
-    init(speed) {
-        top_speed: speed
-    }
+show("1. Default Config (using defaults for host, port, debug)")
+default_config = ServerConfig("admin")
+default_config.display_config()
 
-    open method run() {
-        show("Sprinting at " + String(top_speed) + " km/h!")
-    }
-}
+show("2. Custom Port (overriding 'port' positionally)")
+custom_port_config = ServerConfig("guest", "192.168.1.1", 9000)
+custom_port_config.display_config()
 
-model Duck: Flyable, Swimmable, Runnable {
-    open attr<name>
-
-    init(name, alt, depth, speed) {
-        name: name
-        max_altitude: alt
-        max_depth: depth
-        top_speed: speed
-    }
-
-    open method introduce() {
-        show("Hi, I am " + name + " the duck!")
-    }
-
-    open method show_all() {
-        introduce()
-        fly()
-        swim()
-        run()
-    }
-}
-
-donald = Duck("Donald", 120, 5, 12)
-donald.show_all()
-show("Max altitude : " + String(donald.max_altitude))
-show("Max depth    : " + String(donald.max_depth))
-show("Top speed    : " + String(donald.top_speed))
-
-model Greeter {
-    open attr<greeting>
-    init(g = "Hello") {
-        greeting: g
-    }
-    open method greet(name, suffix = "!") {
-        show(greeting + ", " + name + suffix)
-    }
-}
-
-show("--- Testing Constructors with Defaults ---")
-g1 = Greeter()
-show("g1 greeting: " + g1.greeting)
-
-g2 = Greeter("Welcome")
-show("g2 greeting: " + g2.greeting)
-
-show("--- Testing Methods with Defaults ---")
-g1.greet("World")
-g1.greet("Alice", "?")
-
-show("--- Testing Keyword Arguments ---")
-g1.greet(suffix = "...", name = "Charlie")
-g1.greet(name = "David")
-
-show("--- Testing Variadic show with sep/end ---")
-show("A", "B", "C", sep = " -> ", end = " [DONE]\n")
-show("X", "Y")
+show("3. Debug Mode (overriding 'debug_mode' and 'user' by keyword)")
+debug_config = ServerConfig(user = "root", debug_mode = True)
+debug_config.display_config()
