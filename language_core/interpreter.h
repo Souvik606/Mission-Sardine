@@ -130,7 +130,8 @@ public:
         {
             return RunTimeResult().failure(RunTimeError({}, {}, "Internal error: Cannot visit null node", context));
         }
-        const std::type_index type_idx = typeid(*node.get());
+        const Node &node_ref = *node;
+        const std::type_index type_idx = typeid(node_ref);
         if (const auto it = visit_methods.find(type_idx); it != visit_methods.end())
         {
             return it->second(node, context);
@@ -144,7 +145,8 @@ private:
 
     static RunTimeResult no_visit_method(const shared_ptr<Node> &node)
     {
-        throw std::runtime_error("No visit method defined for node type: " + string(typeid(*node.get()).name()));
+        const Node &node_ref = *node;
+        throw std::runtime_error("No visit method defined for node type: " + string(typeid(node_ref).name()));
     }
 
 public:

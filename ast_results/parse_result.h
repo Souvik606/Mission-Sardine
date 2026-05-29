@@ -1,7 +1,8 @@
 #pragma once
 
 #include <bits/stdc++.h>
-#include "../ast_nodes/operation_nodes.h"
+#include "../ast_nodes/node.h"
+#include "../language_core/error.h"
 
 using namespace std;
 
