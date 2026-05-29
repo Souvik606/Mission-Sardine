@@ -306,6 +306,86 @@ public:
         return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(!is_truthy)), nullptr);
     }
 
+    [[nodiscard]] OperationResult bitwise_and(const shared_ptr<DataType>& operand) const override {
+        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+            if (holds_alternative<double>(this->value) || holds_alternative<double>(other->value)) {
+                return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Bitwise operations require integer Numbers", this->context));
+            }
+            long long left = get<long long>(this->value);
+            long long right = get<long long>(other->value);
+            auto result = Number::make(left & right);
+            result->set_context(this->context);
+            return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
+        }
+        return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
+    }
+
+    [[nodiscard]] OperationResult bitwise_xor(const shared_ptr<DataType>& operand) const override {
+        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+            if (holds_alternative<double>(this->value) || holds_alternative<double>(other->value)) {
+                return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Bitwise operations require integer Numbers", this->context));
+            }
+            long long left = get<long long>(this->value);
+            long long right = get<long long>(other->value);
+            auto result = Number::make(left ^ right);
+            result->set_context(this->context);
+            return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
+        }
+        return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
+    }
+
+    [[nodiscard]] OperationResult bitwise_or(const shared_ptr<DataType>& operand) const override {
+        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+            if (holds_alternative<double>(this->value) || holds_alternative<double>(other->value)) {
+                return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Bitwise operations require integer Numbers", this->context));
+            }
+            long long left = get<long long>(this->value);
+            long long right = get<long long>(other->value);
+            auto result = Number::make(left | right);
+            result->set_context(this->context);
+            return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
+        }
+        return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
+    }
+
+    [[nodiscard]] OperationResult bitwise_not() const override {
+        if (holds_alternative<double>(this->value)) {
+            return std::make_pair(nullptr, make_shared<IllegalOperationError>(this->pos_start.value_or(Position()), this->pos_end.value_or(Position()), "Bitwise operations require integer Numbers", this->context));
+        }
+        long long val = get<long long>(this->value);
+        auto result = Number::make(~val);
+        result->set_context(this->context);
+        return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
+    }
+
+    [[nodiscard]] OperationResult lshift(const shared_ptr<DataType>& operand) const override {
+        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+            if (holds_alternative<double>(this->value) || holds_alternative<double>(other->value)) {
+                return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Bitwise operations require integer Numbers", this->context));
+            }
+            long long left = get<long long>(this->value);
+            long long right = get<long long>(other->value);
+            auto result = Number::make(left << right);
+            result->set_context(this->context);
+            return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
+        }
+        return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
+    }
+
+    [[nodiscard]] OperationResult rshift(const shared_ptr<DataType>& operand) const override {
+        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+            if (holds_alternative<double>(this->value) || holds_alternative<double>(other->value)) {
+                return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Bitwise operations require integer Numbers", this->context));
+            }
+            long long left = get<long long>(this->value);
+            long long right = get<long long>(other->value);
+            auto result = Number::make(left >> right);
+            result->set_context(this->context);
+            return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
+        }
+        return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
+    }
+
     [[nodiscard]] string to_string() const override {
         return std::visit([](auto&& val) { return std::to_string(val); }, this->value);
     }

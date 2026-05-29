@@ -1,5 +1,6 @@
 #pragma once
 #include "node.h"
+#include "../language_core/lexer.h"
 
 using namespace std;
 

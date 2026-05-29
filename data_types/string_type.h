@@ -163,4 +163,11 @@ public:
     [[nodiscard]] OperationResult not_by() const override {
         return std::make_pair(std::static_pointer_cast<DataType>(make_shared<Number>(static_cast<long long>(!is_truthy()))), nullptr);
     }
+
+    [[nodiscard]] OperationResult bitwise_and(const shared_ptr<DataType>& operand) const override { return std::make_pair(nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '&' to a String type", this->context)); }
+    [[nodiscard]] OperationResult bitwise_xor(const shared_ptr<DataType>& operand) const override { return std::make_pair(nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '^' to a String type", this->context)); }
+    [[nodiscard]] OperationResult bitwise_or(const shared_ptr<DataType>& operand) const override { return std::make_pair(nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '|' to a String type", this->context)); }
+    [[nodiscard]] OperationResult bitwise_not() const override { return std::make_pair(nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '~' to a String type", this->context)); }
+    [[nodiscard]] OperationResult lshift(const shared_ptr<DataType>& operand) const override { return std::make_pair(nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '<<' to a String type", this->context)); }
+    [[nodiscard]] OperationResult rshift(const shared_ptr<DataType>& operand) const override { return std::make_pair(nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '>>' to a String type", this->context)); }
 };

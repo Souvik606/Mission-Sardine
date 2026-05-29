@@ -130,7 +130,8 @@ public:
         {
             return RunTimeResult().failure(RunTimeError({}, {}, "Internal error: Cannot visit null node", context));
         }
-        const std::type_index type_idx = typeid(*node.get());
+        const Node &node_ref = *node;
+        const std::type_index type_idx = typeid(node_ref);
         if (const auto it = visit_methods.find(type_idx); it != visit_methods.end())
         {
             return it->second(node, context);
@@ -144,7 +145,8 @@ private:
 
     static RunTimeResult no_visit_method(const shared_ptr<Node> &node)
     {
-        throw std::runtime_error("No visit method defined for node type: " + string(typeid(*node.get()).name()));
+        const Node &node_ref = *node;
+        throw std::runtime_error("No visit method defined for node type: " + string(typeid(node_ref).name()));
     }
 
 public:
@@ -744,6 +746,16 @@ private:
             tie(result, error) = left->floor_divide(right);
         else if (node->operator_token.type == T_EXP)
             tie(result, error) = left->exponent(right);
+        else if (node->operator_token.type == T_BITAND)
+            tie(result, error) = left->bitwise_and(right);
+        else if (node->operator_token.type == T_BITXOR)
+            tie(result, error) = left->bitwise_xor(right);
+        else if (node->operator_token.type == T_BITOR)
+            tie(result, error) = left->bitwise_or(right);
+        else if (node->operator_token.type == T_LSHIFT)
+            tie(result, error) = left->lshift(right);
+        else if (node->operator_token.type == T_RSHIFT)
+            tie(result, error) = left->rshift(right);
         else if (node->operator_token.type == T_EE)
             tie(result, error) = left->get_comparison_eq(right);
         else if (node->operator_token.type == T_NEQ)
@@ -819,6 +831,10 @@ private:
         else if (node->operator_token.type == T_KEYWORD && any_cast<string>(node->operator_token.value) == "not")
         {
             tie(result, error) = number->not_by();
+        }
+        else if (node->operator_token.type == T_BITNOT)
+        {
+            tie(result, error) = number->bitwise_not();
         }
 
         if (error)

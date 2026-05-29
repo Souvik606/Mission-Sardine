@@ -2,7 +2,6 @@
 
 #include <bits/stdc++.h>
 
-#include "../language_core/lexer.h"
 #include "node.h"
 
 using namespace std;
