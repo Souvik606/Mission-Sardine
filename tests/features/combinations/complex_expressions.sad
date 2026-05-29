@@ -1,0 +1,41 @@
+show("--- Complex Expressions ---")
+a = 10
+b = 5
+c = 2
+result = (a + b * c) / (a - b)
+show(result)
+
+show("--- Function call in when condition ---")
+method check(x) {
+    yield x > 10
+}
+
+when check(15) {
+    show("check(15) is true")
+} otherwise {
+    show("check(15) is false")
+}
+
+when check(5) {
+    show("check(5) is true")
+} otherwise {
+    show("check(5) is false")
+}
+
+show("--- Trace loop on list from function ---")
+method get_list() {
+    yield [1, "two", 3.0]
+}
+
+trace item <- get_list() {
+    show(type(item), item)
+}
+
+show("--- Risk/Trap with complex operation ---")
+risk {
+    x = "hello"
+    y = x + 5
+    show("This should not print")
+} trap RunTimeError e {
+    show("Caught expected error:", e.traceback)
+}

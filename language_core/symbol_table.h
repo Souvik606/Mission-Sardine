@@ -33,4 +33,8 @@ public:
     void remove(const string& name) {
         symbols.erase(name);
     }
+
+    [[nodiscard]] const unordered_map<string, shared_ptr<DataType>>& get_symbols() const {
+        return symbols;
+    }
 };

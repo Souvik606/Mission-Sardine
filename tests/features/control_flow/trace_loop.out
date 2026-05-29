@@ -1,0 +1,13 @@
+--- Test: Trace Loop (foreach) ---
+--- Trace over a list ---
+10
+20
+30
+--- Trace over a string ---
+S
+A
+D
+--- Trace over a list of lists ---
+1 -> a
+2 -> b
+3 -> c

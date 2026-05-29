@@ -1,0 +1,27 @@
+--- Deep Traceback Test ---
+Inside start_process.
+Inside middle_func.
+Inside closure.
+Inside deepest_func. Executing callback...
+Inside failing_func. About to crash...
+Error in tests/features/functions/traceback.sad:
+Traceback (most recent call last):
+  File tests/features/functions/traceback.sad, line 40, in <program>
+    start_process()
+    ^^^^^^^^^^^^^^^
+  File tests/features/functions/traceback.sad, line 36, in start_process
+        yield middle_func()
+              ^
+  File tests/features/functions/traceback.sad, line 31, in middle_func
+        yield execute_it(failing_func)
+              ^
+  File tests/features/functions/traceback.sad, line 19, in <anonymous>
+            yield deepest_func(callback, val)
+                  ^
+  File tests/features/functions/traceback.sad, line 11, in deepest_func
+        yield callback(val)
+              ^
+  File tests/features/functions/traceback.sad, line 6, in failing_func
+        yield x / 0
+                  ^
+DivisionByZeroError: Division by zero

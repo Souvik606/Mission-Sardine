@@ -1,0 +1,15 @@
+--- Testing listen() ---
+What is your name?
+Hello, John
+--- Testing Integer() and String() ---
+130
+The value is 45.6
+--- Testing type() ---
+<type Number>
+<type Number>
+<type String>
+<type List>
+<type Dict>
+<type BuiltInFunction>
+<type Model>
+<type ModelInstance>

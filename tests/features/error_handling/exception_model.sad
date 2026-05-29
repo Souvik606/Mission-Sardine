@@ -1,0 +1,80 @@
+show("--- Test: Exception Model ---")
+
+show("--- Case 1: Specific error type with model ---")
+risk {
+    x = missing_var
+} trap NameError err {
+    show("C1 trap")
+    show("Type: " + err.type)
+    show("Message: " + err.message)
+    show(err.traceback)
+} clean {
+    show("C1 clean")
+}
+
+show("--- Case 2: Multiple traps order ---")
+risk {
+    a = 10 / 0
+} trap NameError err {
+    show("C2 name")
+} trap DivisionByZeroError err {
+    show("C2 div")
+    show(err.traceback)
+} trap {
+    show("C2 default")
+} clean {
+    show("C2 clean")
+}
+
+show("--- Case 3: Wildcard trap ---")
+risk {
+    y = missing_any
+} trap {
+    show("C3 default")
+} clean {
+    show("C3 clean")
+}
+
+show("--- Case 4: No error, trap skipped ---")
+risk {
+    show("C4 ok")
+} trap NameError err {
+    show("C4 trap")
+} clean {
+    show("C4 clean")
+}
+
+show("--- Case 5: Clean only ---")
+risk {
+    show("C5 ok")
+} clean {
+    show("C5 clean")
+}
+
+show("--- Case 6: Specific before wildcard ---")
+risk {
+    z = missing_specific
+} trap NameError err {
+    show("C6 name")
+    show(err.traceback)
+} trap {
+    show("C6 default")
+} clean {
+    show("C6 clean")
+}
+
+show("--- Case 7: Nested risk/clean ---")
+risk {
+    show("C7 outer start")
+    risk {
+        b = 1 / 0
+    } trap DivisionByZeroError err {
+        show("C7 inner trap")
+        show(err.traceback)
+    } clean {
+        show("C7 inner clean")
+    }
+    show("C7 outer after")
+} clean {
+    show("C7 outer clean")
+}

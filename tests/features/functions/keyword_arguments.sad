@@ -1,0 +1,8 @@
+show("--- Test: Keyword Arguments ---")
+
+method subtract(a, b) {
+    yield a - b
+}
+
+show("10 - 5 =", subtract(a=10, b=5))
+show("5 - 10 =", subtract(b=10, a=5))

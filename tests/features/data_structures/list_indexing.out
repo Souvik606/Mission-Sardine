@@ -1,0 +1,4 @@
+--- Test: List Indexing ---
+First element: 10
+Third element: 30
+Modified list: [10, 'twenty', 30, 'hello']

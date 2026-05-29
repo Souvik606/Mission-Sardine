@@ -1,0 +1,40 @@
+show("--- Deep Traceback Test ---")
+
+method failing_func(x) {
+    show("Inside failing_func. About to crash...")
+    # Intentional divide-by-zero to trigger a RunTimeError
+    yield x / 0
+}
+
+method deepest_func(callback, val) {
+    show("Inside deepest_func. Executing callback...")
+    yield callback(val)
+}
+
+method wrapped_closure(val) {
+    # This creates and returns a function to ensure 
+    # closures don't break the traceback stack
+    my_closure = method(callback) {
+        show("Inside closure.")
+        yield deepest_func(callback, val)
+    }
+    yield my_closure
+}
+
+method middle_func() {
+    show("Inside middle_func.")
+    
+    # Get the inner function (testing our context fix)
+    execute_it = wrapped_closure(42)
+    
+    # Call the returned function, passing failing_func as a callback
+    yield execute_it(failing_func)
+}
+
+method start_process() {
+    show("Inside start_process.")
+    yield middle_func()
+}
+
+# Kick off the chain
+start_process()

@@ -1,0 +1,15 @@
+--- Complex Expressions ---
+4.0
+--- Function call in when condition ---
+check(15) is true
+check(5) is false
+--- Trace loop on list from function ---
+<type Number> 1
+<type String> two
+<type Number> 3.0
+--- Risk/Trap with complex operation ---
+Caught expected error: Traceback (most recent call last):
+  File tests/features/combinations/complex_expressions.sad, line 37, in <program>
+        y = x + 5
+                ^
+IllegalOperationError: Expected a String type

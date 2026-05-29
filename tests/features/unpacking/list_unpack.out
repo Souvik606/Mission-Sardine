@@ -1,0 +1,3 @@
+--- Test: Direct List Unpacking ---
+a should be 100: 100
+b should be 200: 200

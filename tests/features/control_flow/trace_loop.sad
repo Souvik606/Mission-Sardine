@@ -1,0 +1,19 @@
+show("--- Test: Trace Loop (foreach) ---")
+
+show("--- Trace over a list ---")
+my_list = [10, 20, 30]
+trace item <- my_list {
+    show(item)
+}
+
+show("--- Trace over a string ---")
+my_string = "SAD"
+trace char <- my_string {
+    show(char)
+}
+
+show("--- Trace over a list of lists ---")
+list_of_lists = [[1, "a"], [2, "b"], [3, "c"]]
+trace num, char <- list_of_lists {
+    show(num, "->", char)
+}

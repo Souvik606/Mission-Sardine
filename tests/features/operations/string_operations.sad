@@ -1,0 +1,29 @@
+show("--- String Operations ---")
+
+show("--- Concatenation ---")
+str1 = "hello"
+str2 = " world"
+show(str1 + str2)
+
+show("--- Multiplication ---")
+str3 = "a"
+show(str3 * 5)
+
+show("--- Illegal Operations ---")
+risk {
+    show("hello" - "o")
+} trap IllegalOperationError e {
+    show("Caught expected error:", e.traceback)
+}
+
+risk {
+    show("test" / 2)
+} trap IllegalOperationError e {
+    show("Caught expected error:", e.traceback)
+}
+
+risk {
+    show("string" + 123)
+} trap IllegalOperationError e {
+    show("Caught expected error:", e.traceback)
+}

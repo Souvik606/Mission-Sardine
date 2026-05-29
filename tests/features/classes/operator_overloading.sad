@@ -1,0 +1,148 @@
+# -----------------------------------------------------------------------
+# Test: Operator Overloading
+# Demonstrates operator overloading via special method names.
+# -----------------------------------------------------------------------
+
+# ----------- Model 1: Vec2 - 2D Vector with arithmetic + comparison ----
+model Vec2 {
+    open attr <x, y>
+
+    init(nx, ny) {
+        x: nx,
+        y: ny
+    }
+
+    method __add__(other) {
+        yield Vec2(x + other.x, y + other.y)
+    }
+
+    method __sub__(other) {
+        yield Vec2(x - other.x, y - other.y)
+    }
+
+    method __mul__(other) {
+        yield Vec2(x * other.x, y * other.y)
+    }
+
+    method __eq__(other) {
+        yield (x == other.x) and (y == other.y)
+    }
+
+    method __neq__(other) {
+        yield not ((x == other.x) and (y == other.y))
+    }
+
+    method __lt__(other) {
+        yield (x < other.x) and (y < other.y)
+    }
+
+    method __gt__(other) {
+        yield (x > other.x) and (y > other.y)
+    }
+
+    method __neg__() {
+        yield Vec2(-x, -y)
+    }
+
+    method __not__() {
+        yield (x == 0) and (y == 0)
+    }
+
+    method show_vec() {
+        show("Vec2(" + show(x) + "," + show(y) + ")")
+    }
+}
+
+show("--- Test: Vec2 Arithmetic Operators ---")
+a = Vec2(1, 2)
+b = Vec2(3, 4)
+
+c = a + b
+show(c.x)
+show(c.y)
+
+d = b - a
+show(d.x)
+show(d.y)
+
+e = a * b
+show(e.x)
+show(e.y)
+
+show("--- Test: Vec2 Unary Operators ---")
+n = -a
+show(n.x)
+show(n.y)
+
+show("--- Test: Vec2 Comparison Operators ---")
+show(a == b)
+show(a != b)
+show(a < b)
+show(b > a)
+
+# -----------------------------------------------------------------------
+# Model 2: Fraction - arithmetic on rational numbers
+# -----------------------------------------------------------------------
+model Fraction {
+    open attr <num, den>
+
+    init(n, d) {
+        num: n,
+        den: d
+    }
+
+    method __add__(other) {
+        yield Fraction(num * other.den + other.num * den, den * other.den)
+    }
+
+    method __mul__(other) {
+        yield Fraction(num * other.num, den * other.den)
+    }
+
+    method __eq__(other) {
+        yield (num * other.den) == (other.num * den)
+    }
+}
+
+show("--- Test: Fraction Arithmetic ---")
+f1 = Fraction(1, 2)
+f2 = Fraction(1, 3)
+f3 = f1 + f2
+show(f3.num)
+show(f3.den)
+
+f4 = f1 * f2
+show(f4.num)
+show(f4.den)
+
+show("--- Test: Fraction Equality ---")
+half1 = Fraction(1, 2)
+half2 = Fraction(2, 4)
+show(half1 == half2)
+
+# -----------------------------------------------------------------------
+# Model 3: Counter - augmented assignment reuses __add__
+# -----------------------------------------------------------------------
+model Counter {
+    open attr <val>
+
+    init(v) {
+        val: v
+    }
+
+    method __add__(other) {
+        yield Counter(val + other.val)
+    }
+
+    method __sub__(other) {
+        yield Counter(val - other.val)
+    }
+}
+
+show("--- Test: Counter Augmented Assignment ---")
+cnt = Counter(10)
+step = Counter(5)
+cnt = cnt + step
+show(cnt.val)
+cnt = cnt - step
+show(cnt.val)

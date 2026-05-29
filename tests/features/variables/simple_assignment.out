@@ -1,0 +1,3 @@
+--- Test: Simple Assignment ---
+x should be 10: 10
+y should be hello: hello

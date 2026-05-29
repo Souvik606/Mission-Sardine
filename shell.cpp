@@ -15,14 +15,18 @@
 #include "data_types/number_type.h"
 #include "data_types/string_type.h"
 #include "data_types/list_type.h"
+#include "data_types/dict_type.h"
 #include "data_types/function_type.h"
 #include "data_types/builtins.h"
+#include "data_types/model_type.h"
+#include "data_types/module_type.h"
+#include "data_types/super_proxy.h"
 
 using namespace std;
 
 auto global_symbol_table = make_shared<SymbolTable>();
 
-RunTimeResult builtin_show(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args) {
+RunTimeResult builtin_show(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args, const shared_ptr<Context>& context) {
     string separator = " ";
     string end_char = "\n";
 
@@ -75,7 +79,7 @@ RunTimeResult builtin_show(const vector<shared_ptr<DataType>>& args, const map<s
     return RunTimeResult().success(make_shared<Number>(0LL));
 }
 
-RunTimeResult builtin_listen(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args) {
+RunTimeResult builtin_listen(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args, const shared_ptr<Context>& context) {
     if (!args.empty() || !kw_args.empty()) {
         return RunTimeResult().failure(RunTimeError(
             Position(), Position(),
@@ -88,7 +92,7 @@ RunTimeResult builtin_listen(const vector<shared_ptr<DataType>>& args, const map
     return RunTimeResult().success(make_shared<String>(text));
 }
 
-RunTimeResult builtin_type(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args) {
+RunTimeResult builtin_type(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args, const shared_ptr<Context>& context) {
     if (args.size() != 1 || !kw_args.empty()) {
         return RunTimeResult().failure(RunTimeError(
             Position(), Position(),
@@ -108,18 +112,32 @@ RunTimeResult builtin_type(const vector<shared_ptr<DataType>>& args, const map<s
     else if (dynamic_pointer_cast<List>(value)) {
         type_name = "<type List>";
     }
+    else if (dynamic_pointer_cast<Dict>(value)) {
+        type_name = "<type Dict>";
+    }
     else if (dynamic_pointer_cast<Function>(value)) {
         type_name = "<type Function>";
     }
     else if (dynamic_pointer_cast<BuiltInFunction>(value)) {
         type_name = "<type BuiltInFunction>";
     }
+    else if (dynamic_pointer_cast<ModelType>(value)) {
+        type_name = "<type Model>";
+    }
+    else if (dynamic_pointer_cast<ModelInstance>(value)) {
+        type_name = "<type ModelInstance>";
+    }
+    else if (dynamic_pointer_cast<SuperProxy>(value)) {
+        type_name = "<type SuperProxy>";
+    }
+    else if (dynamic_pointer_cast<Module>(value)) {
+        type_name = "<type Module>";
+    }
 
-    cout << type_name << endl;
-    return RunTimeResult().success(make_shared<Number>(0LL));
+    return RunTimeResult().success(make_shared<String>(type_name));
 }
 
-RunTimeResult builtin_integer(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args) {
+RunTimeResult builtin_integer(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args, const shared_ptr<Context>& context) {
     if (args.size() != 1 || !kw_args.empty()) {
         return RunTimeResult().failure(RunTimeError(
             Position(), Position(),
@@ -156,7 +174,7 @@ RunTimeResult builtin_integer(const vector<shared_ptr<DataType>>& args, const ma
     ));
 }
 
-RunTimeResult builtin_string(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args) {
+RunTimeResult builtin_string(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args, const shared_ptr<Context>& context) {
     if (args.size() != 1 || !kw_args.empty()) {
         return RunTimeResult().failure(RunTimeError(
             Position(), Position(),
@@ -176,6 +194,86 @@ RunTimeResult builtin_string(const vector<shared_ptr<DataType>>& args, const map
     }
 
     return RunTimeResult().success(make_shared<String>(str_val));
+}
+
+RunTimeResult builtin_super(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args, const shared_ptr<Context>& context) {
+    if (!args.empty() || !kw_args.empty()) {
+        return RunTimeResult().failure(RunTimeError(
+            Position(), Position(),
+            "super() takes no arguments",
+            context
+        ));
+    }
+
+    shared_ptr<Context> search_ctx = context;
+    shared_ptr<ModelInstance> instance = nullptr;
+    shared_ptr<ModelType> owner_class = nullptr;
+
+    while (search_ctx != nullptr) {
+        if (!instance) {
+            auto candidate = search_ctx->symbol_table ? search_ctx->symbol_table->get("this") : nullptr;
+            if (candidate) {
+                instance = dynamic_pointer_cast<ModelInstance>(candidate);
+            }
+        }
+        if (!owner_class && search_ctx->owner_class) {
+            owner_class = search_ctx->owner_class;
+        }
+        if (instance && owner_class) {
+            break;
+        }
+        search_ctx = search_ctx->parent;
+    }
+
+    if (!instance) {
+        return RunTimeResult().failure(RunTimeError(
+            Position(), Position(),
+            "super() can only be called inside a method body",
+            context
+        ));
+    }
+
+    if (!owner_class) {
+        return RunTimeResult().failure(RunTimeError(
+            Position(), Position(),
+            "super() could not determine the current class - make sure you are calling it inside a named method",
+            context
+        ));
+    }
+
+    auto proxy = make_shared<SuperProxy>(instance, owner_class);
+    proxy->set_context(context);
+    return RunTimeResult().success(proxy);
+}
+
+RunTimeResult builtin_is_a(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args, const shared_ptr<Context>& context) {
+    if (args.size() != 2 || !kw_args.empty()) {
+        return RunTimeResult().failure(RunTimeError(
+            Position(), Position(),
+            "is_a() takes exactly 2 positional arguments: is_a(object, ModelClass)",
+            context
+        ));
+    }
+
+    auto obj = args[0];
+    auto model_class = dynamic_pointer_cast<ModelType>(args[1]);
+
+    if (!model_class) {
+        return RunTimeResult().failure(RunTimeError(
+            Position(), Position(),
+            "Second argument to is_a() must be a model class",
+            context
+        ));
+    }
+
+    auto model_inst = dynamic_pointer_cast<ModelInstance>(obj);
+    if (!model_inst) {
+        // Primitive types are never instances of any user-defined model
+        return RunTimeResult().success(make_shared<Number>(0LL));
+    }
+
+    bool result = model_inst->model->is_descendant_of(model_class);
+    return RunTimeResult().success(make_shared<Number>(result ? 1LL : 0LL));
 }
 
 struct RunResult {
@@ -210,6 +308,30 @@ RunResult run(const string& filename, const string& text) {
     return out;
 }
 
+inline string get_relative_path(const string& file_path) {
+    if (file_path.empty()) return "";
+    try {
+        namespace fs = std::filesystem;
+        fs::path p(file_path);
+        if (p.is_absolute()) {
+            auto rel = fs::relative(p, fs::current_path());
+            string r_str = rel.generic_string();
+            return r_str;
+        }
+        string r_str = file_path;
+        for (char& c : r_str) {
+            if (c == '\\') c = '/';
+        }
+        return r_str;
+    } catch (...) {
+        string r_str = file_path;
+        for (char& c : r_str) {
+            if (c == '\\') c = '/';
+        }
+        return r_str;
+    }
+}
+
 void run_file(const string& filepath) {
     ifstream file(filepath);
     if (!file.is_open()) {
@@ -224,12 +346,12 @@ void run_file(const string& filepath) {
     RunResult r = run(filepath, file_content);
 
     if (r.error) {
-        cout << "Error in " << filepath << ":\n";
+        cout << "Error in " << get_relative_path(filepath) << ":\n";
         cout << r.error->to_string() << "\n";
     }
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     global_symbol_table->set("None", make_shared<Number>(0LL));
     global_symbol_table->set("null", make_shared<Number>(0LL));
     global_symbol_table->set("True", make_shared<Number>(1LL));
@@ -240,6 +362,13 @@ int main() {
     global_symbol_table->set("type", make_shared<BuiltInFunction>("type", builtin_type));
     global_symbol_table->set("Integer", make_shared<BuiltInFunction>("Integer", builtin_integer));
     global_symbol_table->set("String", make_shared<BuiltInFunction>("String", builtin_string));
+    global_symbol_table->set("super", make_shared<BuiltInFunction>("super", builtin_super));
+    global_symbol_table->set("is_a", make_shared<BuiltInFunction>("is_a", builtin_is_a));
+
+    if (argc > 1) {
+        run_file(argv[1]);
+        return 0;
+    }
 
     string choice;
     cout << "Enter 0 for REPL mode and 1 for file input: ";

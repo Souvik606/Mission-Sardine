@@ -1,0 +1,57 @@
+model Animal {
+    open attr <name>
+    guarded attr <age>
+    secret attr <sound>
+
+    init(name, age, sound) {
+        name: name,
+        age: age,
+        sound: sound
+    }
+
+    open method get_name() {
+        yield name
+    }
+
+    guarded method get_age() {
+        yield age
+    }
+
+    guarded method set_age(new_age) {
+        age = new_age
+    }
+
+    open method make_sound() {
+        show("The animal says", sound)
+    }
+}
+
+model Dog: Animal {
+    open attr <breed>
+
+    init(name, age, sound, breed) {
+        name: name,
+        age: age,
+        sound: sound,
+        breed: breed
+    }
+
+    open method describe() {
+        show("This is ", name, ", a ", breed, sep="")
+        show(name, "'s age is ", get_age(), sep="")
+    }
+
+    open method celebrate_birthday() {
+        new_age = get_age() + 1
+        set_age(new_age)
+        show("Happy Birthday!", name, "is now", get_age(), "years old.")
+    }
+}
+
+my_dog = Dog("Buddy", 5, "Woof", "Golden Retriever")
+
+show(my_dog.get_name())
+my_dog.make_sound()
+my_dog.describe()
+
+my_dog.celebrate_birthday()

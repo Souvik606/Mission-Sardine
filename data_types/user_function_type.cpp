@@ -19,20 +19,21 @@ Function::Function(string name, shared_ptr<Node> body, vector<pair<string, share
     }
 }
 
-RunTimeResult Function::execute(const vector<shared_ptr<DataType>> &pos_args, const map<string, shared_ptr<DataType>> &kw_args, Interpreter &interpreter)
+RunTimeResult Function::execute(const vector<shared_ptr<DataType>> &pos_args, const map<string, shared_ptr<DataType>> &kw_args, Interpreter &interpreter, const shared_ptr<Context> &call_context)
 {
     RunTimeResult res;
 
     shared_ptr<Context> exec_context;
+    shared_ptr<Context> traceback_parent = call_context ? call_context : this->context;
 
     if (instance)
     {
-        exec_context = make_shared<Context>(this->name, this->context, this->pos_start);
+        exec_context = make_shared<Context>(this->name, traceback_parent, this->pos_start);
 
         auto inst_sym = interpreter.get_instance_symbol_table(instance);
         if (!inst_sym)
         {
-            exec_context->symbol_table = make_shared<SymbolTable>(this->context->symbol_table);
+            exec_context->symbol_table = make_shared<SymbolTable>(this->context ? this->context->symbol_table : nullptr);
         }
         else
         {
@@ -44,9 +45,9 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>> &pos_args, co
     }
     else
     {
-        exec_context = make_shared<Context>(this->name, this->context, this->pos_start);
+        exec_context = make_shared<Context>(this->name, traceback_parent, this->pos_start);
         const auto new_symbol_table = make_shared<SymbolTable>();
-        new_symbol_table->parent = this->context->symbol_table;
+        new_symbol_table->parent = this->context ? this->context->symbol_table : nullptr;
         exec_context->symbol_table = new_symbol_table;
     }
 

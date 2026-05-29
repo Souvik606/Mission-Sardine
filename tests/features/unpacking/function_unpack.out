@@ -1,0 +1,4 @@
+--- Test: Function Unpacking ---
+x should be 10: 10
+y should be 20: 20
+z should be 30: 30

@@ -1,0 +1,8 @@
+show("--- Test: String Indexing ---")
+
+my_string = "Sardine"
+
+show("First character:", my_string[0])
+show("Last character:", my_string[6])
+
+show("Character at index 3:", my_string[3])

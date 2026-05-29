@@ -1,0 +1,54 @@
+# -----------------------------------------------------------------------
+# Tests all 5 summon syntax variants
+# -----------------------------------------------------------------------
+
+show("=== Test 1: summon math  (bare module) ===")
+summon math
+show(math.PI)
+show(math.square(5))
+show(math.factorial(6))
+
+show("")
+show("=== Test 2: summon math as mu  (module alias) ===")
+summon math as mu
+show(mu.PI)
+show(mu.cube(3))
+
+show("")
+show("=== Test 3: summon square, circle_area from math  (specific names) ===")
+summon square, circle_area from math
+show(square(4))
+show(circle_area(5))
+
+show("")
+show("=== Test 4: summon factorial as fact from math  (name with alias) ===")
+summon factorial as fact from math
+show(fact(7))
+
+show("")
+show("=== Test 5: summon * from math  (wildcard) ===")
+summon * from math
+show(PI)
+show(absolute(-42))
+show(cube(4))
+
+show("")
+show("=== Test 6: ModuleError on bad module ===")
+risk {
+    summon totally_nonexistent_module
+} trap ModuleError e {
+    show("ModuleError caught correctly:")
+    show("  " + e.message)
+}
+
+show("")
+show("=== Test 7: ModuleError on bad member ===")
+risk {
+    summon nonexistent_name from math
+} trap ModuleError e {
+    show("Bad member error caught:")
+    show("  " + e.message)
+}
+
+show("")
+show("All summon tests passed!")

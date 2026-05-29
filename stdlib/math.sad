@@ -1,0 +1,29 @@
+PI = 3.14159265358979
+
+method square(n) {
+    yield n * n
+}
+
+method cube(n) {
+    yield n * n * n
+}
+
+method factorial(n) {
+    when n <= 1 {
+        yield 1
+    } otherwise {
+        yield n * factorial(n - 1)
+    }
+}
+
+method circle_area(r) {
+    yield PI * r * r
+}
+
+method absolute(n) {
+    when n < 0 {
+        yield -n
+    } otherwise {
+        yield n
+    }
+}

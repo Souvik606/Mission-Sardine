@@ -1,7 +1,7 @@
 ```grammar
 multiline: NEWLINE* (singleline)* (NEWLINE* (singleline))* NEWLINE*
 
-singleline: call | statements | if-expression | for-expression | while-expression | switch-statement | function-definition | exception-handling | class-definition
+singleline: call | statements | if-expression | for-expression | while-expression | switch-statement | function-definition | exception-handling | class-definition | foreach-expression | summon-statement
 
 class-definition: KEYWORD:model IDENTIFIER (COLON IDENTIFIER (COMMA IDENTIFIER)*)? LPAREN2 NEWLINE* (class-member NEWLINE*)* RPAREN2
 
@@ -21,7 +21,7 @@ initializer-list: initializer-item ((COMMA NEWLINE* | NEWLINE+) initializer-item
 
 initializer-item: IDENTIFIER COLON expression
 
-jump-statements: KEYWORD:proceed | KEYWORD:escape |KEYWORD:yield expression
+jump-statements: KEYWORD:proceed | KEYWORD:escape | KEYWORD:yield expression (COMMA expression)*
 
 statements: IDENTIFIER (LPAREN3 expression RPAREN3)* (COMMA IDENTIFIER (LPAREN3 expression RPAREN3)*)* (EQUAL | PLUSEQUAL | MINUSEQUAL | MULEQUAL | DIVIDEEQUAL | MODULUSEQUAL | FLOOREQUAL | EXPEQUAL | BITOREQUAL | BITXOREQUAL | BITANDEQUAL | LSHIFTEQUAL | RSHIFTEQUAL) expression (COMMA expression)*
 
@@ -35,7 +35,7 @@ expression: ternary-expression
 
 ternary-expression: (logical-expression | statements) (QUESTION ternary-expression COLON ternary-expression)*
 
-logical-expression: bitwise-expression ((KEYWORD:AND | KEYWORD:OR) bitwise-expression)*
+logical-expression: bitwise-expression ((KEYWORD:and | KEYWORD:or) bitwise-expression)*
 
 bitwise-expression: bitwise-xor (BITOR bitwise-xor)*
 
@@ -43,7 +43,7 @@ bitwise-xor: bitwise-and (BITXOR bitwise-and)*
 
 bitwise-and: comp-expression (BITAND comp-expression)*
 
-comp-expression: KEYWORD:NOT comp-expression | shift-expression ((EE | NEQ | LT | GT | LTE | GTE) shift-expression)*
+comp-expression: KEYWORD:not comp-expression | shift-expression ((EE | NEQ | LT | GT | LTE | GTE) shift-expression)*
 
 shift-expression: arith-expression ((LSHIFT | RSHIFT) arith-expression)*
 
@@ -55,11 +55,11 @@ unary: (PLUS | MINUS | BITNOT) unary | exponent
 
 exponent: call (EXP unary)*
 
-call:attr-access (LPAREN (expression(COMMA expression)*)? RPAREN)*
+call: attr-access (LPAREN (expression(COMMA expression)*)? RPAREN)*
 
 attr-access: factor (DOT IDENTIFIER)*
 
-factor: INT | FLOAT | STRING | IDENTIFIER (LPAREN3 expression RPAREN3)* | LPAREN expression RPAREN | list-expression | dict-expression
+factor: INT | FLOAT | STRING | FSTRING | IDENTIFIER (LPAREN3 expression RPAREN3)* | LPAREN expression RPAREN | list-expression | dict-expression
 
 dict-expression: LPAREN2 (expression COLON expression(COMMA expression COLON expression)*)? RPAREN2
 
@@ -73,9 +73,21 @@ catch-expression: KEYWORD:trap (ERROR (IDENTIFIER)?)? LPAREN2 (multiline | jump-
 
 finally-expression: KEYWORD:clean LPAREN2 (multiline | jump-statements)* RPAREN2
 
-while-expression: KEYWORD:whenever expression LPAREN2 (multiline | jump-statements)* RPAREN2
+while-expression: KEYWORD:during expression LPAREN2 (multiline | jump-statements)* RPAREN2
 
-for-expression: KEYWORD:Cycle IDENTIFIER EQUAL expression COLON expression (COLON expression)? LPAREN2 (multiline | jump-statements)* RPAREN2
+for-expression: KEYWORD:cycle IDENTIFIER EQUAL expression COLON expression (COLON expression)? LPAREN2 (multiline | jump-statements)* RPAREN2
+
+foreach-expression: KEYWORD:trace IDENTIFIER (COMMA IDENTIFIER)* LARROW expression LPAREN2 (multiline | jump-statements)* RPAREN2
+
+summon-statement: KEYWORD:summon (summon-wildcard | summon-selective | summon-alias | summon-bare)
+
+summon-wildcard: MUL KEYWORD:from IDENTIFIER
+
+summon-selective: IDENTIFIER (KEYWORD:as IDENTIFIER)? (COMMA IDENTIFIER (KEYWORD:as IDENTIFIER)?)* KEYWORD:from IDENTIFIER
+
+summon-alias: IDENTIFIER KEYWORD:as IDENTIFIER
+
+summon-bare: IDENTIFIER
 
 function-definition: KEYWORD:method IDENTIFIER? LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN LPAREN2 (multiline |jump-statements)* RPAREN2
 

@@ -1,0 +1,34 @@
+=== Test 1: summon math  (bare module) ===
+3.14159265358979
+25
+720
+
+=== Test 2: summon math as mu  (module alias) ===
+3.14159265358979
+27
+
+=== Test 3: summon square, circle_area from math  (specific names) ===
+16
+78.53981633974475
+
+=== Test 4: summon factorial as fact from math  (name with alias) ===
+5040
+
+=== Test 5: summon * from math  (wildcard) ===
+3.14159265358979
+42
+64
+
+=== Test 6: ModuleError on bad module ===
+ModuleError caught correctly:
+  Module 'totally_nonexistent_module' not found. Searched:
+  tests/features/built_ins/totally_nonexistent_module.sad
+  tests/features/built_ins/totally_nonexistent_module.sard
+  sards/stdlib/totally_nonexistent_module.sad
+  sards/stdlib/totally_nonexistent_module.sard
+
+=== Test 7: ModuleError on bad member ===
+Bad member error caught:
+  Module 'math' has no member 'nonexistent_name'
+
+All summon tests passed!

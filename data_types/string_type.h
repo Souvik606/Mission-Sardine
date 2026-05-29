@@ -30,7 +30,7 @@ public:
     }
 
     [[nodiscard]] string to_string() const override {
-        return "\"" + value + "\"";
+        return "'" + value + "'";
     }
 
     [[nodiscard]] bool is_truthy() const override {

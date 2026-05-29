@@ -1,0 +1,9 @@
+show("--- Test: List Indexing ---")
+
+my_list = [10, 20, 30, "hello"]
+
+show("First element:", my_list[0])
+show("Third element:", my_list[2])
+
+my_list[1] = "twenty"
+show("Modified list:", my_list)

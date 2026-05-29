@@ -1,0 +1,20 @@
+show("--- Test: Logical Operators ---")
+
+show("true and true ->", 1 and 1)
+show("true and false ->", 1 and 0)
+show("false and true ->", 0 and 1)
+show("false and false ->", 0 and 0)
+
+show("true or true ->", 1 or 1)
+show("true or false ->", 1 or 0)
+show("false or true ->", 0 or 1)
+show("false or false ->", 0 or 0)
+
+show("not true ->", not 1)
+show("not false ->", not 0)
+
+show("--- Test: Operator Precedence ---")
+show("5 + 2 * 3 ->", 5 + 2 * 3)
+show("(5 + 2) * 3 ->", (5 + 2) * 3)
+show("not 0 and 1 ->", not 0 and 1)
+show("not (0 and 1) ->", not (0 and 1))

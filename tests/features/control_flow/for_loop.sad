@@ -1,0 +1,5 @@
+show("--- Test: cycle Loop ---")
+
+cycle i = 0:4 {
+    show("i:", i)
+}

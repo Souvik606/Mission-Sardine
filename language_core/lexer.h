@@ -120,6 +120,87 @@ public:
         return Token(T_STRING, str, pos_start, pos);
     }
 
+    Token make_fstring() {
+        string raw;
+        Position pos_start = pos.copy();
+        bool escape_character = false;
+        advance(); // skip opening '"'
+
+        map<char, char> escape_characters = {
+            {'n', '\n'},
+            {'t', '\t'}
+        };
+        int depth = 0; // track nesting of {{ }} so we store them as-is
+
+        while (current_char.has_value() && (current_char.value() != '"' || depth > 0 || escape_character)) {
+            if (escape_character) {
+                if (depth > 0) {
+                    raw += '\\';
+                    raw += current_char.value();
+                } else {
+                    char escaped_char = current_char.value();
+                    if (escape_characters.count(escaped_char)) {
+                        raw += escape_characters[escaped_char];
+                    } else {
+                        raw += escaped_char;
+                    }
+                }
+                escape_character = false;
+            } else {
+                if (current_char.value() == '\\') {
+                    escape_character = true;
+                } else if (current_char.value() == '{') {
+                    depth++;
+                    raw += '{';
+                } else if (current_char.value() == '}') {
+                    if (depth > 0) depth--;
+                    raw += '}';
+                } else {
+                    raw += current_char.value();
+                }
+            }
+            advance();
+        }
+
+        advance(); // skip closing '"'
+        return Token(T_FSTRING, raw, pos_start, pos);
+    }
+
+    shared_ptr<Error> skip_multiline_comment(const Position& pos_start) {
+        while (current_char.has_value()) {
+            if (current_char.value() == '*') {
+                advance();
+                if (current_char.has_value() && current_char.value() == '#') {
+                    advance();
+                    return nullptr;
+                }
+            } else {
+                advance();
+            }
+        }
+
+        return make_shared<ExpectedCharError>(pos_start, pos, "Closing '*#' for multiline comment");
+    }
+
+    shared_ptr<Error> skip_comment() {
+        Position pos_start = pos.copy();
+        advance();
+
+        if (current_char.has_value() && current_char.value() == '*') {
+            advance();
+            return skip_multiline_comment(pos_start);
+        }
+
+        while (current_char.has_value() && current_char.value() != '\n') {
+            advance();
+        }
+        if (current_char.has_value() && current_char.value() == '\n') {
+            advance();
+        }
+
+        return nullptr;
+    }
+
     Token make_identifier() {
         string id_str;
         Position pos_start = pos.copy();
@@ -175,6 +256,10 @@ public:
         if (current_char.has_value() && current_char.value() == '=') {
             advance();
             token_type = T_LTE;
+        }
+        else if (current_char.has_value() && current_char.value() == '-') {
+            advance();
+            token_type = T_LARROW;
         }
         else if (current_char.has_value() && current_char.value() == '<') {
             advance();
@@ -356,11 +441,24 @@ public:
             else if (DIGITS.find(c) != string::npos) {
                 tokens.push_back(make_number());
             }
-            else if (LETTERS.find(c) != string::npos) {
+            else if (LETTERS.find(c) != string::npos || c == '_') {
                 tokens.push_back(make_identifier());
             }
             else if (c == '"') {
                 tokens.push_back(make_string());
+            }
+            else if (c == '$') {
+                Position pos_start = pos.copy();
+                advance();
+                if (current_char.has_value() && current_char.value() == '"') {
+                    tokens.push_back(make_fstring());
+                } else {
+                    return { {}, make_shared<IllegalCharError>(pos_start, pos, "\"$\"") };
+                }
+            }
+            else if (c == '#') {
+                auto err = skip_comment();
+                if (err) return { {}, err };
             }
             else if (c == '+') {
                 tokens.push_back(make_plus());
