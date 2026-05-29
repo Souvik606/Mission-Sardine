@@ -315,4 +315,11 @@ public:
             return { nullptr, make_shared<RunTimeError>(bad_idx->pos_start.value_or(Position{}), bad_idx->pos_end.value_or(Position{}), "Index out of bounds", context, "RunTimeError") };
         }
     }
+
+    virtual OperationResult bitwise_and(const shared_ptr<DataType>& operand) const override { return { nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply '&' to a Dictionary", context) }; }
+    virtual OperationResult bitwise_xor(const shared_ptr<DataType>& operand) const override { return { nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply '^' to a Dictionary", context) }; }
+    virtual OperationResult bitwise_or(const shared_ptr<DataType>& operand) const override { return { nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply '|' to a Dictionary", context) }; }
+    virtual OperationResult bitwise_not() const override { return { nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position{}), pos_end.value_or(Position{}), "Cannot apply '~' to a Dictionary", context) }; }
+    virtual OperationResult lshift(const shared_ptr<DataType>& operand) const override { return { nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply '<<' to a Dictionary", context) }; }
+    virtual OperationResult rshift(const shared_ptr<DataType>& operand) const override { return { nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply '>>' to a Dictionary", context) }; }
 };

@@ -78,4 +78,11 @@ public:
     [[nodiscard]] OperationResult and_by(const shared_ptr<DataType> &other) const override { return std::make_pair(nullptr, illegal_op_error(this, other.get())); }
     [[nodiscard]] OperationResult or_by(const shared_ptr<DataType> &other) const override { return std::make_pair(nullptr, illegal_op_error(this, other.get())); }
     [[nodiscard]] OperationResult not_by() const override { return std::make_pair(nullptr, illegal_op_error(this)); }
+
+    [[nodiscard]] OperationResult bitwise_and(const shared_ptr<DataType> &other) const override { return std::make_pair(nullptr, illegal_op_error(this, other.get())); }
+    [[nodiscard]] OperationResult bitwise_xor(const shared_ptr<DataType> &other) const override { return std::make_pair(nullptr, illegal_op_error(this, other.get())); }
+    [[nodiscard]] OperationResult bitwise_or(const shared_ptr<DataType> &other) const override { return std::make_pair(nullptr, illegal_op_error(this, other.get())); }
+    [[nodiscard]] OperationResult bitwise_not() const override { return std::make_pair(nullptr, illegal_op_error(this)); }
+    [[nodiscard]] OperationResult lshift(const shared_ptr<DataType> &other) const override { return std::make_pair(nullptr, illegal_op_error(this, other.get())); }
+    [[nodiscard]] OperationResult rshift(const shared_ptr<DataType> &other) const override { return std::make_pair(nullptr, illegal_op_error(this, other.get())); }
 };

@@ -744,6 +744,16 @@ private:
             tie(result, error) = left->floor_divide(right);
         else if (node->operator_token.type == T_EXP)
             tie(result, error) = left->exponent(right);
+        else if (node->operator_token.type == T_BITAND)
+            tie(result, error) = left->bitwise_and(right);
+        else if (node->operator_token.type == T_BITXOR)
+            tie(result, error) = left->bitwise_xor(right);
+        else if (node->operator_token.type == T_BITOR)
+            tie(result, error) = left->bitwise_or(right);
+        else if (node->operator_token.type == T_LSHIFT)
+            tie(result, error) = left->lshift(right);
+        else if (node->operator_token.type == T_RSHIFT)
+            tie(result, error) = left->rshift(right);
         else if (node->operator_token.type == T_EE)
             tie(result, error) = left->get_comparison_eq(right);
         else if (node->operator_token.type == T_NEQ)
@@ -819,6 +829,10 @@ private:
         else if (node->operator_token.type == T_KEYWORD && any_cast<string>(node->operator_token.value) == "not")
         {
             tie(result, error) = number->not_by();
+        }
+        else if (node->operator_token.type == T_BITNOT)
+        {
+            tie(result, error) = number->bitwise_not();
         }
 
         if (error)

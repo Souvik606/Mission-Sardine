@@ -164,6 +164,13 @@ public:
     [[nodiscard]] OperationResult or_by(const shared_ptr<DataType> &o) const override { return err("'or'"); }
     [[nodiscard]] OperationResult not_by() const override { return err("'not'"); }
 
+    [[nodiscard]] OperationResult bitwise_and(const shared_ptr<DataType> &o) const override { return err("'&'"); }
+    [[nodiscard]] OperationResult bitwise_xor(const shared_ptr<DataType> &o) const override { return err("'^'"); }
+    [[nodiscard]] OperationResult bitwise_or(const shared_ptr<DataType> &o) const override { return err("'|'"); }
+    [[nodiscard]] OperationResult bitwise_not() const override { return err("'~'"); }
+    [[nodiscard]] OperationResult lshift(const shared_ptr<DataType> &o) const override { return err("'<<'"); }
+    [[nodiscard]] OperationResult rshift(const shared_ptr<DataType> &o) const override { return err("'>>'"); }
+
 private:
     [[nodiscard]] OperationResult err(const string &op) const
     {
@@ -231,6 +238,13 @@ public:
     [[nodiscard]] OperationResult and_by(const shared_ptr<DataType> &o) const override { return err("'and'"); }
     [[nodiscard]] OperationResult or_by(const shared_ptr<DataType> &o) const override { return err("'or'"); }
     [[nodiscard]] OperationResult not_by() const override { return err("'not'"); }
+
+    [[nodiscard]] OperationResult bitwise_and(const shared_ptr<DataType> &o) const override { return err("'&'"); }
+    [[nodiscard]] OperationResult bitwise_xor(const shared_ptr<DataType> &o) const override { return err("'^'"); }
+    [[nodiscard]] OperationResult bitwise_or(const shared_ptr<DataType> &o) const override { return err("'|'"); }
+    [[nodiscard]] OperationResult bitwise_not() const override { return err("'~'"); }
+    [[nodiscard]] OperationResult lshift(const shared_ptr<DataType> &o) const override { return err("'<<'"); }
+    [[nodiscard]] OperationResult rshift(const shared_ptr<DataType> &o) const override { return err("'>>'"); }
 
 private:
     [[nodiscard]] OperationResult err(const string &op) const

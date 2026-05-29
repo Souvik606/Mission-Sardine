@@ -176,6 +176,14 @@ public:
             advance();
             token_type = T_LTE;
         }
+        else if (current_char.has_value() && current_char.value() == '<') {
+            advance();
+            token_type = T_LSHIFT;
+            if (current_char.has_value() && current_char.value() == '=') {
+                advance();
+                token_type = T_LSHIFTEQUAL;
+            }
+        }
         return Token(token_type, {}, pos_start, pos);
     }
 
@@ -186,6 +194,47 @@ public:
         if (current_char.has_value() && current_char.value() == '=') {
             advance();
             token_type = T_GTE;
+        }
+        else if (current_char.has_value() && current_char.value() == '>') {
+            advance();
+            token_type = T_RSHIFT;
+            if (current_char.has_value() && current_char.value() == '=') {
+                advance();
+                token_type = T_RSHIFTEQUAL;
+            }
+        }
+        return Token(token_type, {}, pos_start, pos);
+    }
+
+    Token make_bitand() {
+        Position pos_start = pos.copy();
+        advance();
+        string token_type = T_BITAND;
+        if (current_char.has_value() && current_char.value() == '=') {
+            advance();
+            token_type = T_BITANDEQUAL;
+        }
+        return Token(token_type, {}, pos_start, pos);
+    }
+
+    Token make_bitxor() {
+        Position pos_start = pos.copy();
+        advance();
+        string token_type = T_BITXOR;
+        if (current_char.has_value() && current_char.value() == '=') {
+            advance();
+            token_type = T_BITXOREQUAL;
+        }
+        return Token(token_type, {}, pos_start, pos);
+    }
+
+    Token make_bitor() {
+        Position pos_start = pos.copy();
+        advance();
+        string token_type = T_BITOR;
+        if (current_char.has_value() && current_char.value() == '=') {
+            advance();
+            token_type = T_BITOREQUAL;
         }
         return Token(token_type, {}, pos_start, pos);
     }
@@ -343,6 +392,19 @@ public:
             }
             else if (c == '>') {
                 tokens.push_back(make_greater());
+            }
+            else if (c == '&') {
+                tokens.push_back(make_bitand());
+            }
+            else if (c == '^') {
+                tokens.push_back(make_bitxor());
+            }
+            else if (c == '|') {
+                tokens.push_back(make_bitor());
+            }
+            else if (c == '~') {
+                tokens.push_back(Token(T_BITNOT, {}, pos));
+                advance();
             }
             else if (c == '(') {
                 tokens.push_back(Token(T_LPAREN, {}, pos));

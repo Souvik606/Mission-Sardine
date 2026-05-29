@@ -57,6 +57,12 @@ public:
     [[nodiscard]] virtual OperationResult and_by(const shared_ptr<DataType>& other) const = 0;
     [[nodiscard]] virtual OperationResult or_by(const shared_ptr<DataType>& other) const = 0;
     [[nodiscard]] virtual OperationResult not_by() const = 0;
+    [[nodiscard]] virtual OperationResult bitwise_and(const shared_ptr<DataType>& other) const = 0;
+    [[nodiscard]] virtual OperationResult bitwise_xor(const shared_ptr<DataType>& other) const = 0;
+    [[nodiscard]] virtual OperationResult bitwise_or(const shared_ptr<DataType>& other) const = 0;
+    [[nodiscard]] virtual OperationResult bitwise_not() const = 0;
+    [[nodiscard]] virtual OperationResult lshift(const shared_ptr<DataType>& other) const = 0;
+    [[nodiscard]] virtual OperationResult rshift(const shared_ptr<DataType>& other) const = 0;
 
     [[nodiscard]] virtual OperationResult getByIndex(const vector<shared_ptr<DataType>>& indexes) const {
         return { nullptr, make_shared<RunTimeError>(pos_start.value_or(Position()), pos_end.value_or(Position()), "Type does not support indexing", context) };

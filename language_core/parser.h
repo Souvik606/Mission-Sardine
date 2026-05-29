@@ -1435,7 +1435,7 @@ private:
             return res;
         Token token = current_tok.value();
 
-        if (token.type == T_PLUS || token.type == T_MINUS)
+        if (token.type == T_PLUS || token.type == T_MINUS || token.type == T_BITNOT)
         {
             res.register_advancement();
             advance();
@@ -1718,7 +1718,9 @@ private:
                 (current_tok->type == T_PLUSEQUAL || current_tok->type == T_MINUSEQUAL ||
                  current_tok->type == T_MULEQUAL || current_tok->type == T_DIVIDEEQUAL ||
                  current_tok->type == T_MODULUSEQUAL || current_tok->type == T_FLOOREQUAL ||
-                 current_tok->type == T_EXPEQUAL))
+                 current_tok->type == T_EXPEQUAL || current_tok->type == T_BITANDEQUAL ||
+                 current_tok->type == T_BITXOREQUAL || current_tok->type == T_BITOREQUAL ||
+                 current_tok->type == T_LSHIFTEQUAL || current_tok->type == T_RSHIFTEQUAL))
             {
                 string op_type;
                 if (current_tok->type == T_PLUSEQUAL) op_type = T_PLUS;
@@ -1728,6 +1730,11 @@ private:
                 else if (current_tok->type == T_MODULUSEQUAL) op_type = T_MODULUS;
                 else if (current_tok->type == T_FLOOREQUAL) op_type = T_FLOOR;
                 else if (current_tok->type == T_EXPEQUAL) op_type = T_EXP;
+                else if (current_tok->type == T_BITANDEQUAL) op_type = T_BITAND;
+                else if (current_tok->type == T_BITXOREQUAL) op_type = T_BITXOR;
+                else if (current_tok->type == T_BITOREQUAL) op_type = T_BITOR;
+                else if (current_tok->type == T_LSHIFTEQUAL) op_type = T_LSHIFT;
+                else if (current_tok->type == T_RSHIFTEQUAL) op_type = T_RSHIFT;
 
                 op = Token(op_type, {}, current_tok->pos_start, current_tok->pos_end);
             }
@@ -1736,7 +1743,7 @@ private:
                 return res.failure(InvalidSyntaxError(
                     current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
                     current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
-                    "Expected '=' or '+=' or '-=' or '*=' or '/=' or '%=' or '//=' or '**='"));
+                    "Expected '=' or '+=' or '-=' or '*=' or '/=' or '%=' or '//=' or '**=' or '&=' or '^=' or '|=' or '<<=' or '>>='"));
             }
         }
         res.register_advancement();
@@ -1852,12 +1859,105 @@ private:
     ParseResult logical_expression()
     {
         ParseResult res;
-        auto left_node = res.register_node(comp_expression());
+        auto left_node = res.register_node(bitwise_expression());
         if (res.error)
             return res;
 
         while (current_tok.has_value() && current_tok->type == T_KEYWORD &&
                (any_cast<string>(current_tok->value) == "and" || any_cast<string>(current_tok->value) == "or"))
+        {
+            Token operator_tok = current_tok.value();
+            res.register_advancement();
+            advance();
+
+            auto right_node = res.register_node(bitwise_expression());
+            if (res.error)
+                return res;
+
+            left_node = make_shared<BinaryOperationNode>(left_node, operator_tok, right_node);
+        }
+
+        auto node = res.register_node(res.success(left_node));
+        if (res.error)
+        {
+            return res.failure(InvalidSyntaxError(
+                current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
+                current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
+                "Expected int,float,identifier"));
+        }
+        return res.success(node);
+    }
+
+    ParseResult bitwise_expression()
+    {
+        ParseResult res;
+        auto left_node = res.register_node(bitwise_xor());
+        if (res.error)
+            return res;
+
+        while (current_tok.has_value() && current_tok->type == T_BITOR)
+        {
+            Token operator_tok = current_tok.value();
+            res.register_advancement();
+            advance();
+
+            auto right_node = res.register_node(bitwise_xor());
+            if (res.error)
+                return res;
+
+            left_node = make_shared<BinaryOperationNode>(left_node, operator_tok, right_node);
+        }
+
+        auto node = res.register_node(res.success(left_node));
+        if (res.error)
+        {
+            return res.failure(InvalidSyntaxError(
+                current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
+                current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
+                "Expected int,float,identifier"));
+        }
+        return res.success(node);
+    }
+
+    ParseResult bitwise_xor()
+    {
+        ParseResult res;
+        auto left_node = res.register_node(bitwise_and());
+        if (res.error)
+            return res;
+
+        while (current_tok.has_value() && current_tok->type == T_BITXOR)
+        {
+            Token operator_tok = current_tok.value();
+            res.register_advancement();
+            advance();
+
+            auto right_node = res.register_node(bitwise_and());
+            if (res.error)
+                return res;
+
+            left_node = make_shared<BinaryOperationNode>(left_node, operator_tok, right_node);
+        }
+
+        auto node = res.register_node(res.success(left_node));
+        if (res.error)
+        {
+            return res.failure(InvalidSyntaxError(
+                current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
+                current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
+                "Expected int,float,identifier"));
+        }
+        return res.success(node);
+    }
+
+    ParseResult bitwise_and()
+    {
+        ParseResult res;
+        auto left_node = res.register_node(comp_expression());
+        if (res.error)
+            return res;
+
+        while (current_tok.has_value() && current_tok->type == T_BITAND)
         {
             Token operator_tok = current_tok.value();
             res.register_advancement();
@@ -1897,13 +1997,42 @@ private:
             return res.success(make_shared<UnaryOperationNode>(operator_token, node));
         }
 
-        auto left_node = res.register_node(arith_expression());
+        auto left_node = res.register_node(shift_expression());
         if (res.error)
             return res;
 
         while (current_tok.has_value() && (current_tok->type == T_EE || current_tok->type == T_NEQ ||
                                            current_tok->type == T_LT || current_tok->type == T_GT ||
                                            current_tok->type == T_GTE || current_tok->type == T_LTE))
+        {
+            Token operator_tok = current_tok.value();
+            res.register_advancement();
+            advance();
+            auto right_node = res.register_node(shift_expression());
+            if (res.error)
+                return res;
+            left_node = make_shared<BinaryOperationNode>(left_node, operator_tok, right_node);
+        }
+
+        auto node = res.register_node(res.success(left_node));
+        if (res.error)
+        {
+            return res.failure(InvalidSyntaxError(
+                current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
+                current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
+                "Expected int,float,identifier,'+','-','not' or '('"));
+        }
+        return res.success(node);
+    }
+
+    ParseResult shift_expression()
+    {
+        ParseResult res;
+        auto left_node = res.register_node(arith_expression());
+        if (res.error)
+            return res;
+
+        while (current_tok.has_value() && (current_tok->type == T_LSHIFT || current_tok->type == T_RSHIFT))
         {
             Token operator_tok = current_tok.value();
             res.register_advancement();
@@ -1920,7 +2049,7 @@ private:
             return res.failure(InvalidSyntaxError(
                 current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
                 current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
-                "Expected int,float,identifier,'+','-','not' or '('"));
+                "Expected int,float,identifier,'+','-' or '('"));
         }
         return res.success(node);
     }
