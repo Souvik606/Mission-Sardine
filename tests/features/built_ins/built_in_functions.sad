@@ -1,0 +1,37 @@
+show("--- Testing listen() ---")
+show("What is your name?")
+name = listen()
+show("Hello,", name)
+
+show("--- Testing Integer() and String() ---")
+num_str = "123"
+num_int = Integer(num_str)
+show(num_int + 7)
+
+float_val = 45.6
+str_val = String(float_val)
+show("The value is", str_val)
+
+model Person {
+    open attr <name, age>
+
+    init(name, age) {
+        name: name,
+        age: age
+    }
+
+    method greet() {
+        show("Hello, my name is", name, "and I am", age, "years old.")
+    }
+}
+
+p = Person("John", 30)
+show("--- Testing type() ---")
+show(type(10))
+show(type(3.14))
+show(type("hello"))
+show(type([1, 2]))
+show(type({"a":1}))
+show(type(show))
+show(type(Person))
+show(type(p))

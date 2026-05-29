@@ -20,6 +20,11 @@ public:
         advance_count++;
     }
 
+    void reverse(int amount = 1) {
+        advance_count -= amount;
+        to_reverse_count += amount;
+    }
+
     shared_ptr<Node> register_node(const ParseResult& res) {
         last_registered_advance_count = res.advance_count;
         this->advance_count += res.advance_count;

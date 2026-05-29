@@ -11,6 +11,7 @@ const string LETTERS_DIGITS = LETTERS + DIGITS;
 const string T_INT = "INT";
 const string T_FLOAT = "FLOAT";
 const string T_STRING = "STRING";
+const string T_FSTRING = "FSTRING";
 const string T_IDENTIFIER = "IDENTIFIER";
 const string T_KEYWORD = "KEYWORD";
 const string T_PLUS = "PLUS";
@@ -40,6 +41,7 @@ const string T_LSHIFTEQUAL = "LSHIFTEQUAL";
 const string T_RSHIFT = "RSHIFT";
 const string T_RSHIFTEQUAL = "RSHIFTEQUAL";
 const string T_ARROW = "ARROW";
+const string T_LARROW = "LARROW";
 const string T_NEQ = "NOTEQUAL";
 const string T_EE = "DOUBLEEQUAL";
 const string T_LT = "LESSTHAN";
@@ -65,11 +67,12 @@ const vector<string> KEYWORDS = {
     "during","method","yield","escape","proceed", "menu", "choice", "fallback",
     "risk", "trap", "clean",
     "model", "attr", "init",
-    "open", "secret", "guarded"
+    "open", "secret", "guarded",
+    "trace", "summon", "from", "as"
 };
 
 const vector<string> ERROR_TYPES = {
     "RunTimeError", "IllegalOperationError", "DivisionByZeroError", "IndexOutOfBoundsError",
     "NameError", "ArgumentError", "InvalidErrorTypeError", "DictKeyError", "NotImplementedError",
-    "AttributeError", "TypeError"
+    "AttributeError", "TypeError", "ModuleError"
 };

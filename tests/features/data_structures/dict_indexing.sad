@@ -1,0 +1,10 @@
+show("--- Test: Dictionary Indexing ---")
+
+my_dict = {"name": "SARDINE", "version": 0.1}
+
+show(my_dict)
+show("Name:", my_dict["name"])
+show("Version:", my_dict["version"])
+
+my_dict["version"] = 0.2
+show("Updated dictionary:", my_dict)

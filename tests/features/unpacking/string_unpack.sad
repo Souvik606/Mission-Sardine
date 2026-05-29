@@ -1,0 +1,6 @@
+show("--- Test: String Unpacking ---")
+
+c1, c2, c3 = "ABC"
+show("c1 should be A:", c1)
+show("c2 should be B:", c2)
+show("c3 should be C:", c3)

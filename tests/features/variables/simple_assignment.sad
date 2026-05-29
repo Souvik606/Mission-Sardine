@@ -1,0 +1,5 @@
+show("--- Test: Simple Assignment ---")
+x = 10
+show("x should be 10:", x)
+y = "hello"
+show("y should be hello:", y)

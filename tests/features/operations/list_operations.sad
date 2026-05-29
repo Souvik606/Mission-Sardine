@@ -1,0 +1,29 @@
+show("--- List Operations ---")
+
+show("--- Concatenation ---")
+list1 = [1, 2]
+list2 = [3, 4]
+show(list1 + list2)
+
+show("--- Multiplication ---")
+list3 = ["a", "b"]
+show(list3 * 3)
+
+show("--- Illegal Operations ---")
+risk {
+    show([1, 2] - [3])
+} trap IllegalOperationError e {
+    show("Caught expected error:", e.traceback)
+}
+
+risk {
+    show([1, 2] / 2)
+} trap IllegalOperationError e {
+    show("Caught expected error:", e.traceback)
+}
+
+risk {
+    show([1, 2] + "hello")
+} trap IllegalOperationError e {
+    show("Caught expected error:", e.traceback)
+}

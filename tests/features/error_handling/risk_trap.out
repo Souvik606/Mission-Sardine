@@ -1,0 +1,11 @@
+Inside risk block, before error
+Caught an error: Traceback (most recent call last):
+  File tests/features/error_handling/risk_trap.sad, line 3, in <program>
+        a = 10 / 0
+                 ^
+DivisionByZeroError: Division by zero
+Inside clean block
+---
+Inside another risk block
+No error here
+Inside the second clean block

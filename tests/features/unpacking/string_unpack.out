@@ -1,0 +1,4 @@
+--- Test: String Unpacking ---
+c1 should be A: A
+c2 should be B: B
+c3 should be C: C

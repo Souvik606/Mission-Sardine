@@ -387,6 +387,16 @@ public:
     }
 
     [[nodiscard]] string to_string() const override {
-        return std::visit([](auto&& val) { return std::to_string(val); }, this->value);
+        if (holds_alternative<double>(this->value)) {
+            double d = get<double>(this->value);
+            ostringstream ss;
+            ss << std::setprecision(16) << d;
+            string s = ss.str();
+            if (s.find('.') == string::npos && s.find('e') == string::npos && s.find('E') == string::npos) {
+                s += ".0";
+            }
+            return s;
+        }
+        return std::to_string(get<long long>(this->value));
     }
 };

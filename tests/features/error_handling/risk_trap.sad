@@ -1,0 +1,23 @@
+risk {
+    show("Inside risk block, before error")
+    a = 10 / 0
+    show("This should not be printed")
+} trap RunTimeError e{
+    show("Caught an error:", e.traceback)
+} clean {
+    show("Inside clean block")
+}
+
+show("---")
+
+risk {
+    show("Inside another risk block")
+    a = 10 / 2
+    show("No error here")
+}
+trap {
+    show("This trap block should not execute")
+}
+clean {
+    show("Inside the second clean block")
+}

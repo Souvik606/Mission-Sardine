@@ -23,6 +23,7 @@ private:
 
 public:
     unordered_map<string, shared_ptr<DataType>> elements;
+    vector<string> keys_order;
 
     [[nodiscard]] bool is_dict() const override {
         return true;
@@ -34,6 +35,9 @@ public:
         for (const auto& pair : elements_vec) {
             string key = get_dict_key(pair.first);
             if (!key.empty()) {
+                if (elements.find(key) == elements.end()) {
+                    keys_order.push_back(key);
+                }
                 elements[key] = pair.second;
             }
         }
@@ -43,8 +47,9 @@ public:
         auto new_dict = make_shared<Dict>();
         new_dict->set_pos(pos_start, pos_end);
         new_dict->set_context(context);
-        for (const auto& pair : elements) {
-            new_dict->elements[pair.first] = pair.second;
+        new_dict->keys_order = this->keys_order;
+        for (const auto& key : keys_order) {
+            new_dict->elements[key] = elements.at(key);
         }
         return new_dict;
     }
@@ -53,14 +58,14 @@ public:
         stringstream ss;
         ss << "{";
         bool first = true;
-        for (const auto& pair : elements) {
+        for (const auto& key : keys_order) {
             if (!first) ss << ", ";
             first = false;
-            if (pair.first.substr(0, 2) == "I:") ss << pair.first.substr(2);
-            else if (pair.first.substr(0, 2) == "D:") ss << pair.first.substr(2);
-            else if (pair.first.substr(0, 2) == "S:") ss << pair.first.substr(2);
+            if (key.substr(0, 2) == "I:") ss << key.substr(2);
+            else if (key.substr(0, 2) == "D:") ss << key.substr(2);
+            else if (key.substr(0, 2) == "S:") ss << "'" << key.substr(2) << "'";
 
-            ss << ": " << pair.second->to_string();
+            ss << ": " << elements.at(key)->to_string();
         }
         ss << "}";
         return ss.str();
@@ -77,8 +82,11 @@ public:
     OperationResult add(const shared_ptr<DataType>& operand) const override {
         if (const auto other_dict = dynamic_cast<const Dict*>(operand.get())) {
             auto new_dict = dynamic_pointer_cast<Dict>(this->copy());
-            for (const auto& pair : other_dict->elements) {
-                new_dict->elements[pair.first] = pair.second;
+            for (const auto& key : other_dict->keys_order) {
+                if (new_dict->elements.find(key) == new_dict->elements.end()) {
+                    new_dict->keys_order.push_back(key);
+                }
+                new_dict->elements[key] = other_dict->elements.at(key);
             }
             return { new_dict, nullptr };
         }
@@ -91,6 +99,7 @@ public:
             string key = get_dict_key(operand);
             if (new_dict->elements.find(key) != new_dict->elements.end()) {
                 new_dict->elements.erase(key);
+                new_dict->keys_order.erase(remove(new_dict->keys_order.begin(), new_dict->keys_order.end(), key), new_dict->keys_order.end());
                 return { new_dict, nullptr };
             }
             return { new_dict, nullptr };
@@ -281,9 +290,13 @@ public:
 
             if (const auto dict_temp = dynamic_cast<Dict*>(current.get())) {
                 updated_current = dict_temp->copy();
+                auto updated_dict_ptr = dynamic_pointer_cast<Dict>(updated_current);
                 if (dynamic_cast<const Number*>(last_idx.get()) || dynamic_cast<const String*>(last_idx.get())) {
                     string key = get_dict_key(last_idx);
-                    dynamic_pointer_cast<Dict>(updated_current)->elements[key] = val;
+                    if (updated_dict_ptr->elements.find(key) == updated_dict_ptr->elements.end()) {
+                        updated_dict_ptr->keys_order.push_back(key);
+                    }
+                    updated_dict_ptr->elements[key] = val;
                 }
                 else {
                     return { nullptr, make_shared<DictKeyError>(last_idx->pos_start.value_or(Position{}), last_idx->pos_end.value_or(Position{}), "Dictionary keys must be numbers or strings", context) };

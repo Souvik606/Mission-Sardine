@@ -1,0 +1,20 @@
+--- Test: Menu Statement ---
+It's Tuesday.
+It's Wednesday.
+Value is 2.
+Value is something else.
+--- Test: Menu Statement (Extra Valid) ---
+V1-3.
+V2-1.
+V2-2.
+V3-Default.
+V4-B.
+V5-Outer-1.
+V5-Inner-2.
+V6-4.
+V7-Default.
+V8-1.
+V8-Default.
+V9.
+V9.
+V10-2.

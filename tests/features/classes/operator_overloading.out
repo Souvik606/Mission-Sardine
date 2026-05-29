@@ -1,0 +1,25 @@
+--- Test: Vec2 Arithmetic Operators ---
+4
+6
+2
+2
+3
+8
+--- Test: Vec2 Unary Operators ---
+-1
+-2
+--- Test: Vec2 Comparison Operators ---
+0
+1
+1
+1
+--- Test: Fraction Arithmetic ---
+5
+6
+1
+6
+--- Test: Fraction Equality ---
+1
+--- Test: Counter Augmented Assignment ---
+15
+10

@@ -22,15 +22,68 @@ public:
     }
 
     [[nodiscard]] virtual string to_string() const {
+        string rel_path = get_relative_path(pos_start.file_name);
+        string snippet = string_with_arrows(pos_start.file_text, pos_start, pos_end);
         stringstream ss;
-        ss << error_name << ": " << details
-            << "\nFile " << pos_start.file_name
-            << ", line " << (pos_start.line + 1);
+        ss << "  File " << rel_path << ", line " << (pos_start.line + 1) << "\n"
+           << snippet << "\n"
+           << error_name << ": " << details;
         return ss.str();
     }
 
     [[nodiscard]] virtual shared_ptr<Error> clone() const {
         return make_shared<Error>(*this);
+    }
+
+protected:
+    static string get_relative_path(const string& file_path) {
+        if (file_path.empty()) return "";
+        try {
+            namespace fs = std::filesystem;
+            fs::path p(file_path);
+            if (p.is_absolute()) {
+                auto rel = fs::relative(p, fs::current_path());
+                string r_str = rel.generic_string();
+                return r_str;
+            }
+            string r_str = file_path;
+            for (char& c : r_str) {
+                if (c == '\\') c = '/';
+            }
+            return r_str;
+        } catch (...) {
+            string r_str = file_path;
+            for (char& c : r_str) {
+                if (c == '\\') c = '/';
+            }
+            return r_str;
+        }
+    }
+
+    static string string_with_arrows(const string& text, const Position& pos_start, const Position& pos_end) {
+        vector<string> lines;
+        stringstream ss(text);
+        string item;
+        while (getline(ss, item, '\n')) {
+            lines.push_back(item);
+        }
+        if (lines.empty()) return "";
+
+        int idx = max(0, min(pos_start.line, (int)lines.size() - 1));
+        string line = lines[idx];
+
+        int col_start = max(0, min(pos_start.col, (int)line.size()));
+        int col_end;
+        if (pos_end.line == pos_start.line) {
+            col_end = max(col_start + 1, min(pos_end.col + 1, (int)line.size()));
+        } else {
+            col_end = max(col_start + 1, (int)line.size());
+        }
+
+        string indent = "    ";
+        string snippet = indent + line + "\n";
+        snippet += indent + string(col_start, ' ') + string(col_end - col_start, '^');
+        return snippet;
     }
 };
 
@@ -80,23 +133,40 @@ public:
     }
 
     [[nodiscard]] string generate_traceback() const {
-        stringstream traceback;
+        vector<string> frames;
         Position pos = this->pos_start;
         shared_ptr<Context> ctx = this->context;
 
         while (ctx) {
-            traceback << "  File " << pos.file_name
-                << ", line " << (pos.line + 1)
-                << ", in " << ctx->display_name << "\n";
+            string rel_path = get_relative_path(pos.file_name);
+            Position end_pos = (ctx->parent == nullptr) ? this->pos_end : pos;
+            string snippet = string_with_arrows(pos.file_text, pos, end_pos);
+
+            stringstream frame_ss;
+            frame_ss << "  File " << rel_path << ", line " << (pos.line + 1)
+                     << ", in " << ctx->display_name << "\n"
+                     << snippet;
+            frames.push_back(frame_ss.str());
 
             pos = ctx->parent_entry_pos.value_or(Position());
             ctx = ctx->parent;
         }
 
+        vector<string> reversed_frames = frames;
+        reverse(reversed_frames.begin(), reversed_frames.end());
+
+        stringstream traceback_body;
+        for (size_t i = 0; i < reversed_frames.size(); ++i) {
+            traceback_body << reversed_frames[i];
+            if (i + 1 < reversed_frames.size()) {
+                traceback_body << "\n";
+            }
+        }
+
         stringstream final_ss;
         final_ss << "Traceback (most recent call last):\n"
-            << traceback.str()
-            << this->error_name << ": " << this->details;
+                 << traceback_body.str() << "\n"
+                 << this->error_name << ": " << this->details;
 
         return final_ss.str();
     }

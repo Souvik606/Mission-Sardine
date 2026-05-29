@@ -1,0 +1,26 @@
+show("--- Test: When-Orwhen-Otherwise ---")
+
+x = 10
+
+when x > 15 {
+    show("x is greater than 15")
+} orwhen x > 5 {
+    show("x is greater than 5")
+} otherwise {
+    show("x is not greater than 5")
+}
+
+y = 0
+
+when y == 0 {
+    show("y is zero")
+} otherwise {
+    show("y is not zero")
+}
+
+z = -5
+when z > 0 {
+    show("z is positive")
+} otherwise {
+    show("z is not positive")
+}

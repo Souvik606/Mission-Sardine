@@ -178,3 +178,192 @@ DataType::OperationResult ModelInstance::get_attr(const string &attr_name,
                          "'" + model->name + "' instance has no attribute '" + attr_name + "'",
                          context)};
 }
+
+DataType::OperationResult ModelInstance::err(const string &op) const
+{
+    return {nullptr, make_shared<IllegalOperationError>(
+                         pos_start.value_or(Position()), pos_end.value_or(Position()),
+                         "Cannot apply " + op + " to a model instance", context)};
+}
+
+static const unordered_map<string, string> BINARY_OP_METHODS = {
+    {"add", "__add__"},
+    {"subtract", "__sub__"},
+    {"multiply", "__mul__"},
+    {"divide", "__div__"},
+    {"modulus", "__mod__"},
+    {"floor_divide", "__floordiv__"},
+    {"exponent", "__pow__"},
+    {"bitwise_and", "__and__"},
+    {"bitwise_or", "__or__"},
+    {"bitwise_xor", "__xor__"},
+    {"lshift", "__lshift__"},
+    {"rshift", "__rshift__"},
+    {"get_comparison_eq", "__eq__"},
+    {"get_comparison_neq", "__neq__"},
+    {"get_comparison_lt", "__lt__"},
+    {"get_comparison_lte", "__lte__"},
+    {"get_comparison_gt", "__gt__"},
+    {"get_comparison_gte", "__gte__"},
+    {"and_by", "__land__"},
+    {"or_by", "__lor__"}
+};
+
+static const unordered_map<string, string> UNARY_OP_METHODS = {
+    {"not_by", "__not__"},
+    {"bitwise_not", "__bitnot__"}
+};
+
+static const unordered_map<string, string> OP_SYMBOLS = {
+    {"add", "+"}, {"subtract", "-"}, {"multiply", "*"}, {"divide", "/"},
+    {"modulus", "%"}, {"floor_divide", "//"}, {"exponent", "**"},
+    {"bitwise_and", "&"}, {"bitwise_or", "|"}, {"bitwise_xor", "^"},
+    {"lshift", "<<"}, {"rshift", ">>"},
+    {"get_comparison_eq", "=="}, {"get_comparison_neq", "!="},
+    {"get_comparison_lt", "<"},  {"get_comparison_lte", "<="},
+    {"get_comparison_gt", ">"},  {"get_comparison_gte", ">="},
+    {"and_by", "and"}, {"or_by", "or"},
+    {"not_by", "not"}, {"bitwise_not", "~"}
+};
+
+DataType::OperationResult ModelInstance::_call_op_method(const string &method_name, const vector<shared_ptr<DataType>> &args) const
+{
+    const MethodInfo *mi = model->find_method(method_name);
+    if (!mi)
+    {
+        return {nullptr, nullptr}; // not found
+    }
+
+    auto *func_def = dynamic_cast<FunctionDefinitionNode *>(mi->node.get());
+    if (!func_def)
+    {
+        return {nullptr, nullptr};
+    }
+
+    vector<pair<string, shared_ptr<Node>>> method_args;
+    for (const auto &p : func_def->arg_nodes)
+    {
+        method_args.push_back({any_cast<string>(p.first.value), p.second});
+    }
+
+    auto self_ptr = const_cast<ModelInstance *>(this)->shared_from_this();
+
+    auto func = make_shared<Function>(
+        method_name,
+        func_def->body_node,
+        method_args,
+        false,
+        self_ptr);
+    func->set_context(context).set_pos(pos_start, pos_end);
+
+    Interpreter interp;
+    map<string, shared_ptr<DataType>> kw_args;
+    RunTimeResult res = func->execute(args, kw_args, interp);
+    if (res.error)
+    {
+        return {nullptr, make_shared<RunTimeError>(*res.error)};
+    }
+    return {res.value, nullptr};
+}
+
+DataType::OperationResult ModelInstance::_binary_op(const string &op_name, const shared_ptr<DataType> &other) const
+{
+    auto it = BINARY_OP_METHODS.find(op_name);
+    if (it != BINARY_OP_METHODS.end())
+    {
+        auto [result, error] = _call_op_method(it->second, {other});
+        if (error)
+            return {nullptr, error};
+        if (result)
+            return {result, nullptr};
+    }
+
+    string symbol = op_name;
+    auto sym_it = OP_SYMBOLS.find(op_name);
+    if (sym_it != OP_SYMBOLS.end())
+        symbol = sym_it->second;
+
+    string user_method = "?";
+    if (it != BINARY_OP_METHODS.end())
+        user_method = it->second;
+
+    return {nullptr, make_shared<IllegalOperationError>(
+                         pos_start.value_or(Position()), pos_end.value_or(Position()),
+                         "Operator '" + symbol + "' is not defined for '" + model->name + "'. Define 'method " + user_method + "(other) {...}' inside the model to enable it.",
+                         context)};
+}
+
+DataType::OperationResult ModelInstance::_unary_op(const string &op_name) const
+{
+    auto it = UNARY_OP_METHODS.find(op_name);
+    if (it != UNARY_OP_METHODS.end())
+    {
+        auto [result, error] = _call_op_method(it->second, {});
+        if (error)
+            return {nullptr, error};
+        if (result)
+            return {result, nullptr};
+    }
+
+    string symbol = op_name;
+    auto sym_it = OP_SYMBOLS.find(op_name);
+    if (sym_it != OP_SYMBOLS.end())
+        symbol = sym_it->second;
+
+    string user_method = "?";
+    if (it != UNARY_OP_METHODS.end())
+        user_method = it->second;
+
+    return {nullptr, make_shared<IllegalOperationError>(
+                         pos_start.value_or(Position()), pos_end.value_or(Position()),
+                         "Operator '" + symbol + "' is not defined for '" + model->name + "'. Define 'method " + user_method + "() {...}' inside the model to enable it.",
+                         context)};
+}
+
+DataType::OperationResult ModelInstance::add(const shared_ptr<DataType> &o) const { return _binary_op("add", o); }
+DataType::OperationResult ModelInstance::subtract(const shared_ptr<DataType> &o) const { return _binary_op("subtract", o); }
+DataType::OperationResult ModelInstance::divide(const shared_ptr<DataType> &o) const { return _binary_op("divide", o); }
+DataType::OperationResult ModelInstance::modulus(const shared_ptr<DataType> &o) const { return _binary_op("modulus", o); }
+DataType::OperationResult ModelInstance::floor_divide(const shared_ptr<DataType> &o) const { return _binary_op("floor_divide", o); }
+DataType::OperationResult ModelInstance::exponent(const shared_ptr<DataType> &o) const { return _binary_op("exponent", o); }
+DataType::OperationResult ModelInstance::get_comparison_eq(const shared_ptr<DataType> &o) const { return _binary_op("get_comparison_eq", o); }
+DataType::OperationResult ModelInstance::get_comparison_neq(const shared_ptr<DataType> &o) const { return _binary_op("get_comparison_neq", o); }
+DataType::OperationResult ModelInstance::get_comparison_lt(const shared_ptr<DataType> &o) const { return _binary_op("get_comparison_lt", o); }
+DataType::OperationResult ModelInstance::get_comparison_gt(const shared_ptr<DataType> &o) const { return _binary_op("get_comparison_gt", o); }
+DataType::OperationResult ModelInstance::get_comparison_lte(const shared_ptr<DataType> &o) const { return _binary_op("get_comparison_lte", o); }
+DataType::OperationResult ModelInstance::get_comparison_gte(const shared_ptr<DataType> &o) const { return _binary_op("get_comparison_gte", o); }
+DataType::OperationResult ModelInstance::and_by(const shared_ptr<DataType> &o) const { return _binary_op("and_by", o); }
+DataType::OperationResult ModelInstance::or_by(const shared_ptr<DataType> &o) const { return _binary_op("or_by", o); }
+DataType::OperationResult ModelInstance::bitwise_and(const shared_ptr<DataType> &o) const { return _binary_op("bitwise_and", o); }
+DataType::OperationResult ModelInstance::bitwise_xor(const shared_ptr<DataType> &o) const { return _binary_op("bitwise_xor", o); }
+DataType::OperationResult ModelInstance::bitwise_or(const shared_ptr<DataType> &o) const { return _binary_op("bitwise_or", o); }
+DataType::OperationResult ModelInstance::lshift(const shared_ptr<DataType> &o) const { return _binary_op("lshift", o); }
+DataType::OperationResult ModelInstance::rshift(const shared_ptr<DataType> &o) const { return _binary_op("rshift", o); }
+
+DataType::OperationResult ModelInstance::not_by() const { return _unary_op("not_by"); }
+DataType::OperationResult ModelInstance::bitwise_not() const { return _unary_op("bitwise_not"); }
+
+DataType::OperationResult ModelInstance::multiply(const shared_ptr<DataType> &o) const
+{
+    // Unary minus case: detect Number(-1) and try __neg__ first
+    if (auto num = dynamic_pointer_cast<Number>(o))
+    {
+        if (holds_alternative<long long>(num->value) && get<long long>(num->value) == -1)
+        {
+            auto [result, error] = _call_op_method("__neg__", {});
+            if (result)
+                return {result, nullptr};
+            if (error)
+                return {nullptr, error};
+        }
+    }
+
+    // Normal multiplication
+    auto [result, error] = _call_op_method("__mul__", {o});
+    if (result)
+        return {result, nullptr};
+    if (error)
+        return {nullptr, error};
+
+    return _binary_op("multiply", o);
+}

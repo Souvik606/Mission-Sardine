@@ -44,7 +44,14 @@ public:
     explicit Function(string name, shared_ptr<Node> body, vector<pair<string, shared_ptr<Node>>> args, bool return_null,
                       shared_ptr<DataType> instance = nullptr);
 
-    RunTimeResult execute(const vector<shared_ptr<DataType>> &pos_args, const map<string, shared_ptr<DataType>> &kw_args, Interpreter &interpreter);
+    DataType& set_context(const shared_ptr<Context>& ctx) override {
+        if (!this->context) {
+            this->context = ctx;
+        }
+        return *this;
+    }
+
+    RunTimeResult execute(const vector<shared_ptr<DataType>> &pos_args, const map<string, shared_ptr<DataType>> &kw_args, Interpreter &interpreter, const shared_ptr<Context> &call_context = nullptr);
 
     [[nodiscard]] bool is_truthy() const override
     {

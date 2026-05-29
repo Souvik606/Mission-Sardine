@@ -1,0 +1,13 @@
+show("--- Test: Basic Function ---")
+
+method add(a, b) {
+    yield a + b
+}
+
+show("2 + 3 =", add(2, 3))
+
+method greet() {
+    yield "Hello, World!"
+}
+
+show(greet())

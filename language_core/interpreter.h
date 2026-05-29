@@ -23,8 +23,16 @@
 #include "../data_types/function_type.h"
 #include "../data_types/builtins.h"
 #include "../data_types/model_type.h"
+#include "../ast_nodes/fstring_nodes.h"
+#include "../ast_nodes/foreach_nodes.h"
+#include "../ast_nodes/summon_nodes.h"
+#include "../data_types/module_type.h"
+#include "../data_types/super_proxy.h"
+#include <filesystem>
+namespace fs = std::filesystem;
 #include "error.h"
 #include "lexer.h"
+#include "parser.h"
 #include "constants.h"
 
 using namespace std;
@@ -121,6 +129,18 @@ public:
         visit_methods[typeid(AttrAssignNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
         {
             return this->visit_AttrAssignNode(static_pointer_cast<AttrAssignNode>(node), context);
+        };
+        visit_methods[typeid(FStringNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
+        {
+            return this->visit_FStringNode(static_pointer_cast<FStringNode>(node), context);
+        };
+        visit_methods[typeid(ForEachLoopNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
+        {
+            return this->visit_ForEachLoopNode(static_pointer_cast<ForEachLoopNode>(node), context);
+        };
+        visit_methods[typeid(SummonNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
+        {
+            return this->visit_SummonNode(static_pointer_cast<SummonNode>(node), context);
         };
     }
 
@@ -248,11 +268,11 @@ private:
         shared_ptr<DataType> return_value;
         if (auto func_to_call = dynamic_pointer_cast<Function>(call_value))
         {
-            return_value = res.register_result(func_to_call->execute(pos_args, kw_args, *this));
+            return_value = res.register_result(func_to_call->execute(pos_args, kw_args, *this, context));
         }
         else if (auto builtin_to_call = dynamic_pointer_cast<BuiltInFunction>(call_value))
         {
-            return_value = res.register_result(builtin_to_call->execute(pos_args, kw_args));
+            return_value = res.register_result(builtin_to_call->execute(pos_args, kw_args, context));
         }
         else if (auto model_to_call = dynamic_pointer_cast<ModelType>(call_value))
         {
@@ -579,6 +599,84 @@ private:
         RunTimeResult res;
         shared_ptr<DataType> last_result = nullptr;
 
+        size_t num_vars = node->var_name_toks.size();
+        size_t num_vals = node->value_nodes.size();
+
+        if (num_vars > 1 && num_vals == 1)
+        {
+            for (size_t i = 0; i < num_vars; ++i) {
+                if (i < node->index_nodes.size() && !node->index_nodes[i].empty()) {
+                    return res.failure(RunTimeError(
+                        node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
+                        "Cannot unpack into indexed variables",
+                        context
+                    ));
+                }
+            }
+
+            auto collection = res.register_result(visit(node->value_nodes[0], context));
+            if (res.should_return())
+                return res;
+
+            vector<shared_ptr<DataType>> elements;
+            if (auto lst = dynamic_pointer_cast<List>(collection))
+            {
+                elements = lst->elements;
+            }
+            else if (auto str = dynamic_pointer_cast<String>(collection))
+            {
+                for (const auto& char_val : str->value) {
+                    auto char_str = make_shared<String>(string(1, char_val));
+                    char_str->set_context(context).set_pos(collection->pos_start, collection->pos_end);
+                    elements.push_back(char_str);
+                }
+            }
+            else
+            {
+                return res.failure(RunTimeError(
+                    node->value_nodes[0]->pos_start.value_or(Position()), node->value_nodes[0]->pos_end.value_or(Position()),
+                    "Cannot unpack non-iterable type '" + collection->to_string() + "'",
+                    context,
+                    "IllegalOperationError"
+                ));
+            }
+
+            if (elements.size() != num_vars)
+            {
+                return res.failure(RunTimeError(
+                    node->value_nodes[0]->pos_start.value_or(Position()), node->value_nodes[0]->pos_end.value_or(Position()),
+                    "ValueError: Expected " + to_string(num_vars) + " values, but got " + to_string(elements.size()),
+                    context
+                ));
+            }
+
+            for (size_t i = 0; i < num_vars; ++i)
+            {
+                string var_name = any_cast<string>(node->var_name_toks[i].value);
+                auto value = elements[i];
+
+                auto this_val = context->symbol_table->get("this");
+                auto this_inst = dynamic_pointer_cast<ModelInstance>(this_val);
+                bool is_attr = false;
+                if (this_inst && this_inst->model->find_attribute(var_name) != nullptr)
+                {
+                    is_attr = true;
+                }
+
+                if (is_attr)
+                {
+                    this_inst->set_attr(var_name, value);
+                }
+                else
+                {
+                    context->symbol_table->set(var_name, value);
+                }
+                last_result = value;
+            }
+
+            return res.success(last_result);
+        }
+
         for (size_t i = 0; i < node->var_name_toks.size(); ++i)
         {
             string var_name = any_cast<string>(node->var_name_toks[i].value);
@@ -777,7 +875,10 @@ private:
         }
 
         if (error)
+        {
+            error->pos_end = node->pos_end.value_or(error->pos_end);
             return res.failure(*error);
+        }
         if (!result)
             return res.failure(RunTimeError(node->pos_start.value_or(Position()), node->pos_end.value_or(Position()), "Unsupported operation", context));
 
@@ -923,10 +1024,33 @@ private:
 
                 if (trap_node->error_name)
                 {
-                    auto err_str = make_shared<String>(error->to_string());
-                    err_str->set_pos(trap_node->pos_start.value_or(Position{}), trap_node->pos_end.value_or(Position{}));
-                    err_str->set_context(trap_context);
-                    trap_context->symbol_table->set(any_cast<string>(trap_node->error_name->value), err_str);
+                    auto exception_model = make_shared<ModelType>(
+                        error->error_name,
+                        vector<AttrInfo>(),
+                        vector<shared_ptr<Node>>(),
+                        nullptr,
+                        unordered_map<string, MethodInfo>(),
+                        vector<shared_ptr<ModelType>>()
+                    );
+                    exception_model->set_context(trap_context).set_pos(trap_node->pos_start, trap_node->pos_end);
+
+                    auto e_instance = make_shared<ModelInstance>(exception_model);
+                    e_instance->set_context(trap_context).set_pos(trap_node->pos_start, trap_node->pos_end);
+
+                    auto err_type = make_shared<String>(error->error_name);
+                    err_type->set_pos(trap_node->pos_start, trap_node->pos_end).set_context(trap_context);
+
+                    auto err_message = make_shared<String>(error->details);
+                    err_message->set_pos(trap_node->pos_start, trap_node->pos_end).set_context(trap_context);
+
+                    auto err_traceback = make_shared<String>(error->to_string());
+                    err_traceback->set_pos(trap_node->pos_start, trap_node->pos_end).set_context(trap_context);
+
+                    e_instance->set_attr("type", err_type);
+                    e_instance->set_attr("message", err_message);
+                    e_instance->set_attr("traceback", err_traceback);
+
+                    trap_context->symbol_table->set(any_cast<string>(trap_node->error_name->value), e_instance);
                 }
 
                 res.register_result(visit(trap_node->body_node, trap_context));
@@ -1020,6 +1144,27 @@ private:
         return res.success(model);
     }
 
+    static inline unordered_map<string, shared_ptr<Module>> module_cache;
+
+    static shared_ptr<DataType> key_to_datatype(const string& key, const shared_ptr<Context>& context) {
+        if (key.substr(0, 2) == "I:") {
+            auto num = make_shared<Number>(stoll(key.substr(2)));
+            num->set_context(context);
+            return num;
+        } else if (key.substr(0, 2) == "D:") {
+            auto num = make_shared<Number>(stod(key.substr(2)));
+            num->set_context(context);
+            return num;
+        } else if (key.substr(0, 2) == "S:") {
+            auto str = make_shared<String>(key.substr(2));
+            str->set_context(context);
+            return str;
+        }
+        auto str = make_shared<String>(key);
+        str->set_context(context);
+        return str;
+    }
+
     RunTimeResult visit_AttrAccessNode(const shared_ptr<AttrAccessNode> &node, const shared_ptr<Context> &context)
     {
         RunTimeResult res;
@@ -1034,6 +1179,20 @@ private:
         if (auto inst = dynamic_pointer_cast<ModelInstance>(object_val))
         {
             auto [v, err] = inst->get_attr(attr_name, *this, context);
+            if (err)
+                return res.failure(*err);
+            value = v;
+        }
+        else if (auto mod = dynamic_pointer_cast<Module>(object_val))
+        {
+            auto [v, err] = mod->get_attr(attr_name, context);
+            if (err)
+                return res.failure(*err);
+            value = v;
+        }
+        else if (auto proxy = dynamic_pointer_cast<SuperProxy>(object_val))
+        {
+            auto [v, err] = proxy->get_attr(attr_name, context);
             if (err)
                 return res.failure(*err);
             value = v;
@@ -1077,10 +1236,415 @@ private:
             inst->set_attr(attr_name, value);
             return res.success(value);
         }
+        else if (auto proxy = dynamic_pointer_cast<SuperProxy>(object_val))
+        {
+            auto [v, err] = proxy->set_attr(attr_name, value);
+            if (err)
+                return res.failure(*err);
+            return res.success(value);
+        }
 
         return res.failure(AttributeError(
             node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
             "Cannot assign attribute '" + attr_name + "' on this type",
             context));
+    }
+
+    RunTimeResult visit_FStringNode(const shared_ptr<FStringNode> &node, const shared_ptr<Context> &context)
+    {
+        RunTimeResult res;
+        stringstream ss;
+        for (const auto& part : node->parts)
+        {
+            if (part.first == "literal")
+            {
+                ss << any_cast<string>(part.second);
+            }
+            else if (part.first == "expr")
+            {
+                auto expr_node = any_cast<shared_ptr<Node>>(part.second);
+                auto val = res.register_result(visit(expr_node, context));
+                if (res.should_return())
+                    return res;
+                if (auto str_val = dynamic_pointer_cast<String>(val)) {
+                    ss << str_val->value;
+                } else {
+                    ss << val->to_string();
+                }
+            }
+        }
+        auto result_str = make_shared<String>(ss.str());
+        result_str->set_pos(node->pos_start, node->pos_end).set_context(context);
+        return res.success(result_str);
+    }
+
+    RunTimeResult visit_ForEachLoopNode(const shared_ptr<ForEachLoopNode> &node, const shared_ptr<Context> &context)
+    {
+        RunTimeResult res;
+        auto var_name_tokens = node->var_name_tokens;
+        size_t num_vars = var_name_tokens.size();
+
+        auto collection = res.register_result(visit(node->collection_node, context));
+        if (res.should_return())
+            return res;
+
+        if (auto dict_val = dynamic_pointer_cast<Dict>(collection))
+        {
+            if (num_vars == 1)
+            {
+                string var_name = any_cast<string>(var_name_tokens[0].value);
+                for (const auto& [key_str, val] : dict_val->elements)
+                {
+                    auto key_dt = key_to_datatype(key_str, context);
+                    auto pair_list = make_shared<List>(vector<shared_ptr<DataType>>{key_dt, val->copy()});
+                    pair_list->set_context(context).set_pos(node->pos_start, node->pos_end);
+                    context->symbol_table->set(var_name, pair_list);
+
+                    res.register_result(visit(node->body_node, context));
+                    if (res.should_return() && !res.loop_continue && !res.loop_or_switch_break)
+                        return res;
+                    if (res.loop_continue)
+                    {
+                        res.loop_continue = false;
+                        continue;
+                    }
+                    if (res.loop_or_switch_break)
+                    {
+                        res.loop_or_switch_break = false;
+                        break;
+                    }
+                }
+            }
+            else if (num_vars == 2)
+            {
+                string key_var_name = any_cast<string>(var_name_tokens[0].value);
+                string val_var_name = any_cast<string>(var_name_tokens[1].value);
+                for (const auto& [key_str, val] : dict_val->elements)
+                {
+                    auto key_dt = key_to_datatype(key_str, context);
+                    context->symbol_table->set(key_var_name, key_dt);
+                    context->symbol_table->set(val_var_name, val->copy());
+
+                    res.register_result(visit(node->body_node, context));
+                    if (res.should_return() && !res.loop_continue && !res.loop_or_switch_break)
+                        return res;
+                    if (res.loop_continue)
+                    {
+                        res.loop_continue = false;
+                        continue;
+                    }
+                    if (res.loop_or_switch_break)
+                    {
+                        res.loop_or_switch_break = false;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                return res.failure(RunTimeError(
+                    node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
+                    "Dictionary trace expects 1 or 2 variables, but got " + std::to_string(num_vars),
+                    context,
+                    "ArgumentError"
+                ));
+            }
+        }
+        else if (auto list_val = dynamic_pointer_cast<List>(collection))
+        {
+            if (num_vars == 1)
+            {
+                string var_name = any_cast<string>(var_name_tokens[0].value);
+                for (const auto& element : list_val->elements)
+                {
+                    context->symbol_table->set(var_name, element->copy());
+
+                    res.register_result(visit(node->body_node, context));
+                    if (res.should_return() && !res.loop_continue && !res.loop_or_switch_break)
+                        return res;
+                    if (res.loop_continue)
+                    {
+                        res.loop_continue = false;
+                        continue;
+                    }
+                    if (res.loop_or_switch_break)
+                    {
+                        res.loop_or_switch_break = false;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                for (const auto& element : list_val->elements)
+                {
+                    auto sub_list = dynamic_pointer_cast<List>(element);
+                    if (!sub_list)
+                    {
+                        return res.failure(RunTimeError(
+                            element->pos_start.value_or(Position()), element->pos_end.value_or(Position()),
+                            "Cannot unpack non-list item into " + std::to_string(num_vars) + " variables",
+                            context,
+                            "IllegalOperationError"
+                        ));
+                    }
+
+                    if (sub_list->elements.size() != num_vars)
+                    {
+                        return res.failure(RunTimeError(
+                            element->pos_start.value_or(Position()), element->pos_end.value_or(Position()),
+                            "Expected " + std::to_string(num_vars) + " values to unpack, but got " + std::to_string(sub_list->elements.size()),
+                            context,
+                            "ValueError"
+                        ));
+                    }
+
+                    for (size_t i = 0; i < num_vars; ++i)
+                    {
+                        string var_name = any_cast<string>(var_name_tokens[i].value);
+                        context->symbol_table->set(var_name, sub_list->elements[i]->copy());
+                    }
+
+                    res.register_result(visit(node->body_node, context));
+                    if (res.should_return() && !res.loop_continue && !res.loop_or_switch_break)
+                        return res;
+                    if (res.loop_continue)
+                    {
+                        res.loop_continue = false;
+                        continue;
+                    }
+                    if (res.loop_or_switch_break)
+                    {
+                        res.loop_or_switch_break = false;
+                        break;
+                    }
+                }
+            }
+        }
+        else if (auto str_val = dynamic_pointer_cast<String>(collection))
+        {
+            if (num_vars == 1)
+            {
+                string var_name = any_cast<string>(var_name_tokens[0].value);
+                for (const auto& char_val : str_val->value)
+                {
+                    auto char_str = make_shared<String>(string(1, char_val));
+                    char_str->set_context(context).set_pos(node->pos_start, node->pos_end);
+                    context->symbol_table->set(var_name, char_str);
+
+                    res.register_result(visit(node->body_node, context));
+                    if (res.should_return() && !res.loop_continue && !res.loop_or_switch_break)
+                        return res;
+                    if (res.loop_continue)
+                    {
+                        res.loop_continue = false;
+                        continue;
+                    }
+                    if (res.loop_or_switch_break)
+                    {
+                        res.loop_or_switch_break = false;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                return res.failure(RunTimeError(
+                    node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
+                    "Cannot unpack a string into " + std::to_string(num_vars) + " variables",
+                    context,
+                    "ArgumentError"
+                ));
+            }
+        }
+        else
+        {
+            return res.failure(RunTimeError(
+                collection->pos_start.value_or(Position()), collection->pos_end.value_or(Position()),
+                "'" + collection->to_string() + "' object is not iterable",
+                context,
+                "IllegalOperationError"
+            ));
+        }
+
+        return res.success(make_shared<Number>(0LL));
+    }
+
+    RunTimeResult visit_SummonNode(const shared_ptr<SummonNode> &node, const shared_ptr<Context> &context)
+    {
+        RunTimeResult res;
+        string module_name = any_cast<string>(node->module_tok.value);
+
+        // ── 1. Resolve the file path ────────────────────────────────────
+        string source_dir = ".";
+        if (node->pos_start.has_value()) {
+            string fn = node->pos_start->file_name;
+            if (!fn.empty() && fn != "<stdin>") {
+                auto path = fs::path(fn).parent_path();
+                if (!path.empty()) {
+                    source_dir = path.string();
+                }
+            }
+        }
+
+        vector<string> stdlib_dirs = {
+            "stdlib",
+            "../stdlib",
+            "../../stdlib",
+            "./stdlib"
+        };
+
+        vector<string> candidates;
+        candidates.push_back((fs::path(source_dir) / (module_name + ".sad")).string());
+        candidates.push_back((fs::path(source_dir) / (module_name + ".sard")).string());
+        for (const auto& sdir : stdlib_dirs) {
+            candidates.push_back((fs::path(sdir) / (module_name + ".sad")).string());
+            candidates.push_back((fs::path(sdir) / (module_name + ".sard")).string());
+        }
+
+        string resolved_path = "";
+        for (const auto& path : candidates) {
+            if (fs::is_regular_file(path)) {
+                resolved_path = fs::absolute(path).string();
+                break;
+            }
+        }
+
+        if (resolved_path.empty()) {
+            auto get_relative_path = [](const string& file_path) {
+                if (file_path.empty()) return string("");
+                try {
+                    fs::path p(file_path);
+                    fs::path rel = fs::relative(p, fs::current_path());
+                    return rel.generic_string();
+                } catch (...) {
+                    string r_str = file_path;
+                    for (char& c : r_str) {
+                        if (c == '\\') c = '/';
+                    }
+                    return r_str;
+                }
+            };
+            vector<string> display_candidates;
+            display_candidates.push_back(get_relative_path((fs::path(source_dir) / (module_name + ".sad")).string()));
+            display_candidates.push_back(get_relative_path((fs::path(source_dir) / (module_name + ".sard")).string()));
+            display_candidates.push_back("sards/stdlib/" + module_name + ".sad");
+            display_candidates.push_back("sards/stdlib/" + module_name + ".sard");
+
+            stringstream ss;
+            ss << "Module '" << module_name << "' not found. Searched:\n";
+            for (size_t i = 0; i < display_candidates.size(); ++i) {
+                ss << "  " << display_candidates[i];
+                if (i + 1 < display_candidates.size()) {
+                    ss << "\n";
+                }
+            }
+            return res.failure(RunTimeError(
+                node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
+                ss.str(),
+                context,
+                "ModuleError"
+            ));
+        }
+
+        // ── 2. Check cache ───────────────────────────────────────────────
+        shared_ptr<Module> module_obj;
+        auto cache_it = module_cache.find(resolved_path);
+        if (cache_it != module_cache.end()) {
+            module_obj = cache_it->second;
+        } else {
+            // ── 3. Read & execute the module ─────────────────────────────
+            ifstream file(resolved_path);
+            if (!file.is_open()) {
+                return res.failure(RunTimeError(
+                    node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
+                    "Failed to open module file: " + resolved_path,
+                    context,
+                    "ModuleError"
+                ));
+            }
+            stringstream buffer;
+            buffer << file.rdbuf();
+            string source = buffer.str();
+
+            Lexer lexer(resolved_path, source);
+            auto [tokens, lex_error] = lexer.enumerate_tokens();
+            if (lex_error) {
+                return res.failure(RunTimeError(
+                    node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
+                    "Lexer error in module '" + module_name + "': " + lex_error->to_string(),
+                    context,
+                    "ModuleError"
+                ));
+            }
+
+            Parser parser(tokens);
+            auto parse_result = parser.parse();
+            if (parse_result.error) {
+                return res.failure(RunTimeError(
+                    node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
+                    "Syntax error in module '" + module_name + "': " + parse_result.error->to_string(),
+                    context,
+                    "ModuleError"
+                ));
+            }
+
+            auto mod_symbol_table = make_shared<SymbolTable>(context->symbol_table);
+            auto mod_context = make_shared<Context>(
+                "<module '" + module_name + "'>",
+                context,
+                node->pos_start
+            );
+            mod_context->symbol_table = mod_symbol_table;
+
+            Interpreter mod_interpreter;
+            auto mod_res = mod_interpreter.visit(parse_result.node, mod_context);
+            if (mod_res.error) {
+                return res.failure(RunTimeError(
+                    node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
+                    "Runtime error in module '" + module_name + "': " + mod_res.error->to_string(),
+                    context,
+                    "ModuleError"
+                ));
+            }
+
+            module_obj = make_shared<Module>(module_name, mod_symbol_table);
+            module_obj->set_pos(node->pos_start, node->pos_end).set_context(context);
+            module_cache[resolved_path] = module_obj;
+        }
+
+        // ── 4. Bind names into current scope ────────────────────────────
+        // Case A: bare  summon math  OR  summon math as m
+        if (node->names.empty() && !node->wildcard) {
+            string bind_name = node->module_alias.has_value() ? any_cast<string>(node->module_alias->value) : module_name;
+            context->symbol_table->set(bind_name, module_obj);
+            return res.success(module_obj);
+        }
+
+        // Case B: wildcard  summon * from math
+        if (node->wildcard) {
+            for (const auto& [name, value] : module_obj->symbol_table->get_symbols()) {
+                context->symbol_table->set(name, value);
+            }
+            return res.success(module_obj);
+        }
+
+        // Case C: specific names  summon sin, cos from math
+        for (const auto& pair : node->names) {
+            string orig_name = any_cast<string>(pair.first.value);
+            auto value = module_obj->symbol_table->get(orig_name);
+            if (!value) {
+                return res.failure(RunTimeError(
+                    pair.first.pos_start.value_or(Position()), pair.first.pos_end.value_or(Position()),
+                    "Module '" + module_name + "' has no member '" + orig_name + "'",
+                    context,
+                    "ModuleError"
+                ));
+            }
+            string bind_name = pair.second.has_value() ? any_cast<string>(pair.second->value) : orig_name;
+            context->symbol_table->set(bind_name, value);
+        }
+
+        return res.success(module_obj);
     }
 };

@@ -1,0 +1,8 @@
+show("--- Test: Default Arguments ---")
+
+method greet(name = "World") {
+    yield "Hello, " + name + "!"
+}
+
+show(greet())
+show(greet("SARDINE"))

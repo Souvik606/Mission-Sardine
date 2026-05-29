@@ -1,0 +1,21 @@
+model Person {
+    open attr <name, age>
+
+    init(name, age) {
+        name: name,
+        age: age
+    }
+
+    method greet() {
+        show("Hello, my name is", name, "and I am", age, "years old.")
+    }
+}
+
+p = Person("John", 30)
+p.greet()
+
+show(p.name)
+show(p.age)
+show("Modifying age")
+p.age += 1
+show(p.age)

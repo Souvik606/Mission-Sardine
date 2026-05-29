@@ -1,0 +1,11 @@
+show("--- Test: Function Unpacking ---")
+
+method get_point() {
+    yield 10, 20, 30
+}
+
+x, y, z = get_point()
+
+show("x should be 10:", x)
+show("y should be 20:", y)
+show("z should be 30:", z)

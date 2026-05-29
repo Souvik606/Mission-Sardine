@@ -1,0 +1,40 @@
+show("--- Standard First-Class Assignment ---")
+method greet(name) {
+    yield "Hello " + name
+}
+
+g = greet
+show(g("World"))
+
+show("--- Callback Functions ---")
+method process(func, a, b) {
+    yield func(a, b)
+}
+
+method add(x, y) {
+    yield x + y
+}
+show(process(add, 10, 5))
+
+show("--- Anonymous Functions ---")
+sub = method(x, y) {
+    yield x - y
+}
+show(process(sub, 10, 5))
+
+show(process(method(x, y) { yield x * y }, 10, 5))
+
+show("--- Higher-Order Functions (Returning Functions) ---")
+method multiplier(factor) {
+    my_func = method(n) {
+        yield n * factor
+    }
+    yield my_func
+}
+
+times_two = multiplier(2)
+times_three = multiplier(3)
+
+show(times_two(5))
+show(times_three(5))
+show(times_two(10))

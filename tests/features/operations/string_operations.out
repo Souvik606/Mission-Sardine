@@ -1,0 +1,21 @@
+--- String Operations ---
+--- Concatenation ---
+hello world
+--- Multiplication ---
+aaaaa
+--- Illegal Operations ---
+Caught expected error: Traceback (most recent call last):
+  File tests/features/operations/string_operations.sad, line 14, in <program>
+        show("hello" - "o")
+             ^^^^^^^^^^^^^^
+IllegalOperationError: Cannot apply '-' to a String type
+Caught expected error: Traceback (most recent call last):
+  File tests/features/operations/string_operations.sad, line 20, in <program>
+        show("test" / 2)
+             ^^^^^^^^^^^
+IllegalOperationError: Cannot apply '/' to a String type
+Caught expected error: Traceback (most recent call last):
+  File tests/features/operations/string_operations.sad, line 26, in <program>
+        show("string" + 123)
+                        ^^^^
+IllegalOperationError: Expected a String type

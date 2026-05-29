@@ -1,0 +1,68 @@
+model Shape {
+    open attr <color>
+
+    init(color) {
+        color: color
+    }
+
+    open method area() {
+        yield 0
+    }
+
+    open method describe() {
+        show("Shape color:", color, "| area:", area())
+    }
+}
+
+model Circle: Shape {
+    open attr <radius>
+
+    init(color, radius) {
+        color: color,
+        radius: radius
+    }
+
+    open method area() {
+        yield 3 * radius * radius
+    }
+
+    open method describe() {
+        super().describe()
+        show("Circle radius:", radius)
+    }
+}
+
+model Rectangle: Shape {
+    open attr <width, height>
+
+    init(color, width, height) {
+        color: color,
+        width: width,
+        height: height
+    }
+
+    open method area() {
+        yield width * height
+    }
+
+    open method describe() {
+        super().describe()
+        show("Rectangle", width, "x", height)
+    }
+}
+
+method print_area(shape) {
+    shape.describe()
+}
+
+c = Circle("red", 4)
+r = Rectangle("blue", 5, 3)
+
+print_area(c)
+print_area(r)
+
+show(is_a(c, Circle))
+show(is_a(c, Shape))
+show(is_a(r, Rectangle))
+show(is_a(r, Circle))
+show(is_a(r, Shape))

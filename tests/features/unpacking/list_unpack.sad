@@ -1,0 +1,5 @@
+show("--- Test: Direct List Unpacking ---")
+
+a, b = [100, 200]
+show("a should be 100:", a)
+show("b should be 200:", b)

@@ -1,0 +1,47 @@
+--- Test: Exception Model ---
+--- Case 1: Specific error type with model ---
+C1 trap
+Type: NameError
+Message: 'missing_var' is not defined
+Traceback (most recent call last):
+  File tests/features/error_handling/exception_model.sad, line 5, in <program>
+        x = missing_var
+            ^^^^^^^^^^^
+NameError: 'missing_var' is not defined
+C1 clean
+--- Case 2: Multiple traps order ---
+C2 div
+Traceback (most recent call last):
+  File tests/features/error_handling/exception_model.sad, line 17, in <program>
+        a = 10 / 0
+                 ^
+DivisionByZeroError: Division by zero
+C2 clean
+--- Case 3: Wildcard trap ---
+C3 default
+C3 clean
+--- Case 4: No error, trap skipped ---
+C4 ok
+C4 clean
+--- Case 5: Clean only ---
+C5 ok
+C5 clean
+--- Case 6: Specific before wildcard ---
+C6 name
+Traceback (most recent call last):
+  File tests/features/error_handling/exception_model.sad, line 56, in <program>
+        z = missing_specific
+            ^^^^^^^^^^^^^^^^
+NameError: 'missing_specific' is not defined
+C6 clean
+--- Case 7: Nested risk/clean ---
+C7 outer start
+C7 inner trap
+Traceback (most recent call last):
+  File tests/features/error_handling/exception_model.sad, line 70, in <program>
+            b = 1 / 0
+                    ^
+DivisionByZeroError: Division by zero
+C7 inner clean
+C7 outer after
+C7 outer clean

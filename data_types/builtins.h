@@ -6,7 +6,7 @@
 
 using namespace std;
 
-using BuiltInFuncType = std::function<RunTimeResult(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args)>;
+using BuiltInFuncType = std::function<RunTimeResult(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args, const shared_ptr<Context>& context)>;
 
 inline shared_ptr<RunTimeError> illegal_op_for_builtin(const DataType* self) {
     return make_shared<RunTimeError>(
@@ -26,8 +26,8 @@ public:
         : name(std::move(name)), execute_impl(std::move(impl)) {
     }
 
-    [[nodiscard]] RunTimeResult execute(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args) const {
-        return this->execute_impl(args, kw_args);
+    [[nodiscard]] RunTimeResult execute(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args, const shared_ptr<Context>& context) const {
+        return this->execute_impl(args, kw_args, context);
     }
 
     [[nodiscard]] bool is_truthy() const override {
