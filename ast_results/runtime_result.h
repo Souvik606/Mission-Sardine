@@ -9,17 +9,17 @@ using namespace std;
 class RunTimeResult {
 public:
     shared_ptr<DataType> value;
-    optional<RunTimeError> error;
+    shared_ptr<RunTimeError> error;
     shared_ptr<DataType> func_return_value;
     bool loop_continue;
     bool loop_or_switch_break;
 
-    RunTimeResult() : value(nullptr), error(nullopt), func_return_value(nullptr), loop_continue(false), loop_or_switch_break(false) {
+    RunTimeResult() : value(nullptr), error(nullptr), func_return_value(nullptr), loop_continue(false), loop_or_switch_break(false) {
     }
 
     void reset() {
         this->value = nullptr;
-        this->error = nullopt;
+        this->error = nullptr;
         this->func_return_value = nullptr;
         this->loop_continue = false;
         this->loop_or_switch_break = false;
@@ -58,12 +58,12 @@ public:
     }
 
     [[nodiscard]] bool should_return() const {
-        return static_cast<bool>(error) || static_cast<bool>(func_return_value) || loop_continue || loop_or_switch_break;
+        return error != nullptr || func_return_value != nullptr || loop_continue || loop_or_switch_break;
     }
 
     RunTimeResult& failure(const RunTimeError& result_error) {
         this->reset();
-        this->error = result_error;
+        this->error = std::static_pointer_cast<RunTimeError>(result_error.clone());
         return *this;
     }
 };

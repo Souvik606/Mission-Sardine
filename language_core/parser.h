@@ -325,7 +325,7 @@ private:
     {
         ParseResult res;
         optional<Token> var_name_tok = nullopt;
-        vector<Token> arg_name_toks;
+        vector<pair<Token, shared_ptr<Node>>> arg_nodes;
 
         if (!current_tok.has_value() || !(current_tok->type == T_KEYWORD && any_cast<string>(current_tok->value) == "method"))
         {
@@ -364,11 +364,25 @@ private:
         res.register_advancement();
         advance();
 
+        bool has_seen_default = false;
+
         if (current_tok.has_value() && current_tok->type == T_IDENTIFIER)
         {
-            arg_name_toks.push_back(current_tok.value());
+            Token param_tok = current_tok.value();
             res.register_advancement();
             advance();
+
+            shared_ptr<Node> default_val = nullptr;
+            if (current_tok.has_value() && current_tok->type == T_EQ)
+            {
+                res.register_advancement();
+                advance();
+                default_val = res.register_node(expression());
+                if (res.error) return res;
+                has_seen_default = true;
+            }
+
+            arg_nodes.push_back({param_tok, default_val});
 
             while (current_tok.has_value() && current_tok->type == T_COMMA)
             {
@@ -381,9 +395,28 @@ private:
                         current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
                         "Expected identifier"));
                 }
-                arg_name_toks.push_back(current_tok.value());
+                Token next_param_tok = current_tok.value();
                 res.register_advancement();
                 advance();
+
+                shared_ptr<Node> next_default_val = nullptr;
+                if (current_tok.has_value() && current_tok->type == T_EQ)
+                {
+                    res.register_advancement();
+                    advance();
+                    next_default_val = res.register_node(expression());
+                    if (res.error) return res;
+                    has_seen_default = true;
+                }
+                else if (has_seen_default)
+                {
+                    return res.failure(InvalidSyntaxError(
+                        next_param_tok.pos_start.value_or(Position()),
+                        next_param_tok.pos_end.value_or(Position()),
+                        "Non-default argument follows default argument"));
+                }
+
+                arg_nodes.push_back({next_param_tok, next_default_val});
             }
 
             if (!current_tok.has_value() || current_tok->type != T_RPAREN)
@@ -474,13 +507,101 @@ private:
         res.register_advancement();
         advance();
 
-        return res.success(make_shared<FunctionDefinitionNode>(var_name_tok, arg_name_toks, body_node, false, access_mod));
+        return res.success(make_shared<FunctionDefinitionNode>(var_name_tok, arg_nodes, body_node, false, access_mod));
+    }
+
+    ParseResult parse_arguments(vector<shared_ptr<Node>>& positional_args, vector<pair<Token, shared_ptr<Node>>>& keyword_args)
+    {
+        ParseResult res;
+        positional_args.clear();
+        keyword_args.clear();
+
+        if (!current_tok.has_value() || current_tok->type != T_LPAREN)
+        {
+            return res.failure(InvalidSyntaxError(
+                current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
+                current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
+                "Expected '('"));
+        }
+        res.register_advancement();
+        advance(); // consume '('
+
+        if (current_tok.has_value() && current_tok->type == T_RPAREN)
+        {
+            res.register_advancement();
+            advance(); // consume ')'
+            return res.success(nullptr);
+        }
+
+        bool parsing_keywords = false;
+
+        while (true)
+        {
+            if (current_tok.has_value() && current_tok->type == T_IDENTIFIER && peek().has_value() && peek()->type == T_EQ)
+            {
+                parsing_keywords = true;
+                Token name_tok = current_tok.value();
+                res.register_advancement();
+                advance(); // consume identifier
+
+                res.register_advancement();
+                advance(); // consume '='
+
+                auto val_node = res.register_node(expression());
+                if (res.error) return res;
+
+                keyword_args.push_back({name_tok, val_node});
+            }
+            else
+            {
+                if (parsing_keywords)
+                {
+                    return res.failure(InvalidSyntaxError(
+                        current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
+                        current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
+                        "Positional argument cannot follow keyword argument"));
+                }
+
+                auto val_node = res.register_node(expression());
+                if (res.error) return res;
+
+                positional_args.push_back(val_node);
+            }
+
+            if (current_tok.has_value() && current_tok->type == T_COMMA)
+            {
+                res.register_advancement();
+                advance(); // consume ','
+
+                if (current_tok.has_value() && current_tok->type == T_RPAREN)
+                {
+                    break;
+                }
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        if (!current_tok.has_value() || current_tok->type != T_RPAREN)
+        {
+            return res.failure(InvalidSyntaxError(
+                current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
+                current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
+                "Expected ',' or ')'"));
+        }
+        res.register_advancement();
+        advance(); // consume ')'
+
+        return res.success(nullptr);
     }
 
     ParseResult function_call()
     {
         ParseResult res;
-        vector<shared_ptr<Node>> arg_nodes;
+        vector<shared_ptr<Node>> pos_args;
+        vector<pair<Token, shared_ptr<Node>>> kw_args;
         shared_ptr<Node> call_node;
 
         if (current_tok.has_value() && current_tok->type == T_IDENTIFIER)
@@ -502,50 +623,11 @@ private:
         if (res.error)
             return res;
 
-        if (!current_tok.has_value() || current_tok->type != T_LPAREN)
-        {
-            return res.failure(InvalidSyntaxError(
-                current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
-                current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
-                "Expected '('"));
-        }
+        res.register_node(parse_arguments(pos_args, kw_args));
+        if (res.error)
+            return res;
 
-        res.register_advancement();
-        advance();
-
-        if (current_tok.has_value() && current_tok->type == T_RPAREN)
-        {
-            res.register_advancement();
-            advance();
-        }
-        else
-        {
-            arg_nodes.push_back(res.register_node(expression()));
-            if (res.error)
-                return res;
-
-            while (current_tok.has_value() && current_tok->type == T_COMMA)
-            {
-                res.register_advancement();
-                advance();
-                arg_nodes.push_back(res.register_node(expression()));
-                if (res.error)
-                    return res;
-            }
-
-            if (!current_tok.has_value() || current_tok->type != T_RPAREN)
-            {
-                return res.failure(InvalidSyntaxError(
-                    current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
-                    current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
-                    "Expected ',' or ')'"));
-            }
-
-            res.register_advancement();
-            advance();
-        }
-
-        return res.success(make_shared<FunctionCallNode>(call_node, arg_nodes));
+        return res.success(make_shared<FunctionCallNode>(call_node, pos_args, kw_args));
     }
 
     ParseResult switch_statement()
@@ -1629,12 +1711,33 @@ private:
             advance();
         }
 
+        optional<Token> op = nullopt;
         if (!current_tok.has_value() || current_tok->type != T_EQ)
         {
-            return res.failure(InvalidSyntaxError(
-                current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
-                current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
-                "Expected '='"));
+            if (current_tok.has_value() &&
+                (current_tok->type == T_PLUSEQUAL || current_tok->type == T_MINUSEQUAL ||
+                 current_tok->type == T_MULEQUAL || current_tok->type == T_DIVIDEEQUAL ||
+                 current_tok->type == T_MODULUSEQUAL || current_tok->type == T_FLOOREQUAL ||
+                 current_tok->type == T_EXPEQUAL))
+            {
+                string op_type;
+                if (current_tok->type == T_PLUSEQUAL) op_type = T_PLUS;
+                else if (current_tok->type == T_MINUSEQUAL) op_type = T_MINUS;
+                else if (current_tok->type == T_MULEQUAL) op_type = T_MUL;
+                else if (current_tok->type == T_DIVIDEEQUAL) op_type = T_DIVIDE;
+                else if (current_tok->type == T_MODULUSEQUAL) op_type = T_MODULUS;
+                else if (current_tok->type == T_FLOOREQUAL) op_type = T_FLOOR;
+                else if (current_tok->type == T_EXPEQUAL) op_type = T_EXP;
+
+                op = Token(op_type, {}, current_tok->pos_start, current_tok->pos_end);
+            }
+            else
+            {
+                return res.failure(InvalidSyntaxError(
+                    current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
+                    current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
+                    "Expected '=' or '+=' or '-=' or '*=' or '/=' or '%=' or '//=' or '**='"));
+            }
         }
         res.register_advancement();
         advance();
@@ -1644,7 +1747,18 @@ private:
             auto expr = res.register_node(expression());
             if (res.error)
                 return res;
-            value_nodes.push_back(expr);
+
+            if (!op.has_value())
+            {
+                value_nodes.push_back(expr);
+            }
+            else
+            {
+                size_t idx = value_nodes.size();
+                auto var_node = make_shared<VariableUseNode>(var_name_toks[idx], index_nodes[idx]);
+                auto bin_op = make_shared<BinaryOperationNode>(var_node, op.value(), expr);
+                value_nodes.push_back(bin_op);
+            }
 
             if (!current_tok.has_value() || current_tok->type != T_COMMA)
             {
@@ -2155,35 +2269,12 @@ private:
             // If followed by '(', it's a method call
             if (current_tok.has_value() && current_tok->type == T_LPAREN)
             {
-                res.register_advancement();
-                advance(); // consume '('
-
-                vector<shared_ptr<Node>> arg_nodes;
-                if (current_tok.has_value() && current_tok->type != T_RPAREN)
-                {
-                    arg_nodes.push_back(res.register_node(expression()));
-                    if (res.error)
-                        return obj_node;
-                    while (current_tok.has_value() && current_tok->type == T_COMMA)
-                    {
-                        res.register_advancement();
-                        advance();
-                        arg_nodes.push_back(res.register_node(expression()));
-                        if (res.error)
-                            return obj_node;
-                    }
-                }
-                if (!current_tok.has_value() || current_tok->type != T_RPAREN)
-                {
-                    res.failure(InvalidSyntaxError(
-                        current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
-                        current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
-                        "Expected ')'"));
+                vector<shared_ptr<Node>> pos_args;
+                vector<pair<Token, shared_ptr<Node>>> kw_args;
+                res.register_node(parse_arguments(pos_args, kw_args));
+                if (res.error)
                     return obj_node;
-                }
-                res.register_advancement();
-                advance();
-                obj_node = make_shared<FunctionCallNode>(obj_node, arg_nodes);
+                obj_node = make_shared<FunctionCallNode>(obj_node, pos_args, kw_args);
             }
         }
         return obj_node;
@@ -2229,34 +2320,12 @@ private:
             if (current_tok.has_value() && current_tok->type == T_LPAREN)
             {
                 auto attr_access = make_shared<AttrAccessNode>(obj_node, attr_tok);
-                res.register_advancement();
-                advance();
-
-                vector<shared_ptr<Node>> arg_nodes;
-                if (current_tok.has_value() && current_tok->type != T_RPAREN)
-                {
-                    arg_nodes.push_back(res.register_node(expression()));
-                    if (res.error)
-                        return res;
-                    while (current_tok.has_value() && current_tok->type == T_COMMA)
-                    {
-                        res.register_advancement();
-                        advance();
-                        arg_nodes.push_back(res.register_node(expression()));
-                        if (res.error)
-                            return res;
-                    }
-                }
-                if (!current_tok.has_value() || current_tok->type != T_RPAREN)
-                {
-                    return res.failure(InvalidSyntaxError(
-                        current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(),
-                        current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
-                        "Expected ')'"));
-                }
-                res.register_advancement();
-                advance();
-                obj_node = make_shared<FunctionCallNode>(attr_access, arg_nodes);
+                vector<shared_ptr<Node>> pos_args;
+                vector<pair<Token, shared_ptr<Node>>> kw_args;
+                res.register_node(parse_arguments(pos_args, kw_args));
+                if (res.error)
+                    return res;
+                obj_node = make_shared<FunctionCallNode>(attr_access, pos_args, kw_args);
             }
             else if (current_tok.has_value() && current_tok->type == T_EQ && !has_more_dot)
             {
@@ -2520,12 +2589,27 @@ private:
         res.register_advancement();
         advance();
 
-        vector<Token> param_toks;
+        vector<pair<Token, shared_ptr<Node>>> param_nodes;
+        bool has_seen_default = false;
+
         if (current_tok.has_value() && current_tok->type == T_IDENTIFIER)
         {
-            param_toks.push_back(current_tok.value());
+            Token param_tok = current_tok.value();
             res.register_advancement();
             advance();
+
+            shared_ptr<Node> default_val = nullptr;
+            if (current_tok.has_value() && current_tok->type == T_EQ)
+            {
+                res.register_advancement();
+                advance();
+                default_val = res.register_node(expression());
+                if (res.error) return res;
+                has_seen_default = true;
+            }
+
+            param_nodes.push_back({param_tok, default_val});
+
             while (current_tok.has_value() && current_tok->type == T_COMMA)
             {
                 res.register_advancement();
@@ -2537,9 +2621,28 @@ private:
                         current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
                         "Expected identifier"));
                 }
-                param_toks.push_back(current_tok.value());
+                Token next_param_tok = current_tok.value();
                 res.register_advancement();
                 advance();
+
+                shared_ptr<Node> next_default_val = nullptr;
+                if (current_tok.has_value() && current_tok->type == T_EQ)
+                {
+                    res.register_advancement();
+                    advance();
+                    next_default_val = res.register_node(expression());
+                    if (res.error) return res;
+                    has_seen_default = true;
+                }
+                else if (has_seen_default)
+                {
+                    return res.failure(InvalidSyntaxError(
+                        next_param_tok.pos_start.value_or(Position()),
+                        next_param_tok.pos_end.value_or(Position()),
+                        "Non-default argument follows default argument"));
+                }
+
+                param_nodes.push_back({next_param_tok, next_default_val});
             }
         }
 
@@ -2603,7 +2706,7 @@ private:
         advance();
 
         auto body_node = make_shared<ListNode>(body_nodes, pos_start, pos_end);
-        return res.success(make_shared<InitNode>(param_toks, body_node, pos_start, pos_end));
+        return res.success(make_shared<InitNode>(param_nodes, body_node, pos_start, pos_end));
     }
 
     ParseResult initializer_list()

@@ -71,7 +71,7 @@ public:
     }
 
     [[nodiscard]] OperationResult is_true() const override {
-        return { make_shared<Number>(static_cast<long long>(elements.size())), nullopt };
+        return { make_shared<Number>(static_cast<long long>(elements.size())), nullptr };
     }
 
     OperationResult add(const shared_ptr<DataType>& operand) const override {
@@ -80,9 +80,9 @@ public:
             for (const auto& pair : other_dict->elements) {
                 new_dict->elements[pair.first] = pair.second;
             }
-            return { new_dict, nullopt };
+            return { new_dict, nullptr };
         }
-        return { nullptr, IllegalOperationError(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Can only add dictionary to another dictionary", context) };
+        return { nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Can only add dictionary to another dictionary", context) };
     }
 
     OperationResult subtract(const shared_ptr<DataType>& operand) const override {
@@ -91,36 +91,36 @@ public:
             string key = get_dict_key(operand);
             if (new_dict->elements.find(key) != new_dict->elements.end()) {
                 new_dict->elements.erase(key);
-                return { new_dict, nullopt };
+                return { new_dict, nullptr };
             }
-            return { new_dict, nullopt };
+            return { new_dict, nullptr };
         }
-        return { nullptr, DictKeyError(operand->pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Dictionary key must be a number or string", context) };
+        return { nullptr, make_shared<DictKeyError>(operand->pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Dictionary key must be a number or string", context) };
     }
 
     OperationResult get_comparison_eq(const shared_ptr<DataType>& operand) const override {
         if (const auto other_dict = dynamic_cast<const Dict*>(operand.get())) {
             if (elements.size() != other_dict->elements.size()) {
-                return { make_shared<Number>(0LL), nullopt };
+                return { make_shared<Number>(0LL), nullptr };
             }
             for (const auto& pair : elements) {
                 if (other_dict->elements.find(pair.first) == other_dict->elements.end()) {
-                    return { make_shared<Number>(0LL), nullopt };
+                    return { make_shared<Number>(0LL), nullptr };
                 }
                 const auto& other_value = other_dict->elements.at(pair.first);
                 if (const auto left_string = dynamic_cast<const String*>(pair.second.get())) {
                     const auto right_string = dynamic_cast<const String*>(other_value.get());
                     if (!right_string || left_string->value != right_string->value) {
-                        return { make_shared<Number>(0LL), nullopt };
+                        return { make_shared<Number>(0LL), nullptr };
                     }
                 }
                 else if (pair.second->to_string() != other_value->to_string()) {
-                    return { make_shared<Number>(0LL), nullopt };
+                    return { make_shared<Number>(0LL), nullptr };
                 }
             }
-            return { make_shared<Number>(1LL), nullopt };
+            return { make_shared<Number>(1LL), nullptr };
         }
-        return { nullptr, IllegalOperationError(operand->pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Expected a Dictionary", context) };
+        return { nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Expected a Dictionary", context) };
     }
 
     OperationResult get_comparison_neq(const shared_ptr<DataType>& operand) const override {
@@ -129,57 +129,57 @@ public:
             return eq_res;
         }
         if (auto t_num = dynamic_cast<Number*>(eq_res.first.get())) {
-            return { make_shared<Number>(t_num->is_truthy() ? 0LL : 1LL), nullopt };
+            return { make_shared<Number>(t_num->is_truthy() ? 0LL : 1LL), nullptr };
         }
         return eq_res;
     }
 
     OperationResult not_by() const override {
-        return { nullptr, IllegalOperationError(pos_start.value_or(Position{}), pos_end.value_or(Position{}), "Cannot apply 'not' to a Dictionary", context) };
+        return { nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position{}), pos_end.value_or(Position{}), "Cannot apply 'not' to a Dictionary", context) };
     }
 
     virtual OperationResult multiply(const shared_ptr<DataType>& operand) const override {
-        return { nullptr, IllegalOperationError(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply '*' to a Dictionary", context) };
+        return { nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply '*' to a Dictionary", context) };
     }
 
     virtual OperationResult divide(const shared_ptr<DataType>& operand) const override {
-        return { nullptr, IllegalOperationError(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply '/' to a Dictionary", context) };
+        return { nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply '/' to a Dictionary", context) };
     }
 
     virtual OperationResult modulus(const shared_ptr<DataType>& operand) const override {
-        return { nullptr, IllegalOperationError(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply '%' to a Dictionary", context) };
+        return { nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply '%' to a Dictionary", context) };
     }
 
     virtual OperationResult exponent(const shared_ptr<DataType>& operand) const override {
-        return { nullptr, IllegalOperationError(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply '^' to a Dictionary", context) };
+        return { nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply '^' to a Dictionary", context) };
     }
 
     virtual OperationResult floor_divide(const shared_ptr<DataType>& operand) const override {
-        return { nullptr, IllegalOperationError(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply '//' to a Dictionary", context) };
+        return { nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply '//' to a Dictionary", context) };
     }
 
     virtual OperationResult get_comparison_lt(const shared_ptr<DataType>& operand) const override {
-        return { nullptr, IllegalOperationError(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply '<' to a Dictionary", context) };
+        return { nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply '<' to a Dictionary", context) };
     }
 
     virtual OperationResult get_comparison_gt(const shared_ptr<DataType>& operand) const override {
-        return { nullptr, IllegalOperationError(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply '>' to a Dictionary", context) };
+        return { nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply '>' to a Dictionary", context) };
     }
 
     virtual OperationResult get_comparison_lte(const shared_ptr<DataType>& operand) const override {
-        return { nullptr, IllegalOperationError(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply '<=' to a Dictionary", context) };
+        return { nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply '<=' to a Dictionary", context) };
     }
 
     virtual OperationResult get_comparison_gte(const shared_ptr<DataType>& operand) const override {
-        return { nullptr, IllegalOperationError(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply '>=' to a Dictionary", context) };
+        return { nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply '>=' to a Dictionary", context) };
     }
 
     virtual OperationResult and_by(const shared_ptr<DataType>& operand) const override {
-        return { nullptr, IllegalOperationError(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply 'and' to a Dictionary", context) };
+        return { nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply 'and' to a Dictionary", context) };
     }
 
     virtual OperationResult or_by(const shared_ptr<DataType>& operand) const override {
-        return { nullptr, IllegalOperationError(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply 'or' to a Dictionary", context) };
+        return { nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply 'or' to a Dictionary", context) };
     }
 
     OperationResult getByIndex(const vector<shared_ptr<DataType>>& indexes) const override {
@@ -193,11 +193,11 @@ public:
                             temp = dict_temp->elements[key];
                         }
                         else {
-                            return { nullptr, DictKeyError(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Key does not exist", context) };
+                            return { nullptr, make_shared<DictKeyError>(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Key does not exist", context) };
                         }
                     }
                     else {
-                        return { nullptr, DictKeyError(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Dictionary keys must be numbers or strings", context) };
+                        return { nullptr, make_shared<DictKeyError>(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Dictionary keys must be numbers or strings", context) };
                     }
                 }
                 else {
@@ -211,24 +211,24 @@ public:
                             temp->set_context(context);
                         }
                         else {
-                            return { nullptr, RunTimeError(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Can't index a data type which is not iterable", context, "RunTimeError") };
+                            return { nullptr, make_shared<RunTimeError>(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Can't index a data type which is not iterable", context, "RunTimeError") };
                         }
                     }
                     else {
-                        return { nullptr, RunTimeError(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Invalid Index Type", context) };
+                        return { nullptr, make_shared<RunTimeError>(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Invalid Index Type", context) };
                     }
                 }
             }
-            return { temp, nullopt };
+            return { temp, nullptr };
         }
         catch (const out_of_range&) {
             auto bad_idx = indexes.back();
-            return { nullptr, RunTimeError(bad_idx->pos_start.value_or(Position{}), bad_idx->pos_end.value_or(Position{}), "Index out of bounds", context, "RunTimeError") };
+            return { nullptr, make_shared<RunTimeError>(bad_idx->pos_start.value_or(Position{}), bad_idx->pos_end.value_or(Position{}), "Index out of bounds", context, "RunTimeError") };
         }
     }
 
     OperationResult assignIndex(const vector<shared_ptr<DataType>>& indexes, const shared_ptr<DataType>& val) const override {
-        if (indexes.empty()) return { nullptr, IndexOutOfBoundsError(pos_start.value_or(Position{}), pos_end.value_or(Position{}), "Index out of bounds", context) };
+        if (indexes.empty()) return { nullptr, make_shared<IndexOutOfBoundsError>(pos_start.value_or(Position{}), pos_end.value_or(Position{}), "Index out of bounds", context) };
 
         auto new_dict = dynamic_pointer_cast<Dict>(copy());
         shared_ptr<DataType> current = new_dict;
@@ -249,11 +249,11 @@ public:
                             current = dict_temp->elements[key];
                         }
                         else {
-                            return { nullptr, DictKeyError(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Key does not exist", context) };
+                            return { nullptr, make_shared<DictKeyError>(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Key does not exist", context) };
                         }
                     }
                     else {
-                        return { nullptr, DictKeyError(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Dictionary keys must be numbers or strings", context) };
+                        return { nullptr, make_shared<DictKeyError>(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Dictionary keys must be numbers or strings", context) };
                     }
                 }
                 else {
@@ -263,20 +263,20 @@ public:
                             current = list_temp->elements.at(get<long long>(num_idx->value));
                         }
                         else if (dynamic_cast<String*>(current.get())) {
-                            return { nullptr, RunTimeError(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Can't assign inside string beyond one level", context, "RunTimeError") };
+                            return { nullptr, make_shared<RunTimeError>(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Can't assign inside string beyond one level", context, "RunTimeError") };
                         }
                         else {
-                            return { nullptr, RunTimeError(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Can't index a data type which is not iterable", context, "RunTimeError") };
+                            return { nullptr, make_shared<RunTimeError>(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Can't index a data type which is not iterable", context, "RunTimeError") };
                         }
                     }
                     else {
-                        return { nullptr, RunTimeError(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Invalid Index Type", context) };
+                        return { nullptr, make_shared<RunTimeError>(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Invalid Index Type", context) };
                     }
                 }
             }
 
             shared_ptr<DataType> updated_current;
-            optional<RunTimeError> leaf_error;
+            shared_ptr<RunTimeError> leaf_error;
             auto last_idx = indexes.back();
 
             if (const auto dict_temp = dynamic_cast<Dict*>(current.get())) {
@@ -286,7 +286,7 @@ public:
                     dynamic_pointer_cast<Dict>(updated_current)->elements[key] = val;
                 }
                 else {
-                    return { nullptr, DictKeyError(last_idx->pos_start.value_or(Position{}), last_idx->pos_end.value_or(Position{}), "Dictionary keys must be numbers or strings", context) };
+                    return { nullptr, make_shared<DictKeyError>(last_idx->pos_start.value_or(Position{}), last_idx->pos_end.value_or(Position{}), "Dictionary keys must be numbers or strings", context) };
                 }
             }
             else if (dynamic_cast<List*>(current.get())) {
@@ -296,7 +296,7 @@ public:
                 tie(updated_current, leaf_error) = current->assignIndex({ last_idx }, val);
             }
             else {
-                return { nullptr, RunTimeError(last_idx->pos_start.value_or(Position{}), last_idx->pos_end.value_or(Position{}), "Can't index a data type which is not iterable", context, "RunTimeError") };
+                return { nullptr, make_shared<RunTimeError>(last_idx->pos_start.value_or(Position{}), last_idx->pos_end.value_or(Position{}), "Can't index a data type which is not iterable", context, "RunTimeError") };
             }
 
             if (leaf_error) return { nullptr, leaf_error };
@@ -308,11 +308,11 @@ public:
                 rebuilt = updated_parent;
             }
 
-            return { rebuilt, nullopt };
+            return { rebuilt, nullptr };
         }
         catch (const out_of_range&) {
             auto bad_idx = indexes.back();
-            return { nullptr, RunTimeError(bad_idx->pos_start.value_or(Position{}), bad_idx->pos_end.value_or(Position{}), "Index out of bounds", context, "RunTimeError") };
+            return { nullptr, make_shared<RunTimeError>(bad_idx->pos_start.value_or(Position{}), bad_idx->pos_end.value_or(Position{}), "Index out of bounds", context, "RunTimeError") };
         }
     }
 };

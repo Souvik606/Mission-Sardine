@@ -130,7 +130,7 @@ public:
     {
         auto r = make_shared<Number>(1LL);
         r->set_context(context).set_pos(pos_start, pos_end);
-        return {r, nullopt};
+        return {r, nullptr};
     }
 
     [[nodiscard]] shared_ptr<DataType> copy() const override
@@ -145,7 +145,7 @@ public:
         return "<model " + name + ">";
     }
 
-    RunTimeResult execute(const vector<shared_ptr<DataType>> &args, Interpreter &interp);
+    RunTimeResult execute(const vector<shared_ptr<DataType>> &pos_args, const map<string, shared_ptr<DataType>> &kw_args, Interpreter &interp);
 
     [[nodiscard]] OperationResult add(const shared_ptr<DataType> &o) const override { return err("'+'"); }
     [[nodiscard]] OperationResult subtract(const shared_ptr<DataType> &o) const override { return err("'-'"); }
@@ -167,7 +167,7 @@ public:
 private:
     [[nodiscard]] OperationResult err(const string &op) const
     {
-        return {nullptr, IllegalOperationError(
+        return {nullptr, make_shared<IllegalOperationError>(
                              pos_start.value_or(Position()), pos_end.value_or(Position()),
                              "Cannot apply " + op + " to a model", context)};
     }
@@ -190,7 +190,7 @@ public:
     OperationResult set_attr(const string &attr_name, shared_ptr<DataType> value)
     {
         symbol_table->set(attr_name, std::move(value));
-        return {nullptr, nullopt};
+        return {nullptr, nullptr};
     }
 
     [[nodiscard]] bool is_truthy() const override { return true; }
@@ -199,7 +199,7 @@ public:
     {
         auto r = make_shared<Number>(1LL);
         r->set_context(context).set_pos(pos_start, pos_end);
-        return {r, nullopt};
+        return {r, nullptr};
     }
 
     [[nodiscard]] shared_ptr<DataType> copy() const override
@@ -235,7 +235,7 @@ public:
 private:
     [[nodiscard]] OperationResult err(const string &op) const
     {
-        return {nullptr, IllegalOperationError(
+        return {nullptr, make_shared<IllegalOperationError>(
                              pos_start.value_or(Position()), pos_end.value_or(Position()),
                              "Cannot apply " + op + " to a model instance", context)};
     }

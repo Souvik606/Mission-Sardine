@@ -198,13 +198,13 @@ private:
         RunTimeResult res;
         string func_name = node->var_name_tok.has_value() ? any_cast<string>(node->var_name_tok->value) : "";
         auto body_node = node->body_node;
-        vector<string> arg_names;
-        for (const auto &tok : node->arg_name_toks)
+        vector<pair<string, shared_ptr<Node>>> arg_nodes;
+        for (const auto &p : node->arg_nodes)
         {
-            arg_names.push_back(any_cast<string>(tok.value));
+            arg_nodes.push_back({any_cast<string>(p.first.value), p.second});
         }
 
-        auto func_value = make_shared<Function>(func_name, body_node, arg_names, node->return_null);
+        auto func_value = make_shared<Function>(func_name, body_node, arg_nodes, node->return_null);
         func_value->set_context(context).set_pos(node->pos_start, node->pos_end);
 
         if (node->var_name_tok.has_value())
@@ -218,7 +218,8 @@ private:
     RunTimeResult visit_FunctionCallNode(const shared_ptr<FunctionCallNode> &node, const shared_ptr<Context> &context)
     {
         RunTimeResult res;
-        vector<shared_ptr<DataType>> args;
+        vector<shared_ptr<DataType>> pos_args;
+        map<string, shared_ptr<DataType>> kw_args;
 
         auto call_value = res.register_result(visit(node->call_node, context));
         if (res.should_return())
@@ -226,25 +227,34 @@ private:
 
         call_value->set_pos(node->pos_start, node->pos_end);
 
-        for (const auto &arg_node : node->arg_nodes)
+        for (const auto &arg_node : node->positional_arg_nodes)
         {
-            args.push_back(res.register_result(visit(arg_node, context)));
+            pos_args.push_back(res.register_result(visit(arg_node, context)));
             if (res.should_return())
                 return res;
+        }
+
+        for (const auto &p : node->keyword_arg_nodes)
+        {
+            const string &name = any_cast<string>(p.first.value);
+            auto val = res.register_result(visit(p.second, context));
+            if (res.should_return())
+                return res;
+            kw_args[name] = val;
         }
 
         shared_ptr<DataType> return_value;
         if (auto func_to_call = dynamic_pointer_cast<Function>(call_value))
         {
-            return_value = res.register_result(func_to_call->execute(args, *this));
+            return_value = res.register_result(func_to_call->execute(pos_args, kw_args, *this));
         }
         else if (auto builtin_to_call = dynamic_pointer_cast<BuiltInFunction>(call_value))
         {
-            return_value = res.register_result(builtin_to_call->execute(args));
+            return_value = res.register_result(builtin_to_call->execute(pos_args, kw_args));
         }
         else if (auto model_to_call = dynamic_pointer_cast<ModelType>(call_value))
         {
-            return_value = res.register_result(model_to_call->execute(args, *this));
+            return_value = res.register_result(model_to_call->execute(pos_args, kw_args, *this));
         }
         else
         {
@@ -514,26 +524,24 @@ private:
     {
         RunTimeResult res;
         const string &var_name = any_cast<string>(node->var_name_tok.value);
-        shared_ptr<DataType> value;
-
-        auto this_val = context->symbol_table->get("this");
-        if (this_val)
-        {
-            if (auto inst = dynamic_pointer_cast<ModelInstance>(this_val))
-            {
-                value = inst->symbol_table->get(var_name);
-                if (!value)
-                {
-                    auto [method_val, err] = inst->get_attr(var_name, *this, context);
-                    if (!err && method_val)
-                        value = method_val;
-                }
-            }
-        }
+        shared_ptr<DataType> value = context->symbol_table->get(var_name);
 
         if (!value)
         {
-            value = context->symbol_table->get(var_name);
+            auto this_val = context->symbol_table->get("this");
+            if (this_val)
+            {
+                if (auto inst = dynamic_pointer_cast<ModelInstance>(this_val))
+                {
+                    value = inst->symbol_table->get(var_name);
+                    if (!value)
+                    {
+                        auto [method_val, err] = inst->get_attr(var_name, *this, context);
+                        if (!err && method_val)
+                            value = method_val;
+                    }
+                }
+            }
         }
 
         if (!value)
@@ -720,7 +728,7 @@ private:
             return res;
 
         shared_ptr<DataType> result = nullptr;
-        optional<RunTimeError> error = nullopt;
+        shared_ptr<RunTimeError> error = nullptr;
 
         if (node->operator_token.type == T_PLUS)
             tie(result, error) = left->add(right);
@@ -802,7 +810,7 @@ private:
             return res;
 
         shared_ptr<DataType> result = nullptr;
-        optional<RunTimeError> error = nullopt;
+        shared_ptr<RunTimeError> error = nullptr;
 
         if (node->operator_token.type == T_MINUS)
         {
@@ -868,8 +876,8 @@ private:
             return res.success(try_result);
         }
 
-        auto error = *res.error;
-        res.error = nullopt;
+        auto error = res.error;
+        res.error = nullptr;
         bool handled = false;
 
         for (const auto &trap_node : node->trap_nodes)
@@ -882,7 +890,7 @@ private:
             else
             {
                 string caught_err = any_cast<string>(trap_node->error_type->value);
-                if (caught_err == "RunTimeError" || caught_err == error.error_name)
+                if (caught_err == "RunTimeError" || caught_err == error->error_name)
                 {
                     matches = true;
                 }
@@ -899,7 +907,7 @@ private:
 
                 if (trap_node->error_name)
                 {
-                    auto err_str = make_shared<String>(error.to_string());
+                    auto err_str = make_shared<String>(error->to_string());
                     err_str->set_pos(trap_node->pos_start.value_or(Position{}), trap_node->pos_end.value_or(Position{}));
                     err_str->set_context(trap_context);
                     trap_context->symbol_table->set(any_cast<string>(trap_node->error_name->value), err_str);
@@ -923,7 +931,7 @@ private:
         if (handled)
             return res.success(nullptr);
 
-        return res.failure(error);
+        return res.failure(*error);
     }
 
     RunTimeResult visit_ModelNode(const shared_ptr<ModelNode> &node, const shared_ptr<Context> &context)
@@ -946,9 +954,9 @@ private:
             auto parent_model = dynamic_pointer_cast<ModelType>(parent_val);
             if (!parent_model)
             {
-                return res.failure(RunTimeError(
+                return res.failure(TypeError(
                     parent_tok.pos_start.value_or(Position()), parent_tok.pos_end.value_or(Position()),
-                    "'" + pname + "' is not a model", context));
+                    "'" + pname + "' is not a class and cannot be inherited from", context));
             }
             parents.push_back(parent_model);
         }

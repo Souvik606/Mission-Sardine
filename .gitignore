@@ -1,9 +1,15 @@
-# JetBrains/CLion user-specific files
+# IDE configuration directories
 .idea/
 .vscode/
 
 # CMake build directories
-build
+build/
+cmake-build-debug/
+cmake-build-release/
+
+# Language server files
+.clangd
+compile_commands.json
 
 # Compiled executables and build artifacts
 *.exe

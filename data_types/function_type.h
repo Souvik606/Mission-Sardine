@@ -11,18 +11,18 @@ using namespace std;
 
 class Interpreter;
 
-inline RunTimeError illegal_op_error(const DataType *self, const DataType *other)
+inline shared_ptr<RunTimeError> illegal_op_error(const DataType *self, const DataType *other)
 {
-    return RunTimeError(
+    return make_shared<RunTimeError>(
         self->pos_start.value_or(Position()),
         other->pos_end.value_or(Position()),
         "Illegal Operation",
         self->context);
 }
 
-inline RunTimeError illegal_op_error(const DataType *self)
+inline shared_ptr<RunTimeError> illegal_op_error(const DataType *self)
 {
-    return RunTimeError(
+    return make_shared<RunTimeError>(
         self->pos_start.value_or(Position()),
         self->pos_end.value_or(Position()),
         "Illegal Operation",
@@ -36,15 +36,15 @@ class Function final : public DataType
 public:
     string name;
     shared_ptr<Node> body_node;
-    vector<string> arg_names;
+    vector<pair<string, shared_ptr<Node>>> arg_nodes;
     bool return_null;
     shared_ptr<DataType> instance;
     shared_ptr<ModelType> access_modifier_owner; 
 
-    explicit Function(string name, shared_ptr<Node> body, vector<string> args, bool return_null,
+    explicit Function(string name, shared_ptr<Node> body, vector<pair<string, shared_ptr<Node>>> args, bool return_null,
                       shared_ptr<DataType> instance = nullptr);
 
-    RunTimeResult execute(const vector<shared_ptr<DataType>> &args, Interpreter &interpreter);
+    RunTimeResult execute(const vector<shared_ptr<DataType>> &pos_args, const map<string, shared_ptr<DataType>> &kw_args, Interpreter &interpreter);
 
     [[nodiscard]] bool is_truthy() const override
     {
@@ -56,7 +56,7 @@ public:
         auto result = make_shared<Number>(1LL);
         result->set_context(this->context);
         result->set_pos(this->pos_start, this->pos_end);
-        return std::make_pair(std::static_pointer_cast<DataType>(result), std::nullopt);
+        return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
     }
 
     [[nodiscard]] shared_ptr<DataType> copy() const override;

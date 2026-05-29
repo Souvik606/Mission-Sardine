@@ -32,7 +32,7 @@ public:
 
     DataType& set_context() { return set_context({}); }
 
-    using OperationResult = pair<shared_ptr<DataType>, optional<RunTimeError>>;
+    using OperationResult = pair<shared_ptr<DataType>, shared_ptr<RunTimeError>>;
 
     [[nodiscard]] virtual shared_ptr<DataType> copy() const = 0;
     [[nodiscard]] virtual string to_string() const = 0;
@@ -59,10 +59,10 @@ public:
     [[nodiscard]] virtual OperationResult not_by() const = 0;
 
     [[nodiscard]] virtual OperationResult getByIndex(const vector<shared_ptr<DataType>>& indexes) const {
-        return { nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Type does not support indexing", context) };
+        return { nullptr, make_shared<RunTimeError>(pos_start.value_or(Position()), pos_end.value_or(Position()), "Type does not support indexing", context) };
     }
 
     [[nodiscard]] virtual OperationResult assignIndex(const vector<shared_ptr<DataType>>& indexes, const shared_ptr<DataType>& value) const {
-        return { nullptr, RunTimeError(pos_start.value_or(Position()), pos_end.value_or(Position()), "Type does not support index assignment", context) };
+        return { nullptr, make_shared<RunTimeError>(pos_start.value_or(Position()), pos_end.value_or(Position()), "Type does not support index assignment", context) };
     }
 };

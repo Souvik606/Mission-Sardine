@@ -21,6 +21,14 @@ const string T_MODULUS = "MOD";
 const string T_FLOOR = "FLOOR";
 const string T_EXP = "EXP";
 const string T_EQ = "EQUAL";
+const string T_PLUSEQUAL = "PLUSEQUAL";
+const string T_MINUSEQUAL = "MINUSEQUAL";
+const string T_MULEQUAL = "MULEQUAL";
+const string T_DIVIDEEQUAL = "DIVIDEEQUAL";
+const string T_MODULUSEQUAL = "MODULUSEQUAL";
+const string T_FLOOREQUAL = "FLOOREQUAL";
+const string T_EXPEQUAL = "EXPEQUAL";
+const string T_ARROW = "ARROW";
 const string T_NEQ = "NOTEQUAL";
 const string T_EE = "DOUBLEEQUAL";
 const string T_LT = "LESSTHAN";
@@ -52,5 +60,5 @@ const vector<string> KEYWORDS = {
 const vector<string> ERROR_TYPES = {
     "RunTimeError", "IllegalOperationError", "DivisionByZeroError", "IndexOutOfBoundsError",
     "NameError", "ArgumentError", "InvalidErrorTypeError", "DictKeyError", "NotImplementedError",
-    "AttributeError"
+    "AttributeError", "TypeError"
 };
