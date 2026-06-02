@@ -68,12 +68,12 @@ public:
     [[nodiscard]] virtual OperationResult lshift(const shared_ptr<DataType>& other) const = 0;
     [[nodiscard]] virtual OperationResult rshift(const shared_ptr<DataType>& other) const = 0;
 
-    [[nodiscard]] virtual OperationResult getByIndex(const vector<shared_ptr<DataType>>& indexes) const {
-        return { nullptr, make_shared<RunTimeError>(pos_start.value_or(Position()), pos_end.value_or(Position()), "Type '" + get_type_name() + "' is not scriptable/indexable", context) };
+    [[nodiscard]] virtual OperationResult getByIndex(const vector<shared_ptr<DataType>>& indexes, const Position& pos_start = Position(), const Position& pos_end = Position()) const {
+        return { nullptr, make_shared<RunTimeError>(pos_start, pos_end, "Type '" + get_type_name() + "' is not scriptable/indexable", context) };
     }
 
-    [[nodiscard]] virtual OperationResult assignIndex(const vector<shared_ptr<DataType>>& indexes, const shared_ptr<DataType>& value) const {
-        return { nullptr, make_shared<RunTimeError>(pos_start.value_or(Position()), pos_end.value_or(Position()), "Type '" + get_type_name() + "' does not support index assignment", context) };
+    [[nodiscard]] virtual OperationResult assignIndex(const vector<shared_ptr<DataType>>& indexes, const shared_ptr<DataType>& value, const Position& pos_start = Position(), const Position& pos_end = Position()) const {
+        return { nullptr, make_shared<RunTimeError>(pos_start, pos_end, "Type '" + get_type_name() + "' does not support index assignment", context) };
     }
 
     [[nodiscard]] virtual OperationResult get_attr(const string& attr_name, const shared_ptr<Context>& calling_context) const {

@@ -423,7 +423,7 @@ public:
                 try {
                     return Token(T_INT, stoll(number_str), pos_start, pos);
                 } catch (...) {
-                    return Token(T_FLOAT, stod(number_str), pos_start, pos);
+                    return Token(T_INT, stod(number_str), pos_start, pos);
                 }
             }
         } catch (...) {

@@ -48,12 +48,15 @@ public:
         return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
     }
 
-    [[nodiscard]] OperationResult getByIndex(const vector<shared_ptr<DataType>>& indexes) const override {
+    [[nodiscard]] OperationResult getByIndex(const vector<shared_ptr<DataType>>& indexes, const Position& pos_start = Position(), const Position& pos_end = Position()) const override {
         string temp = this->value;
         for (const auto& idx : indexes) {
             if (const auto num_idx = dynamic_cast<const Number*>(idx.get())) {
-                if (holds_alternative<double>(num_idx->value)) {
+                if (num_idx->is_float) {
                     return std::make_pair(nullptr, make_shared<IllegalOperationError>(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Invalid Index Type", this->context));
+                }
+                if (holds_alternative<double>(num_idx->value)) {
+                    return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
                 }
                 long long i = get<long long>(num_idx->value);
                 if (i < 0 || i >= temp.length()) {
@@ -71,7 +74,7 @@ public:
         return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
     }
 
-    [[nodiscard]] OperationResult assignIndex(const vector<shared_ptr<DataType>>& indexes, const shared_ptr<DataType>& val) const override {
+    [[nodiscard]] OperationResult assignIndex(const vector<shared_ptr<DataType>>& indexes, const shared_ptr<DataType>& val, const Position& pos_start = Position(), const Position& pos_end = Position()) const override {
         auto str_val = dynamic_cast<const String*>(val.get());
         if (!str_val || str_val->value.length() != 1) {
             return std::make_pair(nullptr, make_shared<IllegalOperationError>(val->pos_start.value_or(Position()), val->pos_end.value_or(Position()), "Assigned value must be a single character string", this->context));
@@ -84,8 +87,12 @@ public:
 
         auto last_idx = indexes.back();
         auto num_idx = dynamic_cast<const Number*>(last_idx.get());
-        if (!num_idx || holds_alternative<double>(num_idx->value)) {
+        if (!num_idx || num_idx->is_float) {
             return std::make_pair(nullptr, make_shared<IllegalOperationError>(last_idx->pos_start.value_or(Position()), last_idx->pos_end.value_or(Position()), "Invalid Index Type", this->context));
+        }
+
+        if (holds_alternative<double>(num_idx->value)) {
+            return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(last_idx->pos_start.value_or(Position()), last_idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
         }
 
         long long i = get<long long>(num_idx->value);

@@ -799,7 +799,7 @@ private:
             indexes.push_back(std::move(index_val));
         }
 
-        auto [indexed_val, error] = value->getByIndex(indexes);
+        auto [indexed_val, error] = value->getByIndex(indexes, node->pos_start.value_or(Position()), node->pos_end.value_or(Position()));
         if (error)
             return res.failure(*error);
 
@@ -978,7 +978,7 @@ private:
                             "'" + var_name + "' is not defined", context));
                     }
 
-                    auto [new_list, error] = list_value->assignIndex(indexes_vals, value);
+                    auto [new_list, error] = list_value->assignIndex(indexes_vals, value, node->pos_start.value_or(Position()), node->pos_end.value_or(Position()));
                     if (error)
                         return res.failure(*error);
                     context->symbol_table->set(var_name, new_list);
@@ -1038,7 +1038,7 @@ private:
                 auto index_val = res.register_result(visit(idx_access->index_node, context));
                 if (res.should_return()) return res;
 
-                auto [new_obj, error] = obj_val->assignIndex({index_val}, value);
+                auto [new_obj, error] = obj_val->assignIndex({index_val}, value, node->pos_start.value_or(Position()), node->pos_end.value_or(Position()));
                 if (error)
                     return res.failure(*error);
                 last_result = value;
@@ -1052,14 +1052,15 @@ private:
     {
         RunTimeResult res;
         shared_ptr<Number> number;
+        bool is_float = (node->token.type == T_FLOAT);
 
         if (node->token.value.type() == typeid(long long))
         {
-            number = make_shared<Number>(any_cast<long long>(node->token.value));
+            number = make_shared<Number>(any_cast<long long>(node->token.value), is_float);
         }
         else if (node->token.value.type() == typeid(double))
         {
-            number = make_shared<Number>(any_cast<double>(node->token.value));
+            number = make_shared<Number>(any_cast<double>(node->token.value), is_float);
         }
         else
         {
@@ -1099,6 +1100,30 @@ private:
         const shared_ptr<DataType> left = res.register_result(visit(node->left_node, context));
         if (res.should_return())
             return res;
+
+        if (dynamic_pointer_cast<Function>(left) ||
+            dynamic_pointer_cast<BuiltInFunction>(left) ||
+            dynamic_pointer_cast<Module>(left) ||
+            dynamic_pointer_cast<ModelType>(left))
+        {
+            string op_symbol = node->operator_token.type;
+            if (op_symbol == T_KEYWORD && node->operator_token.value.type() == typeid(string)) {
+                op_symbol = any_cast<string>(node->operator_token.value);
+                transform(op_symbol.begin(), op_symbol.end(), op_symbol.begin(), ::toupper);
+            }
+
+            string type_name = left->get_type_name();
+            if (dynamic_pointer_cast<ModelType>(left)) {
+                type_name = "Model";
+            }
+
+            return res.failure(IllegalOperationError(
+                node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
+                "Operator '" + op_symbol + "' is not supported by type '" + type_name + "'",
+                context
+            ));
+        }
+
         const shared_ptr<DataType> right = res.register_result(visit(node->right_node, context));
         if (res.should_return())
             return res;
@@ -1196,6 +1221,29 @@ private:
         auto number = res.register_result(visit(node->node, context));
         if (res.should_return())
             return res;
+
+        if (dynamic_pointer_cast<Function>(number) ||
+            dynamic_pointer_cast<BuiltInFunction>(number) ||
+            dynamic_pointer_cast<Module>(number) ||
+            dynamic_pointer_cast<ModelType>(number))
+        {
+            string op_symbol = node->operator_token.type;
+            if (op_symbol == T_KEYWORD && node->operator_token.value.type() == typeid(string)) {
+                op_symbol = any_cast<string>(node->operator_token.value);
+                transform(op_symbol.begin(), op_symbol.end(), op_symbol.begin(), ::toupper);
+            }
+
+            string type_name = number->get_type_name();
+            if (dynamic_pointer_cast<ModelType>(number)) {
+                type_name = "Model";
+            }
+
+            return res.failure(IllegalOperationError(
+                node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
+                "Operator '" + op_symbol + "' is not supported by type '" + type_name + "'",
+                context
+            ));
+        }
 
         shared_ptr<DataType> result = nullptr;
         shared_ptr<RunTimeError> error = nullptr;
@@ -1420,6 +1468,7 @@ private:
     }
 
     static inline unordered_map<string, shared_ptr<Module>> module_cache;
+    static inline unordered_set<string> loading_modules;
 
     static shared_ptr<DataType> key_to_datatype(const string& key, const shared_ptr<Context>& context) {
         if (key.substr(0, 2) == "I:") {
@@ -1452,7 +1501,7 @@ private:
             return res;
 
         vector<shared_ptr<DataType>> indexes = { index_val };
-        auto [indexed_val, error] = obj_val->getByIndex(indexes);
+        auto [indexed_val, error] = obj_val->getByIndex(indexes, node->pos_start.value_or(Position()), node->pos_end.value_or(Position()));
         if (error)
             return res.failure(*error);
 
@@ -1829,11 +1878,10 @@ private:
                     ss << "\n";
                 }
             }
-            return res.failure(RunTimeError(
+            return res.failure(ModuleError(
                 node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
                 ss.str(),
-                context,
-                "ModuleError"
+                context
             ));
         }
 
@@ -1843,14 +1891,30 @@ private:
         if (cache_it != module_cache.end()) {
             module_obj = cache_it->second;
         } else {
+            if (loading_modules.count(resolved_path)) {
+                return res.failure(ModuleError(
+                    node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
+                    "Circular dependency detected: module '" + module_name + "' is already being loaded",
+                    context
+                ));
+            }
+            struct LoadingModuleGuard {
+                string path;
+                explicit LoadingModuleGuard(string p) : path(std::move(p)) {
+                    Interpreter::loading_modules.insert(path);
+                }
+                ~LoadingModuleGuard() {
+                    Interpreter::loading_modules.erase(path);
+                }
+            } guard(resolved_path);
+
             // ── 3. Read & execute the module ─────────────────────────────
             ifstream file(resolved_path);
             if (!file.is_open()) {
-                return res.failure(RunTimeError(
+                return res.failure(ModuleError(
                     node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
                     "Failed to open module file: " + resolved_path,
-                    context,
-                    "ModuleError"
+                    context
                 ));
             }
             stringstream buffer;
@@ -1860,22 +1924,20 @@ private:
             Lexer lexer(resolved_path, source);
             auto [tokens, lex_error] = lexer.enumerate_tokens();
             if (lex_error) {
-                return res.failure(RunTimeError(
+                return res.failure(ModuleError(
                     node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
                     "Lexer error in module '" + module_name + "': " + lex_error->to_string(),
-                    context,
-                    "ModuleError"
+                    context
                 ));
             }
 
             Parser parser(tokens);
             auto parse_result = parser.parse();
             if (parse_result.error) {
-                return res.failure(RunTimeError(
+                return res.failure(ModuleError(
                     node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
                     "Syntax error in module '" + module_name + "': " + parse_result.error->to_string(),
-                    context,
-                    "ModuleError"
+                    context
                 ));
             }
 
@@ -1890,11 +1952,10 @@ private:
             Interpreter mod_interpreter;
             auto mod_res = mod_interpreter.visit(parse_result.node, mod_context);
             if (mod_res.error) {
-                return res.failure(RunTimeError(
+                return res.failure(ModuleError(
                     node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
-                    "Runtime error in module '" + module_name + "': " + mod_res.error->to_string(),
-                    context,
-                    "ModuleError"
+                    "Runtime error in module '" + module_name + "': " + mod_res.error->details,
+                    context
                 ));
             }
 
@@ -1924,11 +1985,10 @@ private:
             string orig_name = any_cast<string>(pair.first.value);
             auto value = module_obj->symbol_table->get(orig_name);
             if (!value) {
-                return res.failure(RunTimeError(
+                return res.failure(ModuleError(
                     pair.first.pos_start.value_or(Position()), pair.first.pos_end.value_or(Position()),
                     "Module '" + module_name + "' has no member '" + orig_name + "'",
-                    context,
-                    "ModuleError"
+                    context
                 ));
             }
             string bind_name = pair.second.has_value() ? any_cast<string>(pair.second->value) : orig_name;

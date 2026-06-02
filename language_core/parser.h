@@ -2019,14 +2019,16 @@ private:
         {
             res.register_advancement();
             advance();
-            return res.success(make_shared<NumberNode>(token));
+            auto num_node = make_shared<NumberNode>(token);
+            return res.success(dot_access_chain(res, num_node));
         }
 
         if (token.type == T_STRING)
         {
             res.register_advancement();
             advance();
-            return res.success(make_shared<StringNode>(token));
+            auto str_node = make_shared<StringNode>(token);
+            return res.success(dot_access_chain(res, str_node));
         }
 
         if (token.type == T_FSTRING)
@@ -2036,7 +2038,7 @@ private:
             auto fstring_node = res.register_node(_parse_fstring(token));
             if (res.error)
                 return res;
-            return res.success(fstring_node);
+            return res.success(dot_access_chain(res, fstring_node));
         }
 
         if (token.type == T_KEYWORD && any_cast<string>(token.value) == "method")
@@ -2127,7 +2129,7 @@ private:
         return res.failure(InvalidSyntaxError(
             token.pos_start.value_or(Position()),
             token.pos_end.value_or(Position()),
-            "Expected int, float,identifier,'+','-'or '('"));
+            "Expected an expression (value, variable, '(', '[', '{', or operator)"));
     }
 
     ParseResult term()

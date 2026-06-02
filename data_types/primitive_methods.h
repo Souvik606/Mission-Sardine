@@ -289,10 +289,14 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             if (args.size() != 2 || !kw_args.empty()) {
                 return { nullptr, make_shared<ArgumentError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "insert() takes exactly 2 arguments: (index, item)", context) };
             }
-            long long idx_val = 0;
-            if (!is_integer(args[0], idx_val)) {
+            auto num_idx = dynamic_pointer_cast<Number>(args[0]);
+            if (!num_idx || num_idx->is_float) {
                 return { nullptr, make_shared<IllegalOperationError>(args[0]->pos_start.value_or(Position()), args[0]->pos_end.value_or(Position()), "Index must be an integer Number", context) };
             }
+            if (holds_alternative<double>(num_idx->value)) {
+                return { nullptr, make_shared<IndexOutOfBoundsError>(args[0]->pos_start.value_or(Position()), args[0]->pos_end.value_or(Position()), "Index too large (overflow)", context) };
+            }
+            long long idx_val = get<long long>(num_idx->value);
             if (idx_val < 0) {
                 idx_val = static_cast<long long>(list_self->elements.size()) + idx_val;
             }
@@ -313,9 +317,14 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             }
             long long idx_val = -1;
             if (args.size() == 1) {
-                if (!is_integer(args[0], idx_val)) {
+                auto num_idx = dynamic_pointer_cast<Number>(args[0]);
+                if (!num_idx || num_idx->is_float) {
                     return { nullptr, make_shared<IllegalOperationError>(args[0]->pos_start.value_or(Position()), args[0]->pos_end.value_or(Position()), "Index must be an integer Number", context) };
                 }
+                if (holds_alternative<double>(num_idx->value)) {
+                    return { nullptr, make_shared<IndexOutOfBoundsError>(args[0]->pos_start.value_or(Position()), args[0]->pos_end.value_or(Position()), "Index too large (overflow)", context) };
+                }
+                idx_val = get<long long>(num_idx->value);
             }
             long long actual_idx = idx_val;
             if (actual_idx < 0) {
@@ -437,14 +446,23 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             }
             long long start_val = 0;
             long long end_val = 0;
-            if (!is_integer(args[0], start_val) || !is_integer(args[1], end_val)) {
+            long long n = static_cast<long long>(list_self->elements.size());
+            auto get_bound = [&](const shared_ptr<DataType>& arg, long long& out_val) -> bool {
+                auto num = dynamic_pointer_cast<Number>(arg);
+                if (!num || num->is_float) return false;
+                if (holds_alternative<long long>(num->value)) {
+                    out_val = get<long long>(num->value);
+                    if (out_val < 0) out_val = n + out_val;
+                    out_val = max(0LL, min(out_val, n));
+                } else {
+                    double val = get<double>(num->value);
+                    out_val = (val >= 0.0) ? n : 0LL;
+                }
+                return true;
+            };
+            if (!get_bound(args[0], start_val) || !get_bound(args[1], end_val)) {
                 return { nullptr, make_shared<IllegalOperationError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "Slice bounds must be integer Numbers", context) };
             }
-            long long n = static_cast<long long>(list_self->elements.size());
-            if (start_val < 0) start_val = n + start_val;
-            if (end_val < 0) end_val = n + end_val;
-            start_val = max(0LL, min(start_val, n));
-            end_val = max(0LL, min(end_val, n));
             vector<shared_ptr<DataType>> sliced;
             for (long long i = start_val; i < end_val; ++i) {
                 sliced.push_back(list_self->elements[i]->copy());

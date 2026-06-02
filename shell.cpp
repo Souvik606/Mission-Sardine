@@ -39,7 +39,7 @@ RunTimeResult builtin_show(const Position& pos_start, const Position& pos_end, c
                 return RunTimeResult().failure(ArgumentError(
                     pos_start, pos_end,
                     "'sep' must be a string",
-                    context
+                    context->parent ? context->parent : context
                 ));
             }
             separator = str_val->value;
@@ -50,7 +50,7 @@ RunTimeResult builtin_show(const Position& pos_start, const Position& pos_end, c
                 return RunTimeResult().failure(ArgumentError(
                     pos_start, pos_end,
                     "'end' must be a string",
-                    context
+                    context->parent ? context->parent : context
                 ));
             }
             end_char = str_val->value;
@@ -59,7 +59,7 @@ RunTimeResult builtin_show(const Position& pos_start, const Position& pos_end, c
             return RunTimeResult().failure(ArgumentError(
                 pos_start, pos_end,
                 "Unexpected keyword argument '" + name + "' for show",
-                context
+                context->parent ? context->parent : context
             ));
         }
     }
@@ -86,7 +86,7 @@ RunTimeResult builtin_listen(const Position& pos_start, const Position& pos_end,
         return RunTimeResult().failure(ArgumentError(
             pos_start, pos_end,
             "listen() takes 0 arguments",
-            context
+            context->parent ? context->parent : context
         ));
     }
     string text;
@@ -99,7 +99,7 @@ RunTimeResult builtin_type(const Position& pos_start, const Position& pos_end, c
         return RunTimeResult().failure(ArgumentError(
             pos_start, pos_end,
             "type() takes exactly one argument",
-            context
+            context->parent ? context->parent : context
         ));
     }
     const auto& value = args[0];
@@ -144,13 +144,23 @@ RunTimeResult builtin_integer(const Position& pos_start, const Position& pos_end
         return RunTimeResult().failure(ArgumentError(
             pos_start, pos_end,
             "Integer() takes exactly one argument",
-            context
+            context->parent ? context->parent : context
         ));
     }
 
     const auto& value = args[0];
 
     if (const auto num = dynamic_pointer_cast<Number>(value)) {
+        if (holds_alternative<double>(num->value)) {
+            double d_val = get<double>(num->value);
+            if (std::isnan(d_val) || std::isinf(d_val) || d_val < static_cast<double>(LLONG_MIN) || d_val > static_cast<double>(LLONG_MAX)) {
+                return RunTimeResult().failure(ArgumentError(
+                    pos_start, pos_end,
+                    "Argument must be a value convertible to an integer",
+                    context->parent ? context->parent : context
+                ));
+            }
+        }
         long long int_val = std::visit([](auto v) { return static_cast<long long>(v); }, num->value);
         return RunTimeResult().success(make_shared<Number>(int_val));
     }
@@ -164,7 +174,7 @@ RunTimeResult builtin_integer(const Position& pos_start, const Position& pos_end
             return RunTimeResult().failure(ArgumentError(
                 pos_start, pos_end,
                 "Argument must be a value convertible to an integer",
-                context
+                context->parent ? context->parent : context
             ));
         }
     }
@@ -172,7 +182,7 @@ RunTimeResult builtin_integer(const Position& pos_start, const Position& pos_end
     return RunTimeResult().failure(ArgumentError(
         pos_start, pos_end,
         "Argument must be a primitive value (Number or String)",
-        context
+        context->parent ? context->parent : context
     ));
 }
 
@@ -181,7 +191,7 @@ RunTimeResult builtin_string(const Position& pos_start, const Position& pos_end,
         return RunTimeResult().failure(ArgumentError(
             pos_start, pos_end,
             "String() takes exactly one argument",
-            context
+            context->parent ? context->parent : context
         ));
     }
 
@@ -197,6 +207,7 @@ RunTimeResult builtin_string(const Position& pos_start, const Position& pos_end,
 
     return RunTimeResult().success(make_shared<String>(str_val));
 }
+
 
 RunTimeResult builtin_super(const Position& pos_start, const Position& pos_end, const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args, const shared_ptr<Context>& context) {
     if (!args.empty() || !kw_args.empty()) {
@@ -253,7 +264,7 @@ RunTimeResult builtin_is_a(const Position& pos_start, const Position& pos_end, c
         return RunTimeResult().failure(ArgumentError(
             pos_start, pos_end,
             "is_a() takes exactly 2 positional arguments: is_a(object, ModelClass)",
-            context
+            context->parent ? context->parent : context
         ));
     }
 
@@ -264,7 +275,7 @@ RunTimeResult builtin_is_a(const Position& pos_start, const Position& pos_end, c
         return RunTimeResult().failure(ArgumentError(
             pos_start, pos_end,
             "Second argument to is_a() must be a model class",
-            context
+            context->parent ? context->parent : context
         ));
     }
 
@@ -287,7 +298,7 @@ public:
 
 bool is_integer(const shared_ptr<DataType>& arg, long long& out_val) {
     auto num = dynamic_pointer_cast<Number>(arg);
-    if (!num) return false;
+    if (!num || num->is_float) return false;
     if (holds_alternative<long long>(num->value)) {
         out_val = get<long long>(num->value);
         return true;
@@ -314,7 +325,7 @@ RunTimeResult builtin_error(const Position& pos_start, const Position& pos_end, 
         return RunTimeResult().failure(ArgumentError(
             pos_start, pos_end,
             "error() takes no keyword arguments",
-            context
+            context->parent ? context->parent : context
         ));
     }
     string msg = "Illegal operation";
@@ -324,7 +335,7 @@ RunTimeResult builtin_error(const Position& pos_start, const Position& pos_end, 
             return RunTimeResult().failure(ArgumentError(
                 pos_start, pos_end,
                 "Error message must be a String value",
-                context
+                context->parent ? context->parent : context
             ));
         }
         msg = str_val->value;
@@ -332,7 +343,7 @@ RunTimeResult builtin_error(const Position& pos_start, const Position& pos_end, 
     return RunTimeResult().failure(IllegalOperationError(
         pos_start, pos_end,
         msg,
-        context->parent
+        context->parent ? context->parent : context
     ));
 }
 
@@ -392,31 +403,78 @@ RunTimeResult builtin_len(const Position& pos_start, const Position& pos_end, co
     ));
 }
 
+string format_double_as_clean_int(double d) {
+    if (d < 1e15) {
+        stringstream ss;
+        ss << std::fixed << std::setprecision(0) << d;
+        return ss.str();
+    }
+    stringstream ss;
+    ss << std::scientific << std::setprecision(14) << d;
+    string s = ss.str();
+    
+    size_t e_pos = s.find('e');
+    if (e_pos == string::npos) return s;
+    
+    string coeff = s.substr(0, e_pos);
+    int exp = stoi(s.substr(e_pos + 1));
+    
+    size_t dot_pos = coeff.find('.');
+    if (dot_pos != string::npos) {
+        coeff.erase(dot_pos, 1);
+        int frac_len = coeff.length() - dot_pos;
+        if (exp >= frac_len) {
+            coeff += string(exp - frac_len, '0');
+        } else {
+            coeff.insert(dot_pos + exp, ".");
+        }
+    } else {
+        coeff += string(exp, '0');
+    }
+    
+    if (coeff.find('.') != string::npos) {
+        while (!coeff.empty() && coeff.back() == '0') coeff.pop_back();
+        if (!coeff.empty() && coeff.back() == '.') coeff.pop_back();
+    }
+    return coeff;
+}
+
+bool get_range_arg(const shared_ptr<DataType>& arg, double& out_val) {
+    auto num = dynamic_pointer_cast<Number>(arg);
+    if (!num || num->is_float) return false;
+    if (holds_alternative<long long>(num->value)) {
+        out_val = static_cast<double>(get<long long>(num->value));
+    } else {
+        out_val = get<double>(num->value);
+    }
+    return true;
+}
+
 RunTimeResult builtin_range(const Position& pos_start, const Position& pos_end, const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args, const shared_ptr<Context>& context) {
     if (args.empty() || args.size() > 3 || !kw_args.empty()) {
         return RunTimeResult().failure(ArgumentError(
             pos_start, pos_end,
             "range() takes 1, 2, or 3 arguments",
-            context
+            context->parent ? context->parent : context
         ));
     }
 
-    vector<long long> vals;
+    vector<double> vals;
     for (size_t i = 0; i < args.size(); ++i) {
-        long long val = 0;
-        if (!is_integer(args[i], val)) {
+        double val = 0.0;
+        if (!get_range_arg(args[i], val)) {
             return RunTimeResult().failure(IllegalOperationError(
                 args[i]->pos_start.value_or(Position()), args[i]->pos_end.value_or(Position()),
                 "Argument " + to_string(i + 1) + " to range() must be an integer Number",
-                context
+                context->parent ? context->parent : context
             ));
         }
         vals.push_back(val);
     }
 
-    long long start = 0;
-    long long end = 0;
-    long long step = 1;
+    double start = 0.0;
+    double end = 0.0;
+    double step = 1.0;
 
     if (vals.size() == 1) {
         end = vals[0];
@@ -429,67 +487,87 @@ RunTimeResult builtin_range(const Position& pos_start, const Position& pos_end, 
         step = vals[2];
     }
 
-    if (step == 0) {
+    if (step == 0.0) {
         return RunTimeResult().failure(IllegalOperationError(
             args.back()->pos_start.value_or(Position()), args.back()->pos_end.value_or(Position()),
             "range() step cannot be 0",
-            context
+            context->parent ? context->parent : context
         ));
     }
 
-    long long num_elements = 0;
-    if ((step > 0 && start >= end) || (step < 0 && start <= end)) {
-        num_elements = 0;
-    } else {
-        if (step > 0) {
-            if (start < 0 && end > LLONG_MAX + start) {
-                return RunTimeResult().failure(ValueError(
-                    args.front()->pos_start.value_or(Position()), args.back()->pos_end.value_or(Position()),
-                    "range() boundary overflow",
-                    context
-                ));
-            }
-        } else {
-            if (start > 0 && end < LLONG_MIN + start) {
-                return RunTimeResult().failure(ValueError(
-                    args.front()->pos_start.value_or(Position()), args.back()->pos_end.value_or(Position()),
-                    "range() boundary overflow",
-                    context
-                ));
-            }
+    double diff = (step > 0.0) ? (end - start) : (start - end);
+    double num_elements_double = 0.0;
+    if ((step > 0.0 && start < end) || (step < 0.0 && start > end)) {
+        num_elements_double = std::ceil(diff / std::abs(step));
+    }
+
+    if (num_elements_double > 1000000.0) {
+        return RunTimeResult().failure(ValueError(
+            args.front()->pos_start.value_or(Position()), args.back()->pos_end.value_or(Position()),
+            "range() limit exceeded (size " + format_double_as_clean_int(num_elements_double) + " > 1,000,000 limit)",
+            context->parent ? context->parent : context
+        ));
+    }
+
+    // Now check if start, end, step exceed standard long long limits
+    if (start < static_cast<double>(LLONG_MIN) || start > static_cast<double>(LLONG_MAX) ||
+        end < static_cast<double>(LLONG_MIN) || end > static_cast<double>(LLONG_MAX) ||
+        step < static_cast<double>(LLONG_MIN) || step > static_cast<double>(LLONG_MAX)) {
+        return RunTimeResult().failure(ValueError(
+            args.front()->pos_start.value_or(Position()), args.back()->pos_end.value_or(Position()),
+            "range() boundary overflow",
+            context->parent ? context->parent : context
+        ));
+    }
+
+    long long start_ll = static_cast<long long>(start);
+    long long end_ll = static_cast<long long>(end);
+    long long step_ll = static_cast<long long>(step);
+
+    if (step_ll > 0) {
+        if (start_ll < 0 && end_ll > LLONG_MAX + start_ll) {
+            return RunTimeResult().failure(ValueError(
+                args.front()->pos_start.value_or(Position()), args.back()->pos_end.value_or(Position()),
+                "range() boundary overflow",
+                context->parent ? context->parent : context
+            ));
         }
-        long long diff = (step > 0) ? (end - start) : (start - end);
-        long long abs_step = (step > 0) ? step : -step;
-        num_elements = diff / abs_step;
-        if (diff % abs_step != 0) {
+    } else {
+        if (start_ll > 0 && end_ll < LLONG_MIN + start_ll) {
+            return RunTimeResult().failure(ValueError(
+                args.front()->pos_start.value_or(Position()), args.back()->pos_end.value_or(Position()),
+                "range() boundary overflow",
+                context->parent ? context->parent : context
+            ));
+        }
+    }
+
+    long long num_elements = 0;
+    if ((step_ll > 0 && start_ll < end_ll) || (step_ll < 0 && start_ll > end_ll)) {
+        long long diff_ll = (step_ll > 0) ? (end_ll - start_ll) : (start_ll - end_ll);
+        long long abs_step = (step_ll > 0) ? step_ll : -step_ll;
+        num_elements = diff_ll / abs_step;
+        if (diff_ll % abs_step != 0) {
             num_elements += 1;
         }
     }
 
-    if (num_elements > 1000000) {
-        return RunTimeResult().failure(ValueError(
-            args.front()->pos_start.value_or(Position()), args.back()->pos_end.value_or(Position()),
-            "range() limit exceeded (size " + to_string(num_elements) + " > 1,000,000 limit)",
-            context
-        ));
-    }
-
     vector<shared_ptr<DataType>> elements;
     elements.reserve(num_elements);
-    long long current = start;
-    if (step > 0) {
-        while (current < end) {
+    long long current = start_ll;
+    if (step_ll > 0) {
+        while (current < end_ll) {
             auto num_obj = make_shared<Number>(current);
             num_obj->set_context(context);
             elements.push_back(num_obj);
-            current += step;
+            current += step_ll;
         }
     } else {
-        while (current > end) {
+        while (current > end_ll) {
             auto num_obj = make_shared<Number>(current);
             num_obj->set_context(context);
             elements.push_back(num_obj);
-            current += step;
+            current += step_ll;
         }
     }
 
@@ -504,7 +582,7 @@ RunTimeResult builtin_exit(const Position& pos_start, const Position& pos_end, c
         return RunTimeResult().failure(ArgumentError(
             pos_start, pos_end,
             "exit() takes no arguments",
-            context
+            context->parent ? context->parent : context
         ));
     }
     throw CleanExitException();
