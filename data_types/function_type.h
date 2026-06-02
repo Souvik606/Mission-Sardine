@@ -44,6 +44,8 @@ public:
     explicit Function(string name, shared_ptr<Node> body, vector<pair<string, shared_ptr<Node>>> args, bool return_null,
                       shared_ptr<DataType> instance = nullptr);
 
+    [[nodiscard]] string get_type_name() const override { return "Function"; }
+
     DataType& set_context(const shared_ptr<Context>& ctx) override {
         if (!this->context) {
             this->context = ctx;

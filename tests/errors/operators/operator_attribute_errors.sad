@@ -1,0 +1,7 @@
+# Operator Attribute Errors test
+method my_func() { yield 1 }
+risk {
+    my_func + 5
+} trap IllegalOperationError e {
+    show(e.message)
+}

@@ -1,0 +1,49 @@
+--- random stdlib: instantiation & seeding ---
+RNG initialized with seed 42
+--- random stdlib: float & integer generation ---
+rand() call 1       : 0.2523
+rand() call 2       : 0.0881
+rand_nonzero()      : 0.5773
+uniform(10.0, 20.0) : 12.2255
+uniform(-5.0, 5.0)  : -1.2434
+randint(1, 6)       : 1
+randint(100, 200)   : 145
+--- random stdlib: coin flip & dice ---
+coin_flip() call 1  : 0
+coin_flip() call 2  : 1
+coin_flip() call 3  : 0
+roll_dice(6)        : 6
+roll_dice(20)       : 10
+roll_dice_n(6, 5)   : [4, 6, 4, 1, 1]
+--- random stdlib: list selections ---
+List                : ['apple', 'banana', 'cherry', 'date', 'fig']
+pick(lst) call 1    : fig
+pick(lst) call 2    : fig
+picks(lst, 3)       : ['fig', 'cherry', 'apple']
+draw(lst, 3)        : ['cherry', 'banana', 'fig']
+shuffle(lst)        : ['banana', 'date', 'cherry', 'apple', 'fig']
+randlist(6, 1, 10)  : [1, 1, 6, 9, 9, 7]
+rand_floats(4)      : [0.3808, 0.5857, 0.6964, 0.7114]
+--- random stdlib: weighted pick ---
+weighted_pick       : gold
+weighted_pick again : platinum
+--- random stdlib: distributions ---
+bernoulli(0.3)      : 0
+bernoulli(0.8)      : 1
+geometric(0.5)      : 1
+geometric(0.2)      : 2
+--- random stdlib: reseeding & reproducibility ---
+Seeded 999 series 1 : [63, 90, 85, 65, 19]
+Seeded 999 series 2 : [63, 90, 85, 65, 19]
+Series are equal    : 1
+--- random stdlib: error handling ---
+Caught empty list pick error
+Caught empty list picks error
+Caught draw k > len error
+Caught draw negative k error
+Caught weighted_pick empty items error
+Caught weighted_pick length mismatch error
+Caught roll_dice < 2 sides error
+Caught roll_dice_n < 2 sides error
+Caught bernoulli p > 1 error
+Caught geometric p <= 0 error

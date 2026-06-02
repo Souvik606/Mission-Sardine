@@ -1,0 +1,5 @@
+# Division of a list containing non-primitive values should complete without crashing Python
+method foo() {}
+items = [foo]
+items = items / 42
+show("Divide completed without crash")

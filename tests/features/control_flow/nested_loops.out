@@ -1,0 +1,28 @@
+--- Test: Nested Loops ---
+--- cycle inside during with escape ---
+Outer during: 1
+  Inner cycle: 1
+  Inner cycle: 2
+Escaping inner cycle loop
+Outer during: 2
+  Inner cycle: 1
+  Inner cycle: 2
+Escaping inner cycle loop
+Outer during: 3
+  Inner cycle: 1
+  Inner cycle: 2
+Escaping inner cycle loop
+--- trace inside cycle with proceed ---
+cycle i: 1
+  trace name: Alice
+cycle i: 2
+  trace name: Alice
+--- Nesting menu inside loop with escape ---
+Loop k: 1
+  Fallback matched, k = 1
+Loop k: 2
+  Choice 2 matched, escaping loop
+Loop k: 3
+  Fallback matched, k = 3
+Loop k: 4
+  Fallback matched, k = 4

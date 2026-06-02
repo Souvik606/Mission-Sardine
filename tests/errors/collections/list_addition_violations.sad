@@ -1,0 +1,3 @@
+# Attempt to add a non-primitive function value to list
+method foo() {}
+items = [1, 2] + foo

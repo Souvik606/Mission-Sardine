@@ -16,11 +16,15 @@ inline string repeat_string(const string& str, const long long n) {
     return result;
 }
 
-class String final : public DataType {
+class String final : public DataType, public enable_shared_from_this<String> {
 public:
     string value;
 
     explicit String(string val) : value(std::move(val)) {}
+
+    [[nodiscard]] string get_type_name() const override { return "String"; }
+
+    [[nodiscard]] OperationResult get_attr(const string& attr_name, const shared_ptr<Context>& calling_context) const override;
 
     [[nodiscard]] shared_ptr<DataType> copy() const override {
         auto new_str = make_shared<String>(this->value);
@@ -103,7 +107,11 @@ public:
             result->set_context(this->context);
             return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
         }
-        return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a String type", this->context));
+        string hint = "";
+        if (const auto other_num = dynamic_cast<const Number*>(operand.get())) {
+            hint = "Cannot concatenate String and Number. Try converting with 'String(" + other_num->to_string() + ")' or wrap in an f-string.";
+        }
+        return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a String type", this->context, hint));
     }
 
     [[nodiscard]] OperationResult multiply(const shared_ptr<DataType>& operand) const override {

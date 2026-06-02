@@ -1,0 +1,11 @@
+--- Test: Variable Scope and Closures ---
+--- Variable Shadowing ---
+Global x initially: 10
+Inside shadow_test, local x: 20
+Global x after shadow_test: 10
+--- Read-only Closure ---
+add_five(3): 8
+add_ten(3): 13
+--- Closure Shadowing on Assignment ---
+counter1 call 1: 101
+counter1 call 2: 101

@@ -1,4 +1,115 @@
-PI = 3.14159265358979
+# ============================================================
+# math.sad — Mathematics Standard Library for Sardine
+# ============================================================
+#
+# CONSTANTS:
+#   PI       — 3.14159265358979...   (ratio of circumference to diameter)
+#   E        — 2.71828182845904...   (Euler's number / natural base)
+#   TAU      — 6.28318530717958...   (2 * PI)
+#   PHI      — 1.61803398874989...   (Golden ratio)
+#   INF      — 999999999999999       (practical infinity sentinel)
+#
+# BASIC OPERATIONS:
+#   abs(n)             — absolute value of n
+#   sign(n)            — sign of n: -1, 0, or 1
+#   square(n)          — n squared (n^2)
+#   cube(n)            — n cubed (n^3)
+#   pow(base, exp)     — base raised to exp (integer exponents)
+#   sqrt(n)            — square root via Newton-Raphson
+#   cbrt(n)            — cube root
+#   hypot(a, b)        — hypotenuse sqrt(a^2 + b^2)
+#
+# ROUNDING & DIVISION:
+#   floor(n)           — largest integer <= n
+#   ceil(n)            — smallest integer >= n
+#   round(n)           — round to nearest integer
+#   clamp(n, lo, hi)   — clamp n to the [lo, hi] range
+#   gcd(a, b)          — greatest common divisor
+#   lcm(a, b)          — least common multiple
+#
+# EXPONENTIALS & LOGARITHMS:
+#   exp(n)             — e raised to the power n
+#   ln(n)              — natural logarithm (base e)
+#   log2(n)            — logarithm base 2
+#   log10(n)           — logarithm base 10
+#   log(n, base)       — logarithm of n in any base
+#
+# TRIGONOMETRY (angles in radians):
+#   sin(x)             — sine
+#   cos(x)             — cosine
+#   tan(x)             — tangent
+#   asin(x)            — inverse sine (arcsine)
+#   acos(x)            — inverse cosine (arccosine)
+#   atan(x)            — inverse tangent (arctangent)
+#   atan2(y, x)        — 2-argument arctangent
+#   deg_to_rad(d)      — convert degrees to radians
+#   rad_to_deg(r)      — convert radians to degrees
+#
+# NUMBER THEORY:
+#   factorial(n)       — n! (iterative, no recursion limit)
+#   fibonacci(n)       — nth Fibonacci number (iterative)
+#   is_prime(n)        — 1 if n is prime, 0 otherwise
+#   gcd(a, b)          — greatest common divisor
+#   lcm(a, b)          — least common multiple
+#   is_even(n)         — 1 if n is even
+#   is_odd(n)          — 1 if n is odd
+#
+# GEOMETRY:
+#   circle_area(r)     — area of a circle with radius r
+#   circle_perimeter(r)— circumference of a circle
+#   triangle_area(b,h) — area of a triangle (base, height)
+#   sphere_volume(r)   — volume of a sphere
+#   cylinder_volume(r,h)— volume of a cylinder
+#
+# COMBINATORICS:
+#   permutations(n, r) — nPr = n! / (n-r)!
+#   combinations(n, r) — nCr = n! / (r! * (n-r)!)
+# ============================================================
+
+# --- Constants ---
+
+PI  = 3.14159265358979
+E   = 2.71828182845904
+TAU = 6.28318530717958
+PHI = 1.61803398874989
+INF = 999999999999999
+
+# --- Private helpers ---
+
+method _abs(n) {
+    when n < 0 { yield -n } otherwise { yield n }
+}
+
+method _factorial_iter(n) {
+    result = 1
+    i = 2
+    during i <= n {
+        result = result * i
+        i = i + 1
+    }
+    yield result
+}
+
+# --- Basic Operations ---
+
+method abs(n) {
+    when n < 0 {
+        yield -n
+    } otherwise {
+        yield n
+    }
+}
+
+# Backward-compatible alias
+method absolute(n) {
+    when n < 0 { yield -n } otherwise { yield n }
+}
+
+method sign(n) {
+    when n < 0 { yield -1 }
+    orwhen n > 0 { yield 1 }
+    otherwise { yield 0 }
+}
 
 method square(n) {
     yield n * n
@@ -8,22 +119,399 @@ method cube(n) {
     yield n * n * n
 }
 
-method factorial(n) {
-    when n <= 1 {
+method pow(base, exp) {
+    when exp == 0 {
         yield 1
+    } orwhen exp < 0 {
+        yield 1.0 / pow(base, -exp)
     } otherwise {
-        yield n * factorial(n - 1)
+        result = 1
+        i = 0
+        during i < exp {
+            result = result * base
+            i = i + 1
+        }
+        yield result
     }
 }
+
+method sqrt(n) {
+    when n < 0 {
+        yield error("sqrt: cannot take square root of a negative number")
+    } orwhen n == 0 {
+        yield 0
+    } otherwise {
+        guess = n / 2.0
+        i = 0
+        during i < 60 {
+            better = (guess + n / guess) / 2.0
+            diff = better - guess
+            when diff < 0 { diff = -diff }
+            when diff < 0.000000001 {
+                i = 60
+            } otherwise {
+                guess = better
+                i = i + 1
+            }
+        }
+        yield guess
+    }
+}
+
+method cbrt(n) {
+    when n == 0 {
+        yield 0
+    } otherwise {
+        sign_val = 1
+        val = n
+        when n < 0 {
+            sign_val = -1
+            val = -n
+        }
+        guess = val / 3.0
+        i = 0
+        during i < 80 {
+            better = (2.0 * guess + val / (guess * guess)) / 3.0
+            diff = better - guess
+            when diff < 0 { diff = -diff }
+            when diff < 0.000000001 {
+                i = 80
+            } otherwise {
+                guess = better
+                i = i + 1
+            }
+        }
+        yield sign_val * guess
+    }
+}
+
+method hypot(a, b) {
+    yield sqrt(a * a + b * b)
+}
+
+# --- Rounding & Division ---
+
+method floor(n) {
+    i = Integer(n)
+    when n < 0 and n != i {
+        yield i - 1
+    } otherwise {
+        yield i
+    }
+}
+
+method ceil(n) {
+    i = Integer(n)
+    when n > 0 and n != i {
+        yield i + 1
+    } otherwise {
+        yield i
+    }
+}
+
+method round(n) {
+    when n >= 0 {
+        yield Integer(n + 0.5)
+    } otherwise {
+        yield -Integer(-n + 0.5)
+    }
+}
+
+method clamp(n, lo, hi) {
+    when n < lo { yield lo }
+    orwhen n > hi { yield hi }
+    otherwise { yield n }
+}
+
+method gcd(a, b) {
+    a = _abs(a)
+    b = _abs(b)
+    during b != 0 {
+        temp = b
+        b = a % b
+        a = temp
+    }
+    yield a
+}
+
+method lcm(a, b) {
+    g = gcd(a, b)
+    when g == 0 {
+        yield 0
+    } otherwise {
+        yield _abs(a * b) / g
+    }
+}
+
+# --- Exponentials & Logarithms ---
+
+method exp(n) {
+    # Taylor series: e^x = sum(x^k / k!)
+    result = 1.0
+    term = 1.0
+    i = 1
+    during i <= 60 {
+        term = term * n / i
+        result = result + term
+        diff = term
+        when diff < 0 { diff = -diff }
+        when diff < 0.0000000000001 {
+            i = 61
+        } otherwise {
+            i = i + 1
+        }
+    }
+    yield result
+}
+
+method ln(n) {
+    when n <= 0 {
+        yield error("ln: argument must be positive")
+    } otherwise {
+        # Use identity: ln(n) = ln((n-1)/n * n) converges faster
+        # Halley's method: iterate x = x + 2*(n - e^x)/(n + e^x)
+        x = (n - 1.0) / (n + 1.0)
+        result = 0.0
+        i = 1
+        term = x
+        x2 = x * x
+        during i <= 200 {
+            result = result + term / i
+            term = term * x2
+            i = i + 2
+        }
+        yield 2.0 * result
+    }
+}
+
+method log2(n) {
+    yield ln(n) / ln(2)
+}
+
+method log10(n) {
+    yield ln(n) / ln(10)
+}
+
+method log(n, base) {
+    when base <= 0 or base == 1 {
+        yield error("log: base must be positive and not equal to 1")
+    } otherwise {
+        yield ln(n) / ln(base)
+    }
+}
+
+# --- Trigonometry ---
+# All angles in radians. Use deg_to_rad to convert.
+
+method deg_to_rad(d) {
+    yield d * PI / 180
+}
+
+method rad_to_deg(r) {
+    yield r * 180 / PI
+}
+
+method _normalize_angle(x) {
+    # Reduce x to [-PI, PI] range
+    during x > PI {
+        x = x - TAU
+    }
+    during x < -PI {
+        x = x + TAU
+    }
+    yield x
+}
+
+method sin(x) {
+    x = _normalize_angle(x)
+    # Taylor: sin(x) = x - x^3/3! + x^5/5! - ...
+    result = 0.0
+    term = x
+    x2 = x * x
+    i = 1
+    during i <= 19 {
+        result = result + term
+        term = -term * x2 / ((2 * i) * (2 * i + 1))
+        i = i + 1
+    }
+    yield result
+}
+
+method cos(x) {
+    x = _normalize_angle(x)
+    # Taylor: cos(x) = 1 - x^2/2! + x^4/4! - ...
+    result = 0.0
+    term = 1.0
+    x2 = x * x
+    i = 1
+    during i <= 19 {
+        result = result + term
+        term = -term * x2 / ((2 * i - 1) * (2 * i))
+        i = i + 1
+    }
+    yield result
+}
+
+method tan(x) {
+    c = cos(x)
+    when c == 0 {
+        yield error("tan: undefined at this angle (cos is zero)")
+    } otherwise {
+        yield sin(x) / c
+    }
+}
+
+method asin(x) {
+    when x < -1 or x > 1 {
+        yield error("asin: argument must be in [-1, 1]")
+    } otherwise {
+        # asin(x) = atan(x / sqrt(1 - x^2))
+        yield atan(x / sqrt(1 - x * x))
+    }
+}
+
+method acos(x) {
+    when x < -1 or x > 1 {
+        yield error("acos: argument must be in [-1, 1]")
+    } otherwise {
+        yield PI / 2 - asin(x)
+    }
+}
+
+method atan(x) {
+    # Use identity to reduce range, then Taylor series
+    when x < 0 {
+        yield -atan(-x)
+    } orwhen x > 1 {
+        yield PI / 2 - atan(1.0 / x)
+    } otherwise {
+        result = 0.0
+        term = x
+        x2 = x * x
+        i = 0
+        during i <= 30 {
+            result = result + term / (2 * i + 1)
+            term = -term * x2
+            i = i + 1
+        }
+        yield result
+    }
+}
+
+method atan2(y, x) {
+    when x > 0 {
+        yield atan(y / x)
+    } orwhen x < 0 and y >= 0 {
+        yield atan(y / x) + PI
+    } orwhen x < 0 and y < 0 {
+        yield atan(y / x) - PI
+    } orwhen x == 0 and y > 0 {
+        yield PI / 2
+    } orwhen x == 0 and y < 0 {
+        yield -PI / 2
+    } otherwise {
+        yield error("atan2: both arguments are zero (undefined)")
+    }
+}
+
+# --- Number Theory ---
+
+method factorial(n) {
+    when n < 0 {
+        yield error("factorial: argument must be non-negative")
+    } otherwise {
+        yield _factorial_iter(n)
+    }
+}
+
+method fibonacci(n) {
+    when n < 0 {
+        yield error("fibonacci: argument must be non-negative")
+    } orwhen n == 0 {
+        yield 0
+    } orwhen n == 1 {
+        yield 1
+    } otherwise {
+        a = 0
+        b = 1
+        i = 2
+        during i <= n {
+            temp = a + b
+            a = b
+            b = temp
+            i = i + 1
+        }
+        yield b
+    }
+}
+
+method is_prime(n) {
+    when n < 2 {
+        yield 0
+    } orwhen n == 2 {
+        yield 1
+    } orwhen n % 2 == 0 {
+        yield 0
+    } otherwise {
+        prime = 1
+        i = 3
+        limit = sqrt(n)
+        during i <= limit {
+            when n % i == 0 {
+                prime = 0
+                i = limit + 1
+            } otherwise {
+                i = i + 2
+            }
+        }
+        yield prime
+    }
+}
+
+method is_even(n) {
+    when n % 2 == 0 { yield 1 } otherwise { yield 0 }
+}
+
+method is_odd(n) {
+    when n % 2 != 0 { yield 1 } otherwise { yield 0 }
+}
+
+# --- Geometry ---
 
 method circle_area(r) {
     yield PI * r * r
 }
 
-method absolute(n) {
-    when n < 0 {
-        yield -n
+method circle_perimeter(r) {
+    yield TAU * r
+}
+
+method triangle_area(base, height) {
+    yield 0.5 * base * height
+}
+
+method sphere_volume(r) {
+    yield (4.0 / 3.0) * PI * r * r * r
+}
+
+method cylinder_volume(r, h) {
+    yield PI * r * r * h
+}
+
+# --- Combinatorics ---
+
+method permutations(n, r) {
+    when r > n or r < 0 {
+        yield error("permutations: r must be between 0 and n")
     } otherwise {
-        yield n
+        yield _factorial_iter(n) / _factorial_iter(n - r)
+    }
+}
+
+method combinations(n, r) {
+    when r > n or r < 0 {
+        yield error("combinations: r must be between 0 and n")
+    } otherwise {
+        yield _factorial_iter(n) / (_factorial_iter(r) * _factorial_iter(n - r))
     }
 }

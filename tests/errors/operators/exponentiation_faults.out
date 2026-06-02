@@ -1,0 +1,7 @@
+Error in tests/errors/operators/exponentiation_faults.sad:
+[E5002] Traceback (most recent call last):
+  File tests/errors/operators/exponentiation_faults.sad, line 2, in <program>
+    show(0 ** -1)
+              ^^
+DivisionByZeroError: Division by zero
+  Hint: Check that the divisor is not zero before dividing. Example: `when b != 0 { result = a / b }`

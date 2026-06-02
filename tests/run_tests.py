@@ -4,7 +4,7 @@ import subprocess
 import sys
 
 def run_tests():
-    tests_dir = os.path.join(os.path.dirname(__file__), 'features')
+    tests_dir = os.path.dirname(__file__)
     sards_executable = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'build', 'MissionSardine.exe'))
     if not os.path.exists(sards_executable):
         sards_executable = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'build', 'MissionSardine'))

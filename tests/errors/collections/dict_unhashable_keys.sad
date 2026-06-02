@@ -1,0 +1,7 @@
+# Dict unhashable keys test
+risk {
+    # Verify compile-time validation rejects list key
+    d = { [1, 2]: "value" }
+} trap IllegalOperationError e {
+    show(e.message)
+}

@@ -8,8 +8,8 @@
 
 using namespace std;
 
-class Dict final : public DataType {
-private:
+class Dict final : public DataType, public enable_shared_from_this<Dict> {
+public:
     static string get_dict_key(const shared_ptr<DataType>& key) {
         if (const auto n = dynamic_cast<const Number*>(key.get())) {
             if (holds_alternative<long long>(n->value)) return "I:" + std::to_string(std::get<long long>(n->value));
@@ -25,9 +25,10 @@ public:
     unordered_map<string, shared_ptr<DataType>> elements;
     vector<string> keys_order;
 
-    [[nodiscard]] bool is_dict() const override {
-        return true;
-    }
+    [[nodiscard]] bool is_dict() const override { return true; }
+    [[nodiscard]] string get_type_name() const override { return "Dict"; }
+
+    [[nodiscard]] OperationResult get_attr(const string& attr_name, const shared_ptr<Context>& calling_context) const override;
 
     Dict() = default;
 

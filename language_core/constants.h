@@ -62,6 +62,10 @@ const string T_EOF = "EOF";
 const string T_ERROR = "ERROR";
 const string T_DOT = "DOT";
 
+const int MAX_AST_DEPTH = 60;
+const int MAX_RECURSION_DEPTH = 100;
+inline bool UNBOUNDED_MODE = false;
+
 const vector<string> KEYWORDS = {
     "define", "and", "or", "not","when","orwhen","otherwise","cycle",
     "during","method","yield","escape","proceed", "menu", "choice", "fallback",
@@ -74,5 +78,5 @@ const vector<string> KEYWORDS = {
 const vector<string> ERROR_TYPES = {
     "RunTimeError", "IllegalOperationError", "DivisionByZeroError", "IndexOutOfBoundsError",
     "NameError", "ArgumentError", "InvalidErrorTypeError", "DictKeyError", "NotImplementedError",
-    "AttributeError", "TypeError", "ModuleError"
+    "AttributeError", "TypeError", "ModuleError", "ValueError", "StackDepthExceededError"
 };

@@ -1,3 +1,12 @@
 --- Test: Direct List Unpacking ---
 a should be 100: 100
 b should be 200: 200
+--- Stress Test: Mismatched Unpacking (Too Many LHS Variables) ---
+Caught expected unpack error for too many variables:
+  ValueError: Expected 3 values, but got 2
+--- Stress Test: Mismatched Unpacking (Too Few LHS Variables) ---
+Caught expected unpack error for too few variables:
+  ValueError: Expected 2 values, but got 3
+--- Stress Test: Unpacking a Non-iterable Primitive ---
+Caught expected unpack error on integer:
+  Cannot unpack non-iterable type 'Number'

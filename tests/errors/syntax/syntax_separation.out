@@ -1,0 +1,5 @@
+Error in tests/errors/syntax/syntax_separation.sad:
+  [E2001] File tests/errors/syntax/syntax_separation.sad, line 1
+    a = 1 b = 2
+          ^
+Invalid Syntax Error: Expected newline to separate statements

@@ -1,0 +1,7 @@
+# list_overflow_pop test
+a = [1, 2]
+risk {
+    a.pop(100000000000000000000000000000000000000)
+} trap IndexOutOfBoundsError e {
+    show(e.message)
+}

@@ -1,0 +1,7 @@
+Error in tests/errors/classes_and_functions/function_call_violations.sad:
+[E5001] Traceback (most recent call last):
+  File tests/errors/classes_and_functions/function_call_violations.sad, line 2, in <program>
+    x()
+    ^
+IllegalOperationError: 'Number' object is not callable
+  Hint: Only functions and models (constructors) can be called with '()'.

@@ -1,0 +1,6 @@
+Error in tests/errors/operators/builtin_type_violations.sad:
+[E6001] Traceback (most recent call last):
+  File tests/errors/operators/builtin_type_violations.sad, line 2, in <program>
+    Integer([1, 2])
+    ^^^^^^^^^^^^^^^
+ArgumentError: Argument must be a primitive value (Number or String)

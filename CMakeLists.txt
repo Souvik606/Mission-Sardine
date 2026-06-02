@@ -4,8 +4,13 @@ project(MissionSardine)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(NOT MSVC)
+    add_compile_options(-Wa,-mbig-obj)
+endif()
+
 add_executable(MissionSardine
         shell.cpp
+        data_types/data_type.cpp
         data_types/user_function_type.cpp
         data_types/model_type.cpp
         ast_nodes/string_nodes.h

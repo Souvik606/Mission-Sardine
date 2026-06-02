@@ -14,7 +14,7 @@ public:
     explicit Number(long long val) : value(val) {}
     explicit Number(double val) : value(val) {}
     explicit Number(variant<long long, double> val) : value(std::move(val)) {}
-
+    [[nodiscard]] string get_type_name() const override { return "Number"; }
     // ── Small-integer cache ───────────────────────────────────────────────────
     static constexpr long long CACHE_MIN = -1;
     static constexpr long long CACHE_MAX = 256;
@@ -389,8 +389,17 @@ public:
     [[nodiscard]] string to_string() const override {
         if (holds_alternative<double>(this->value)) {
             double d = get<double>(this->value);
+            char buf[64];
+            auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), d);
+            if (ec == std::errc{}) {
+                string s(buf, ptr - buf);
+                if (s.find('.') == string::npos && s.find('e') == string::npos && s.find('E') == string::npos) {
+                    s += ".0";
+                }
+                return s;
+            }
             ostringstream ss;
-            ss << std::setprecision(16) << d;
+            ss << std::setprecision(17) << d;
             string s = ss.str();
             if (s.find('.') == string::npos && s.find('e') == string::npos && s.find('E') == string::npos) {
                 s += ".0";

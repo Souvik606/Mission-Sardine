@@ -14,3 +14,15 @@ x /= 4 -> 6.0
 x //= 2 -> 3.0
 x %= 2 -> 1.0
 x **= 3 -> 27
+--- Stress Test: Division and Modulo by Zero ---
+Caught integer division by zero:
+  Division by zero
+Caught float division by zero:
+  Division by zero
+Caught integer modulus by zero:
+  Division by zero
+--- Stress Test: Negative and Float Exponentiation ---
+2 ** -3 = 0.125
+9 ** 0.5 = 3.0
+--- Stress Test: Floating Point Modulus ---
+5.5 % 2.1 = 1.2999999999999998

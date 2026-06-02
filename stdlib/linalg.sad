@@ -1,0 +1,966 @@
+# ============================================================
+# linalg.sad — Linear Algebra Standard Library for Sardine
+# ============================================================
+#
+# --- VEC MODEL (Vectors) ---
+#
+#   Construction:
+#     vec(list)            — create a vector from a list of numbers
+#     vec.data             — access the underlying list (open attr)
+#
+#   Information:
+#     v.size()             — number of elements
+#
+#   Arithmetic (operator overloads):
+#     v1 + v2              — element-wise addition
+#     v1 - v2              — element-wise subtraction
+#     v  * scalar          — scalar multiplication
+#     v  * v2              — dot product (returns a Number)
+#     v  ** scalar         — element-wise power
+#     -v                   — negate all elements
+#     v1 == v2             — 1 if equal, 0 otherwise
+#     v1 != v2             — 1 if not equal, 0 otherwise
+#
+#   Math Methods:
+#     v.dot(other)         — dot product with another vector
+#     v.norm()             — Euclidean (L2) magnitude/length
+#     v.norm_l1()          — Manhattan (L1) norm
+#     v.normalize()        — unit vector (direction only, L2 norm = 1)
+#     v.cross(other)       — cross product (3D vectors only)
+#     v.angle(other)       — angle in radians between two vectors
+#     v.project(other)     — projection of v onto other
+#     v.sum()              — sum of all elements
+#     v.mean()             — arithmetic mean of elements
+#     v.min()              — minimum element value
+#     v.max()              — maximum element value
+#     v.scale(scalar)      — same as v * scalar
+#     v.zeros(n)           — create a zero vector of size n
+#     v.ones(n)            — create an all-ones vector of size n
+#
+# --- MAT MODEL (Matrices) ---
+#
+#   Construction:
+#     mat(list_of_lists)   — create a matrix from a 2D list
+#     mat.rows             — access the underlying list of rows (open attr)
+#
+#   Information:
+#     m.shape()            — [rows, cols] as a list
+#     m.is_square()        — 1 if rows == cols, 0 otherwise
+#
+#   Arithmetic (operator overloads):
+#     m1 + m2              — element-wise addition (same shape required)
+#     m1 - m2              — element-wise subtraction
+#     m  * scalar          — scalar multiplication
+#     m  * vec             — matrix-vector product -> vec
+#     m1 * m2              — matrix-matrix product
+#     m  ** n              — matrix power (square matrices, n >= 0)
+#     -m  (via !m)         — matrix inverse (use: not m)
+#     m1 == m2             — 1 if equal element-wise
+#     m1 != m2             — 1 if not equal
+#
+#   Decomposition & Properties:
+#     m.transpose()        — transpose (flip rows and columns)
+#     m.tr()               — trace (sum of diagonal, square only)
+#     m.determinant()      — determinant via cofactor expansion
+#     m.inverse()          — inverse via Gauss-Jordan elimination
+#     m.rank()             — matrix rank via Gaussian elimination
+#     m.frobenius_norm()   — Frobenius norm (sqrt of sum of squares)
+#
+#   Factories:
+#     m.identity(n)        — n×n identity matrix
+#     m.zeros(r, c)        — r×c zero matrix
+#     m.ones(r, c)         — r×c all-ones matrix
+#     m.diagonal(lst)      — diagonal matrix from a list
+#
+# ============================================================
+
+model vec {
+    open attr <data>
+
+    init(values) {
+        data: values
+    }
+
+    # ── Private helpers ───────────────────────────────────────
+    method _len(list) {
+        count = 0
+        trace item <- list {
+            count = count + 1
+        }
+        yield count
+    }
+
+    method _is_number(value) {
+        yield type(value) == "<type Number>"
+    }
+
+    method _sqrt(n) {
+        when n <= 0 { yield 0 } otherwise {
+            guess = n / 2.0
+            i = 0
+            during i < 60 {
+                better = (guess + n / guess) / 2.0
+                diff = better - guess
+                when diff < 0 { diff = -diff }
+                when diff < 0.000000001 { i = 60 }
+                otherwise { guess = better
+                             i = i + 1 }
+            }
+            yield guess
+        }
+    }
+
+    method _acos(x) {
+        # acos via atan: acos(x) = atan(sqrt(1-x^2)/x) with quadrant correction
+        when x == 1 { yield 0 }
+        orwhen x == -1 { yield 3.14159265358979 }
+        orwhen x == 0 { yield 1.5707963267948966 }
+        otherwise {
+            arg = _sqrt(1 - x * x) / x
+            r = _atan(arg)
+            when x < 0 { yield r + 3.14159265358979 }
+            otherwise { yield r }
+        }
+    }
+
+    method _atan(x) {
+        when x < 0 { yield -_atan(-x) }
+        orwhen x > 1 { yield 1.5707963267948966 - _atan(1.0 / x) }
+        otherwise {
+            result = 0.0
+            term = x
+            x2 = x * x
+            i = 0
+            during i <= 30 {
+                result = result + term / (2 * i + 1)
+                term = -term * x2
+                i = i + 1
+            }
+            yield result
+        }
+    }
+
+    # ── Size & validation ──────────────────────────────────────
+    method size() {
+        yield _len(data)
+    }
+
+    method _same_size(other) {
+        yield _len(data) == _len(other.data)
+    }
+
+    # ── Dot product ───────────────────────────────────────────
+    method dot(other) {
+        when not is_a(other, vec) {
+            yield error("dot: argument must be a Vector")
+        } otherwise {
+            when not _same_size(other) {
+                yield error("dot: vectors must have the same size")
+            } otherwise {
+                sum = 0
+                i = 0
+                n = _len(data)
+                during i < n {
+                    sum = sum + data[i] * other.data[i]
+                    i = i + 1
+                }
+                yield sum
+            }
+        }
+    }
+
+    # ── Euclidean (L2) norm ───────────────────────────────────
+    method norm() {
+        sq = 0
+        trace x <- data {
+            sq = sq + x * x
+        }
+        yield _sqrt(sq)
+    }
+
+    # ── Manhattan (L1) norm ───────────────────────────────────
+    method norm_l1() {
+        total = 0
+        trace x <- data {
+            when x < 0 { total = total + (-x) }
+            otherwise  { total = total + x    }
+        }
+        yield total
+    }
+
+    # ── Unit vector ───────────────────────────────────────────
+    method normalize() {
+        n = norm()
+        when n == 0 {
+            yield error("normalize: cannot normalize a zero vector")
+        } otherwise {
+            out = []
+            trace x <- data {
+                out = out + [x / n]
+            }
+            yield vec(out)
+        }
+    }
+
+    # ── Cross product (3D only) ───────────────────────────────
+    method cross(other) {
+        when not is_a(other, vec) {
+            yield error("cross: argument must be a Vector")
+        } otherwise {
+            when _len(data) != 3 or _len(other.data) != 3 {
+                yield error("cross: both vectors must be 3-dimensional")
+            } otherwise {
+                cx = data[1] * other.data[2] - data[2] * other.data[1]
+                cy = data[2] * other.data[0] - data[0] * other.data[2]
+                cz = data[0] * other.data[1] - data[1] * other.data[0]
+                yield vec([cx, cy, cz])
+            }
+        }
+    }
+
+    # ── Angle between two vectors (radians) ───────────────────
+    method angle(other) {
+        when not is_a(other, vec) {
+            yield error("angle: argument must be a Vector")
+        } otherwise {
+            na = norm()
+            nb = other.norm()
+            when na == 0 or nb == 0 {
+                yield error("angle: cannot compute angle with a zero vector")
+            } otherwise {
+                cos_theta = dot(other) / (na * nb)
+                when cos_theta > 1  { cos_theta = 1  }
+                when cos_theta < -1 { cos_theta = -1 }
+                yield _acos(cos_theta)
+            }
+        }
+    }
+
+    # ── Projection of self onto other ─────────────────────────
+    method project(other) {
+        when not is_a(other, vec) {
+            yield error("project: argument must be a Vector")
+        } otherwise {
+            d = dot(other)
+            n2 = other.dot(other)
+            when n2 == 0 {
+                yield error("project: cannot project onto a zero vector")
+            } otherwise {
+                scale_factor = d / n2
+                out = []
+                trace x <- other.data {
+                    out = out + [x * scale_factor]
+                }
+                yield vec(out)
+            }
+        }
+    }
+
+    # ── Aggregates on elements ────────────────────────────────
+    method sum() {
+        total = 0
+        trace x <- data { total = total + x }
+        yield total
+    }
+
+    method mean() {
+        n = _len(data)
+        when n == 0 { yield error("mean: empty vector") }
+        otherwise   { yield sum() / n }
+    }
+
+    method min() {
+        when _len(data) == 0 { yield error("min: empty vector") }
+        otherwise {
+            best = data[0]
+            trace x <- data {
+                when x < best { best = x }
+            }
+            yield best
+        }
+    }
+
+    method max() {
+        when _len(data) == 0 { yield error("max: empty vector") }
+        otherwise {
+            best = data[0]
+            trace x <- data {
+                when x > best { best = x }
+            }
+            yield best
+        }
+    }
+
+    method scale(scalar) {
+        yield __mul__(scalar)
+    }
+
+    # ── Static-style constructors (call on any vec instance) ──
+    method zeros(n) {
+        out = []
+        i = 0
+        during i < n { out = out + [0]
+                          i = i + 1 }
+        yield vec(out)
+    }
+
+    method ones(n) {
+        out = []
+        i = 0
+        during i < n { out = out + [1]
+                          i = i + 1 }
+        yield vec(out)
+    }
+
+    # ── Operator overloads ─────────────────────────────────────
+    method __add__(other) {
+        when not is_a(other, vec) {
+            yield error("vec +: addition requires a Vector")
+        } otherwise {
+            when not _same_size(other) {
+                yield error("vec +: vectors must have the same size")
+            } otherwise {
+                out = []
+                i = 0
+                n = _len(data)
+                during i < n {
+                    out = out + [data[i] + other.data[i]]
+                    i = i + 1
+                }
+                yield vec(out)
+            }
+        }
+    }
+
+    method __sub__(other) {
+        when not is_a(other, vec) {
+            yield error("vec -: subtraction requires a Vector")
+        } otherwise {
+            when not _same_size(other) {
+                yield error("vec -: vectors must have the same size")
+            } otherwise {
+                out = []
+                i = 0
+                n = _len(data)
+                during i < n {
+                    out = out + [data[i] - other.data[i]]
+                    i = i + 1
+                }
+                yield vec(out)
+            }
+        }
+    }
+
+    method __mul__(other) {
+        when _is_number(other) {
+            out = []
+            i = 0
+            n = _len(data)
+            during i < n {
+                out = out + [data[i] * other]
+                i = i + 1
+            }
+            yield vec(out)
+        } orwhen is_a(other, vec) {
+            yield dot(other)
+        } otherwise {
+            yield error("vec *: requires a scalar or Vector")
+        }
+    }
+
+    method __pow__(power) {
+        when not _is_number(power) {
+            yield error("vec **: requires a scalar exponent")
+        } otherwise {
+            out = []
+            i = 0
+            n = _len(data)
+            during i < n {
+                out = out + [data[i] ** power]
+                i = i + 1
+            }
+            yield vec(out)
+        }
+    }
+
+    method __neg__() {
+        out = []
+        i = 0
+        n = _len(data)
+        during i < n {
+            out = out + [-data[i]]
+            i = i + 1
+        }
+        yield vec(out)
+    }
+
+    method __eq__(other) {
+        when not is_a(other, vec) { yield 0 }
+        otherwise {
+            when not _same_size(other) { yield 0 }
+            otherwise {
+                same = 1
+                i = 0
+                n = _len(data)
+                during i < n {
+                    when data[i] != other.data[i] { same = 0 }
+                    i = i + 1
+                }
+                yield same
+            }
+        }
+    }
+
+    method __neq__(other) {
+        yield not (__eq__(other))
+    }
+}
+
+
+model mat {
+    open attr <rows>
+
+    init(values) {
+        rows: values
+    }
+
+    # ── Private helpers ───────────────────────────────────────
+    method _len(list) {
+        count = 0
+        trace item <- list { count = count + 1 }
+        yield count
+    }
+
+    method _is_number(value) {
+        yield type(value) == "<type Number>"
+    }
+
+    method _sqrt(n) {
+        when n <= 0 { yield 0 } otherwise {
+            guess = n / 2.0
+            i = 0
+            during i < 60 {
+                better = (guess + n / guess) / 2.0
+                diff = better - guess
+                when diff < 0 { diff = -diff }
+                when diff < 0.000000001 { i = 60 }
+                otherwise { guess = better
+                             i = i + 1 }
+            }
+            yield guess
+        }
+    }
+
+    method _row_count() {
+        yield _len(rows)
+    }
+
+    method _col_count() {
+        when _row_count() == 0 { yield 0 }
+        otherwise              { yield _len(rows[0]) }
+    }
+
+    method _same_shape(other) {
+        yield _row_count() == other._row_count() and _col_count() == other._col_count()
+    }
+
+    method _dot_list(a, b) {
+        sum = 0
+        i = 0
+        n = _len(a)
+        during i < n {
+            sum = sum + a[i] * b[i]
+            i = i + 1
+        }
+        yield sum
+    }
+
+    method _column(idx) {
+        out = []
+        i = 0
+        r = _row_count()
+        during i < r {
+            out = out + [rows[i][idx]]
+            i = i + 1
+        }
+        yield out
+    }
+
+    method _minor(skip_r, skip_c) {
+        out = []
+        i = 0
+        r = _row_count()
+        c = _col_count()
+        during i < r {
+            when i != skip_r {
+                new_row = []
+                j = 0
+                during j < c {
+                    when j != skip_c {
+                        new_row = new_row + [rows[i][j]]
+                    }
+                    j = j + 1
+                }
+                out = out + [new_row]
+            }
+            i = i + 1
+        }
+        yield mat(out)
+    }
+
+    # ── Information ────────────────────────────────────────────
+
+    method shape() {
+        yield [_row_count(), _col_count()]
+    }
+
+    method is_square() {
+        when _row_count() == _col_count() { yield 1 }
+        otherwise { yield 0 }
+    }
+
+    # ── Decomposition & Properties ────────────────────────────
+
+    method transpose() {
+        out = []
+        r = _row_count()
+        c = _col_count()
+        j = 0
+        during j < c {
+            new_row = []
+            i = 0
+            during i < r {
+                new_row = new_row + [rows[i][j]]
+                i = i + 1
+            }
+            out = out + [new_row]
+            j = j + 1
+        }
+        yield mat(out)
+    }
+
+    method tr() {
+        when _row_count() != _col_count() {
+            yield error("tr: trace requires a square matrix")
+        } otherwise {
+            sum = 0
+            i = 0
+            n = _row_count()
+            during i < n {
+                sum = sum + rows[i][i]
+                i = i + 1
+            }
+            yield sum
+        }
+    }
+
+    method determinant() {
+        r = _row_count()
+        c = _col_count()
+        when r != c {
+            yield error("determinant: requires a square matrix")
+        } otherwise {
+            when r == 0 { yield 0 }
+            orwhen r == 1 { yield rows[0][0] }
+            orwhen r == 2 {
+                yield rows[0][0] * rows[1][1] - rows[0][1] * rows[1][0]
+            } otherwise {
+                det = 0
+                j = 0
+                during j < c {
+                    sign = 1
+                    when j % 2 == 1 { sign = -1 }
+                    det = det + sign * rows[0][j] * _minor(0, j).determinant()
+                    j = j + 1
+                }
+                yield det
+            }
+        }
+    }
+
+    method inverse() {
+        n = _row_count()
+        when n != _col_count() {
+            yield error("inverse: requires a square matrix")
+        } otherwise {
+            aug = []
+            i = 0
+            during i < n {
+                row = []
+                j = 0
+                during j < n { row = row + [rows[i][j]]
+                                  j = j + 1 }
+                j = 0
+                during j < n {
+                    when i == j { row = row + [1] }
+                    otherwise   { row = row + [0] }
+                    j = j + 1
+                }
+                aug = aug + [row]
+                i = i + 1
+            }
+
+            i = 0
+            total = n + n
+            during i < n {
+                pivot = aug[i][i]
+                when pivot == 0 {
+                    swap = -1
+                    k = i + 1
+                    during k < n {
+                        when aug[k][i] != 0 { swap = k }
+                        k = k + 1
+                    }
+                    when swap == -1 {
+                        yield error("inverse: matrix is singular")
+                    } otherwise {
+                        temp = aug[i]
+                        aug[i] = aug[swap]
+                        aug[swap] = temp
+                        pivot = aug[i][i]
+                    }
+                }
+                j = 0
+                during j < total {
+                    aug[i][j] = aug[i][j] / pivot
+                    j = j + 1
+                }
+                r = 0
+                during r < n {
+                    when r != i {
+                        factor = aug[r][i]
+                        j = 0
+                        during j < total {
+                            aug[r][j] = aug[r][j] - factor * aug[i][j]
+                            j = j + 1
+                        }
+                    }
+                    r = r + 1
+                }
+                i = i + 1
+            }
+
+            inv = []
+            i = 0
+            during i < n {
+                row = []
+                j = 0
+                during j < n {
+                    row = row + [aug[i][j + n]]
+                    j = j + 1
+                }
+                inv = inv + [row]
+                i = i + 1
+            }
+            yield mat(inv)
+        }
+    }
+
+    # ── Rank via Gaussian elimination ─────────────────────────
+    method rank() {
+        r = _row_count()
+        c = _col_count()
+        # Work on a copy
+        m = []
+        i = 0
+        during i < r {
+            new_row = []
+            j = 0
+            during j < c {
+                new_row = new_row + [rows[i][j]]
+                j = j + 1
+            }
+            m = m + [new_row]
+            i = i + 1
+        }
+
+        rk = 0
+        col = 0
+        row_ptr = 0
+        during col < c and row_ptr < r {
+            # Find pivot in this column
+            pivot_row = -1
+            k = row_ptr
+            during k < r {
+                diff = m[k][col]
+                when diff < 0 { diff = -diff }
+                when diff > 0.0000001 and pivot_row == -1 {
+                    pivot_row = k
+                }
+                k = k + 1
+            }
+            when pivot_row == -1 {
+                col = col + 1
+            } otherwise {
+                # Swap pivot row into position
+                temp = m[row_ptr]
+                m[row_ptr] = m[pivot_row]
+                m[pivot_row] = temp
+
+                # Eliminate below
+                k = row_ptr + 1
+                during k < r {
+                    factor = m[k][col] / m[row_ptr][col]
+                    j = col
+                    during j < c {
+                        m[k][j] = m[k][j] - factor * m[row_ptr][j]
+                        j = j + 1
+                    }
+                    k = k + 1
+                }
+                rk = rk + 1
+                row_ptr = row_ptr + 1
+                col = col + 1
+            }
+        }
+        yield rk
+    }
+
+    # ── Frobenius norm ────────────────────────────────────────
+    method frobenius_norm() {
+        sq = 0
+        trace row <- rows {
+            trace x <- row {
+                sq = sq + x * x
+            }
+        }
+        yield _sqrt(sq)
+    }
+
+    # ── Factories ─────────────────────────────────────────────
+
+    method identity(n) {
+        when not _is_number(n) {
+            yield error("identity: requires a scalar size")
+        } otherwise {
+            out = []
+            i = 0
+            during i < n {
+                row = []
+                j = 0
+                during j < n {
+                    when i == j { row = row + [1] }
+                    otherwise   { row = row + [0] }
+                    j = j + 1
+                }
+                out = out + [row]
+                i = i + 1
+            }
+            yield mat(out)
+        }
+    }
+
+    method zeros(r, c) {
+        out = []
+        i = 0
+        during i < r {
+            row = []
+            j = 0
+            during j < c {
+                row = row + [0]
+                j = j + 1
+            }
+            out = out + [row]
+            i = i + 1
+        }
+        yield mat(out)
+    }
+
+    method ones(r, c) {
+        out = []
+        i = 0
+        during i < r {
+            row = []
+            j = 0
+            during j < c {
+                row = row + [1]
+                j = j + 1
+            }
+            out = out + [row]
+            i = i + 1
+        }
+        yield mat(out)
+    }
+
+    method diagonal(lst) {
+        n = _len(lst)
+        out = []
+        i = 0
+        during i < n {
+            row = []
+            j = 0
+            during j < n {
+                when i == j { row = row + [lst[i]] }
+                otherwise   { row = row + [0] }
+                j = j + 1
+            }
+            out = out + [row]
+            i = i + 1
+        }
+        yield mat(out)
+    }
+
+    # ── Operator overloads ─────────────────────────────────────
+
+    method __not__() {
+        yield inverse()
+    }
+
+    method __add__(other) {
+        when not is_a(other, mat) {
+            yield error("mat +: addition requires a Matrix")
+        } otherwise {
+            when not _same_shape(other) {
+                yield error("mat +: matrices must have the same shape")
+            } otherwise {
+                out = []
+                r = _row_count()
+                c = _col_count()
+                i = 0
+                during i < r {
+                    row = []
+                    j = 0
+                    during j < c {
+                        row = row + [rows[i][j] + other.rows[i][j]]
+                        j = j + 1
+                    }
+                    out = out + [row]
+                    i = i + 1
+                }
+                yield mat(out)
+            }
+        }
+    }
+
+    method __sub__(other) {
+        when not is_a(other, mat) {
+            yield error("mat -: subtraction requires a Matrix")
+        } otherwise {
+            when not _same_shape(other) {
+                yield error("mat -: matrices must have the same shape")
+            } otherwise {
+                out = []
+                r = _row_count()
+                c = _col_count()
+                i = 0
+                during i < r {
+                    row = []
+                    j = 0
+                    during j < c {
+                        row = row + [rows[i][j] - other.rows[i][j]]
+                        j = j + 1
+                    }
+                    out = out + [row]
+                    i = i + 1
+                }
+                yield mat(out)
+            }
+        }
+    }
+
+    method __mul__(other) {
+        when _is_number(other) {
+            out = []
+            r = _row_count()
+            c = _col_count()
+            i = 0
+            during i < r {
+                row = []
+                j = 0
+                during j < c {
+                    row = row + [rows[i][j] * other]
+                    j = j + 1
+                }
+                out = out + [row]
+                i = i + 1
+            }
+            yield mat(out)
+        } orwhen is_a(other, vec) {
+            when _col_count() != other.size() {
+                yield error("mat * vec: column count must match vector size")
+            } otherwise {
+                out = []
+                r = _row_count()
+                i = 0
+                during i < r {
+                    out = out + [_dot_list(rows[i], other.data)]
+                    i = i + 1
+                }
+                yield vec(out)
+            }
+        } orwhen is_a(other, mat) {
+            when _col_count() != other._row_count() {
+                yield error("mat * mat: left columns must equal right rows")
+            } otherwise {
+                out = []
+                r = _row_count()
+                c = other._col_count()
+                i = 0
+                during i < r {
+                    row = []
+                    j = 0
+                    during j < c {
+                        row = row + [_dot_list(rows[i], other._column(j))]
+                        j = j + 1
+                    }
+                    out = out + [row]
+                    i = i + 1
+                }
+                yield mat(out)
+            }
+        } otherwise {
+            yield error("mat *: requires a scalar, Vector, or Matrix")
+        }
+    }
+
+    method __pow__(power) {
+        when not _is_number(power) {
+            yield error("mat **: requires a scalar exponent")
+        } otherwise {
+            when _row_count() != _col_count() {
+                yield error("mat **: power requires a square matrix")
+            } otherwise {
+                power_int = Integer(power)
+                when power_int != power {
+                    yield error("mat **: exponent must be an integer")
+                } orwhen power_int < 0 {
+                    yield error("mat **: exponent cannot be negative (use inverse first)")
+                } otherwise {
+                    result = identity(_row_count())
+                    i = 0
+                    during i < power_int {
+                        result = result * mat(rows)
+                        i = i + 1
+                    }
+                    yield result
+                }
+            }
+        }
+    }
+
+    method __eq__(other) {
+        when not is_a(other, mat) { yield 0 }
+        otherwise {
+            when not _same_shape(other) { yield 0 }
+            otherwise {
+                same = 1
+                r = _row_count()
+                c = _col_count()
+                i = 0
+                during i < r {
+                    j = 0
+                    during j < c {
+                        when rows[i][j] != other.rows[i][j] { same = 0 }
+                        j = j + 1
+                    }
+                    i = i + 1
+                }
+                yield same
+            }
+        }
+    }
+
+    method __neq__(other) {
+        yield not (__eq__(other))
+    }
+}

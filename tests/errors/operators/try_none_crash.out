@@ -1,0 +1,5 @@
+Error in tests/errors/operators/try_none_crash.sad:
+  [E2001] File tests/errors/operators/try_none_crash.sad, line 1
+    x = risk {
+        ^^^^
+Invalid Syntax Error: Expected an expression (value, variable, '(', '[', '{', or operator)

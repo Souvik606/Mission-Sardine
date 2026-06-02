@@ -1,0 +1,92 @@
+--- linalg stdlib: vec and mat ---
+--- vec operations ---
+[5, 7, 9]
+[3, 3, 3]
+32
+[2, 4, 6]
+[1, 4, 9]
+32
+0
+1
+[-1, -2, -3]
+--- vec new methods ---
+v3 size      : 3
+v3 L2 norm   : 5.0
+v3 L1 norm   : 7
+v3 normalized: [0.6, -0.8, 0]
+v3 sum       : -1
+v3 mean      : -0.3333
+v3 min       : -4
+v3 max       : 3
+v3 scale(3.5): [10.5, -14, 0]
+va cross vb  : [0, 0, 1]
+va angle vb  : 1.5708
+va project vb: [0, 0, 0]
+vec.zeros(4) : [0, 0, 0, 0]
+vec.ones(3)  : [1, 1, 1]
+--- vec invalid ops ---
+Caught expected error: [E5001] Traceback (most recent call last):
+  File sards/stdlib/linalg.sad, line 316, in <program>
+        method __add__(other) {
+               ^^^^^^^^^^^^^^^^
+  File sards/stdlib/linalg.sad, line 321, in method __add__
+                    yield error("vec +: vectors must have the same size")
+                          ^
+IllegalOperationError: vec +: vectors must have the same size
+Caught expected sub mismatch error
+Caught expected mul invalid type error
+Caught expected pow invalid type error
+Caught expected normalize zero vector error
+Caught expected cross product size error
+Caught expected angle size error
+Caught expected project onto zero vector error
+--- mat operations ---
+[[58, 64], [139, 154]]
+[[2, 4, 6], [8, 10, 12]]
+[14, 32]
+--- mat methods ---
+[[1, 4], [2, 5], [3, 6]]
+2
+1
+[[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+[[-24, 18, 5], [20, -15, -4], [-5, 4, 1]]
+--- mat new methods ---
+m3 shape       : [3, 3]
+m3 is_square   : 1
+m1 is_square   : 0
+m3 rank        : 3
+m3 frob norm   : 9.5917
+mat.zeros(2,3) : [[0, 0, 0], [0, 0, 0]]
+mat.ones(3,2)  : [[1, 1], [1, 1], [1, 1]]
+mat.diagonal   : [[2, 0, 0], [0, 5, 0], [0, 0, 9]]
+m3 ** 0        : [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+m3 ** 2        : [[16, 22, 11], [20, 25, 4], [5, 16, 39]]
+--- mat invalid ops ---
+Caught expected error: [E5001] Traceback (most recent call last):
+  File sards/stdlib/linalg.sad, line 809, in <program>
+        method __add__(other) {
+               ^^^^^^^^^^^^^^^^
+  File sards/stdlib/linalg.sad, line 814, in method __add__
+                    yield error("mat +: matrices must have the same shape")
+                          ^
+IllegalOperationError: mat +: matrices must have the same shape
+Caught expected error: [E5001] Traceback (most recent call last):
+  File sards/stdlib/linalg.sad, line 861, in <program>
+        method __mul__(other) {
+               ^^^^^^^^^^^^^^^^
+  File sards/stdlib/linalg.sad, line 880, in method __mul__
+                    yield error("mat * vec: column count must match vector size")
+                          ^
+IllegalOperationError: mat * vec: column count must match vector size
+Caught expected error: [E5001] Traceback (most recent call last):
+  File sards/stdlib/linalg.sad, line 806, in <program>
+            yield inverse()
+                  ^^^^^^^^^
+  File sards/stdlib/linalg.sad, line 584, in method inverse
+                yield error("inverse: requires a square matrix")
+                      ^
+IllegalOperationError: inverse: requires a square matrix
+Caught expected sub mismatch error
+Caught expected power non-square error
+Caught expected power non-integer error
+Caught expected power negative exponent error

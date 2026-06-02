@@ -32,3 +32,32 @@ show("x %= 2 ->", x)
 x = 3
 x **= 3
 show("x **= 3 ->", x)
+
+show("--- Stress Test: Division and Modulo by Zero ---")
+risk {
+    val = 100 / 0
+} trap DivisionByZeroError e {
+    show("Caught integer division by zero:")
+    show("  " + e.message)
+}
+
+risk {
+    val = 100.5 / 0.0
+} trap DivisionByZeroError e {
+    show("Caught float division by zero:")
+    show("  " + e.message)
+}
+
+risk {
+    val = 100 % 0
+} trap DivisionByZeroError e {
+    show("Caught integer modulus by zero:")
+    show("  " + e.message)
+}
+
+show("--- Stress Test: Negative and Float Exponentiation ---")
+show("2 ** -3 =", 2 ** -3)
+show("9 ** 0.5 =", 9 ** 0.5)
+
+show("--- Stress Test: Floating Point Modulus ---")
+show("5.5 % 2.1 =", 5.5 % 2.1)

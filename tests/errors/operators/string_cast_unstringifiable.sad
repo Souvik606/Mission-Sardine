@@ -1,0 +1,4 @@
+# string_cast_unstringifiable test
+model Dummy {}
+d = Dummy()
+show(String(d))

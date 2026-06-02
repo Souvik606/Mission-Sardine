@@ -4,7 +4,7 @@
 --- Multiplication ---
 ['a', 'b', 'a', 'b', 'a', 'b']
 --- Illegal Operations ---
-Caught expected error: Traceback (most recent call last):
+Caught expected error: [E5001] Traceback (most recent call last):
   File tests/features/operations/list_operations.sad, line 14, in <program>
         show([1, 2] - [3])
                       ^^^^

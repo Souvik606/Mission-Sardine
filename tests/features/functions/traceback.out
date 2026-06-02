@@ -5,7 +5,7 @@ Inside closure.
 Inside deepest_func. Executing callback...
 Inside failing_func. About to crash...
 Error in tests/features/functions/traceback.sad:
-Traceback (most recent call last):
+[E5002] Traceback (most recent call last):
   File tests/features/functions/traceback.sad, line 40, in <program>
     start_process()
     ^^^^^^^^^^^^^^^
@@ -25,3 +25,4 @@ Traceback (most recent call last):
         yield x / 0
                   ^
 DivisionByZeroError: Division by zero
+  Hint: Check that the divisor is not zero before dividing. Example: `when b != 0 { result = a / b }`

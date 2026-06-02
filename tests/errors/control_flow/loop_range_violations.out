@@ -1,0 +1,6 @@
+Error in tests/errors/control_flow/loop_range_violations.sad:
+[E4001] Traceback (most recent call last):
+  File tests/errors/control_flow/loop_range_violations.sad, line 2, in <program>
+    cycle i = foo : 10 {}
+              ^^^
+TypeError: Loop start value must be a Number, not 'Function'

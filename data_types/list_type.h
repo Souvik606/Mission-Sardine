@@ -9,7 +9,7 @@ using namespace std;
 
 
 
-class List final : public DataType {
+class List final : public DataType, public enable_shared_from_this<List> {
 public:
     vector<shared_ptr<DataType>> elements;
 
@@ -18,6 +18,10 @@ public:
         set_pos();
         set_context();
     }
+
+    [[nodiscard]] string get_type_name() const override { return "List"; }
+
+    [[nodiscard]] OperationResult get_attr(const string& attr_name, const shared_ptr<Context>& calling_context) const override;
 
     [[nodiscard]] shared_ptr<DataType> copy() const override {
         auto new_list = make_shared<List>(this->elements);
@@ -238,7 +242,7 @@ public:
             new_list->set_context(this->context);
             return std::make_pair(std::static_pointer_cast<DataType>(new_list), nullptr);
         }
-        return std::make_pair(nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Cannot add List and " + operand->to_string(), context));
+        return std::make_pair(nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Cannot add '" + operand->get_type_name() + "' to a List", context));
     }
 
     [[nodiscard]] OperationResult subtract(const shared_ptr<DataType>& operand) const override {

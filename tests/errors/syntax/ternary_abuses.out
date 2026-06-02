@@ -1,0 +1,5 @@
+Error in tests/errors/syntax/ternary_abuses.sad:
+  [E2001] File tests/errors/syntax/ternary_abuses.sad, line 1
+    val = (10 > 5) ? 1
+                      ^
+Invalid Syntax Error: Expected ':' 

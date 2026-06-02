@@ -1,0 +1,6 @@
+# comprehension_limit test
+risk {
+    [i cycle i = 0 : 100000]
+} trap ValueError e {
+    show(e.message)
+}

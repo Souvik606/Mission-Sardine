@@ -1,0 +1,7 @@
+Error in tests/errors/collections/list_dict_key_error.sad:
+[E7003] Traceback (most recent call last):
+  File tests/errors/collections/list_dict_key_error.sad, line 2, in <program>
+    show(l[0]["y"])
+              ^^^
+DictKeyError: Key does not exist
+  Hint: Check whether the key exists before accessing it.
