@@ -351,6 +351,11 @@ void run_file(const string& filepath) {
     }
 }
 
+#ifdef __EMSCRIPTEN__
+int main() {
+    return 0;
+}
+#else
 int main(int argc, char* argv[]) {
     global_symbol_table->set("None", make_shared<Number>(0LL));
     global_symbol_table->set("null", make_shared<Number>(0LL));
@@ -407,3 +412,34 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
+#endif
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+
+extern "C" {
+    EMSCRIPTEN_KEEPALIVE
+    void run_interpreter(const char* raw_code) {
+        // Reset and rebuild the global symbol table for a fresh execution context
+        global_symbol_table = make_shared<SymbolTable>();
+        global_symbol_table->set("None", make_shared<Number>(0LL));
+        global_symbol_table->set("null", make_shared<Number>(0LL));
+        global_symbol_table->set("True", make_shared<Number>(1LL));
+        global_symbol_table->set("False", make_shared<Number>(0LL));
+
+        global_symbol_table->set("show", make_shared<BuiltInFunction>("show", builtin_show));
+        global_symbol_table->set("listen", make_shared<BuiltInFunction>("listen", builtin_listen));
+        global_symbol_table->set("type", make_shared<BuiltInFunction>("type", builtin_type));
+        global_symbol_table->set("Integer", make_shared<BuiltInFunction>("Integer", builtin_integer));
+        global_symbol_table->set("String", make_shared<BuiltInFunction>("String", builtin_string));
+        global_symbol_table->set("super", make_shared<BuiltInFunction>("super", builtin_super));
+        global_symbol_table->set("is_a", make_shared<BuiltInFunction>("is_a", builtin_is_a));
+
+        string code(raw_code);
+        RunResult r = run("<stdin>", code);
+        if (r.error) {
+            cout << r.error->to_string() << "\n";
+        }
+    }
+}
+#endif

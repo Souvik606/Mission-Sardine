@@ -427,7 +427,7 @@ public:
         vector<Token> tokens;
         while (current_char.has_value()) {
             char c = current_char.value();
-            if (c == ' ' || c == '\t') {
+            if (c == ' ' || c == '\t' || c == '\r') {
                 advance();
             }
             else if (c == ';') {
