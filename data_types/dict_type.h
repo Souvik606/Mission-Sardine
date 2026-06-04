@@ -3,7 +3,6 @@
 #include "data_type.h"
 #include "number_type.h"
 #include "string_type.h"
-#include "list_type.h"
 #include "../language_core/error.h"
 
 using namespace std;

@@ -6,7 +6,6 @@
 #include "list_type.h"
 #include "dict_type.h"
 #include "../language_core/error.h"
-#include "../language_core/constants.h"
 
 using namespace std;
 

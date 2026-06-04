@@ -2,6 +2,7 @@
 #include <string>
 #include <memory>
 #include "data_type.h"
+#include "number_type.h"
 #include "../language_core/symbol_table.h"
 #include "../language_core/error.h"
 
@@ -39,7 +40,7 @@ public:
         return "<module '" + name + "'>";
     }
 
-    OperationResult get_attr(const string& attr_name, const shared_ptr<Context>& calling_context) const {
+    [[nodiscard]] OperationResult get_attr(const string& attr_name, const shared_ptr<Context>& calling_context) const override {
         auto value = symbol_table->get(attr_name);
         if (!value) {
             return { nullptr, make_shared<AttributeError>(
