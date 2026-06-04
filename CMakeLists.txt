@@ -4,7 +4,7 @@ project(MissionSardine)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if(NOT MSVC)
+if(WIN32 AND NOT MSVC)
     add_compile_options(-Wa,-mbig-obj)
 endif()
 
