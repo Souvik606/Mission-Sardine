@@ -1,0 +1,14 @@
+show("--- Dict Comprehensions: cycle ---")
+show({i : i * i cycle i = 1 : 4})
+show({i : i * 10 cycle i = 1 : 6 when i % 2 == 1})
+show({i : i * i cycle i = 1 : 3})
+
+show("--- Dict Comprehensions: trace ---")
+nums = [1, 2, 3]
+show({x : x * x trace x <- nums})
+
+pairs = [["a", 1], ["b", 2], ["c", 3]]
+show({k : v trace k, v <- pairs})
+
+nums2 = [1, 2, 3, 4]
+show({x : x * 2 trace x <- nums2 when x > 2})

@@ -1,0 +1,2 @@
+method foo() {}
+cycle i = foo : 10 {}

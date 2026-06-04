@@ -1,0 +1,6 @@
+Error in tests/errors/control_flow/control_flow_abuses.sad:
+[E9001] Traceback (most recent call last):
+  File tests/errors/control_flow/control_flow_abuses.sad, line 4, in <program>
+        choice 1 { show("B") }
+               ^
+RunTimeError: Duplicate choice '1' in menu

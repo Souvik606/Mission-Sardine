@@ -45,7 +45,7 @@ public:
         return "<super of " + owner_class->name + ">";
     }
 
-    OperationResult get_attr(const string& name, const shared_ptr<Context>& calling_context) const {
+    [[nodiscard]] OperationResult get_attr(const string& name, const shared_ptr<Context>& calling_context) const override {
         for (const auto& parent : owner_class->parents) {
             const MethodInfo* mi = parent->find_method(name);
             if (mi) {

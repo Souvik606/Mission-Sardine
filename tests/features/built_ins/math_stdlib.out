@@ -1,0 +1,104 @@
+--- math stdlib: constants ---
+PI : 3.1416
+E  : 2.7183
+TAU: 6.2832
+PHI: 1.618
+INF: 999999999999999
+--- math stdlib: basic operations ---
+abs(5)        : 5
+abs(-7.5)     : 7.5
+absolute(-3)  : 3
+sign(-12)     : -1
+sign(0)       : 0
+sign(4.2)     : 1
+square(4)     : 16
+square(-2.5)  : 6.25
+cube(3)       : 27
+cube(-2)      : -8
+pow(2, 5)     : 32
+pow(1.5, 3)   : 3.375
+pow(4, 0)     : 1
+pow(2, -3)    : 0.125
+sqrt(16)      : 4.0
+sqrt(2)       : 1.4142
+sqrt(0)       : 0
+cbrt(27)      : 3.0
+cbrt(-8)      : -2
+cbrt(0)       : 0
+hypot(3, 4)   : 5.0
+hypot(5, 12)  : 13
+--- math stdlib: rounding & division ---
+floor(3.7)    : 3
+floor(-2.3)   : -3
+floor(5)      : 5
+ceil(3.2)     : 4
+ceil(-2.7)    : -2
+ceil(5)       : 5
+round(3.4)    : 3
+round(3.6)    : 4
+round(-2.5)   : -3
+round(-2.4)   : -2
+clamp(5, 1, 10) : 5
+clamp(0, 1, 10) : 1
+clamp(12, 1, 10): 10
+gcd(12, 18)   : 6
+gcd(-6, 9)    : 3
+lcm(12, 18)   : 36
+lcm(0, 5)     : 0
+--- math stdlib: exponentials & logarithms ---
+exp(0)        : 1
+exp(1)        : 2.7183
+exp(-1)       : 0.3679
+ln(m.E)       : 1.0
+ln(1)         : 0
+log2(8)       : 3.0
+log10(100)    : 1.9984
+log(27, 3)    : 3.0
+--- math stdlib: trigonometry ---
+sin(0)        : 0
+sin(m.PI/2)   : 1.0
+cos(0)        : 1
+cos(m.PI)     : -1
+tan(0)        : 0
+tan(m.PI/4)   : 1.0
+asin(0.5)     : 0.5236
+acos(0.5)     : 1.0472
+atan(1)       : 0.7935
+atan2(1, 1)   : 0.7935
+atan2(-1, 0)  : -1.5708
+deg_to_rad(90): 1.5708
+rad_to_deg(m.PI/6): 30
+--- math stdlib: number theory ---
+factorial(5)  : 120
+factorial(0)  : 1
+fibonacci(0)  : 0
+fibonacci(1)  : 1
+fibonacci(10) : 55
+is_prime(2)   : 1
+is_prime(17)  : 1
+is_prime(4)   : 0
+is_prime(1)   : 0
+is_even(6)    : 1
+is_even(7)    : 0
+is_odd(6)     : 0
+is_odd(7)     : 1
+--- math stdlib: geometry ---
+circle_area(3.0)      : 28.2743
+circle_perimeter(2.5) : 15.708
+triangle_area(4, 5)   : 10
+sphere_volume(1.5)    : 14.1372
+cylinder_volume(2, 3) : 37.6991
+--- math stdlib: combinatorics ---
+permutations(5, 2)  : 20
+combinations(5, 2)  : 10
+--- math stdlib: error handling ---
+Caught sqrt(-1) error
+Caught ln(0) error
+Caught log with base 1 error
+Caught asin(2.5) error
+Caught acos(-1.5) error
+Caught atan2(0,0) error
+Caught negative factorial error
+Caught negative fibonacci error
+Caught permutations r > n error
+Caught combinations r < 0 error

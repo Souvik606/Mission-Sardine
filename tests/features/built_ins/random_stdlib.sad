@@ -1,0 +1,126 @@
+# ============================================================
+# random_stdlib.sad — Comprehensive tests for random.sad
+# ============================================================
+
+summon random as r
+
+summon test_utils as tu
+
+method rf(x) {
+    yield tu.rf(x)
+}
+
+show("--- random stdlib: instantiation & seeding ---")
+# Create seeded generator
+rng = r.rng(42)
+show("RNG initialized with seed 42")
+
+show("--- random stdlib: float & integer generation ---")
+show("rand() call 1       :", rf(rng.rand()))
+show("rand() call 2       :", rf(rng.rand()))
+show("rand_nonzero()      :", rf(rng.rand_nonzero()))
+show("uniform(10.0, 20.0) :", rf(rng.uniform(10.0, 20.0)))
+show("uniform(-5.0, 5.0)  :", rf(rng.uniform(-5.0, 5.0)))
+show("randint(1, 6)       :", rf(rng.randint(1, 6)))
+show("randint(100, 200)   :", rf(rng.randint(100, 200)))
+
+show("--- random stdlib: coin flip & dice ---")
+show("coin_flip() call 1  :", rf(rng.coin_flip()))
+show("coin_flip() call 2  :", rf(rng.coin_flip()))
+show("coin_flip() call 3  :", rf(rng.coin_flip()))
+show("roll_dice(6)        :", rf(rng.roll_dice(6)))
+show("roll_dice(20)       :", rf(rng.roll_dice(20)))
+show("roll_dice_n(6, 5)   :", rf(rng.roll_dice_n(6, 5)))
+
+show("--- random stdlib: list selections ---")
+lst = ["apple", "banana", "cherry", "date", "fig"]
+show("List                :", lst)
+show("pick(lst) call 1    :", rf(rng.pick(lst)))
+show("pick(lst) call 2    :", rf(rng.pick(lst)))
+show("picks(lst, 3)       :", rf(rng.picks(lst, 3)))
+show("draw(lst, 3)        :", rf(rng.draw(lst, 3)))
+show("shuffle(lst)        :", rf(rng.shuffle(lst)))
+show("randlist(6, 1, 10)  :", rf(rng.randlist(6, 1, 10)))
+show("rand_floats(4)      :", rf(rng.rand_floats(4)))
+
+show("--- random stdlib: weighted pick ---")
+items = ["silver", "gold", "platinum"]
+weights = [10, 3, 1]
+show("weighted_pick       :", rf(rng.weighted_pick(items, weights)))
+show("weighted_pick again :", rf(rng.weighted_pick(items, weights)))
+
+show("--- random stdlib: distributions ---")
+show("bernoulli(0.3)      :", rf(rng.bernoulli(0.3)))
+show("bernoulli(0.8)      :", rf(rng.bernoulli(0.8)))
+show("geometric(0.5)      :", rf(rng.geometric(0.5)))
+show("geometric(0.2)      :", rf(rng.geometric(0.2)))
+
+show("--- random stdlib: reseeding & reproducibility ---")
+rng.reseed(999)
+val1 = rng.randlist(5, 1, 100)
+rng.reseed(999)
+val2 = rng.randlist(5, 1, 100)
+show("Seeded 999 series 1 :", rf(val1))
+show("Seeded 999 series 2 :", rf(val2))
+show("Series are equal    :", val1 == val2)
+
+show("--- random stdlib: error handling ---")
+risk {
+    bad = rng.pick([])
+} trap RunTimeError e {
+    show("Caught empty list pick error")
+}
+
+risk {
+    bad = rng.picks([], 2)
+} trap RunTimeError e {
+    show("Caught empty list picks error")
+}
+
+risk {
+    bad = rng.draw(lst, 10)
+} trap RunTimeError e {
+    show("Caught draw k > len error")
+}
+
+risk {
+    bad = rng.draw(lst, -1)
+} trap RunTimeError e {
+    show("Caught draw negative k error")
+}
+
+risk {
+    bad = rng.weighted_pick([], weights)
+} trap RunTimeError e {
+    show("Caught weighted_pick empty items error")
+}
+
+risk {
+    bad = rng.weighted_pick(items, [1, 2])
+} trap RunTimeError e {
+    show("Caught weighted_pick length mismatch error")
+}
+
+risk {
+    bad = rng.roll_dice(1)
+} trap RunTimeError e {
+    show("Caught roll_dice < 2 sides error")
+}
+
+risk {
+    bad = rng.roll_dice_n(1, 3)
+} trap RunTimeError e {
+    show("Caught roll_dice_n < 2 sides error")
+}
+
+risk {
+    bad = rng.bernoulli(1.5)
+} trap RunTimeError e {
+    show("Caught bernoulli p > 1 error")
+}
+
+risk {
+    bad = rng.geometric(0)
+} trap RunTimeError e {
+    show("Caught geometric p <= 0 error")
+}

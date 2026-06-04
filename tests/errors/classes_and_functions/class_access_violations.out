@@ -1,0 +1,7 @@
+Error in tests/errors/classes_and_functions/class_access_violations.sad:
+[E7002] Traceback (most recent call last):
+  File tests/errors/classes_and_functions/class_access_violations.sad, line 8, in <program>
+    show(a.balance)
+         ^
+AttributeError: Cannot access secret attribute 'balance'
+  Hint: 'secret' attributes can only be accessed within the model that defines them.

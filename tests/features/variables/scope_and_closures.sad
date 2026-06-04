@@ -1,0 +1,41 @@
+show("--- Test: Variable Scope and Closures ---")
+
+show("--- Variable Shadowing ---")
+x = 10
+show("Global x initially:", x)
+
+method shadow_test() {
+    x = 20
+    show("Inside shadow_test, local x:", x)
+}
+
+shadow_test()
+show("Global x after shadow_test:", x)
+
+show("--- Read-only Closure ---")
+method make_adder(increment) {
+    yield method(val) {
+        yield val + increment
+    }
+}
+
+add_five = make_adder(5)
+add_ten = make_adder(10)
+
+show("add_five(3):", add_five(3))
+show("add_ten(3):", add_ten(3))
+
+show("--- Closure Shadowing on Assignment ---")
+# Assigning to a variable inside an inner closure shadows it locally 
+# rather than mutating the outer lexical variable.
+method make_counter() {
+    count = 100
+    yield method() {
+        count = count + 1
+        yield count
+    }
+}
+
+counter1 = make_counter()
+show("counter1 call 1:", counter1())
+show("counter1 call 2:", counter1())

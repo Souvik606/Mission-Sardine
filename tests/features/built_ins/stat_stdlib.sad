@@ -1,0 +1,164 @@
+# ============================================================
+# stat_stdlib.sad — Comprehensive tests for stat.sad
+# ============================================================
+
+summon stat as s
+
+summon test_utils as tu
+
+method rf(x) {
+    yield tu.rf(x)
+}
+
+show("--- stat stdlib: univariate statistics ---")
+data1 = [2, 4, 4, 4, 5, 5, 7, 9]
+show("Data 1:", data1)
+show("range(data1)          :", rf(s.range(data1)))
+show("mean(data1)           :", rf(s.mean(data1)))
+show("geometric_mean([2,8]) :", rf(s.geometric_mean([2, 8])))
+show("harmonic_mean([2,4])  :", rf(s.harmonic_mean([2, 4])))
+show("median(data1)         :", rf(s.median(data1)))
+show("mode(data1)           :", rf(s.mode(data1)))
+show("variance(data1)       :", rf(s.variance(data1)))
+show("variance_s(data1)     :", rf(s.variance_s(data1)))
+show("stddev(data1)         :", rf(s.stddev(data1)))
+show("stddev_s(data1)       :", rf(s.stddev_s(data1)))
+
+show("--- stat stdlib: normalization & percentiles ---")
+show("zscore(data1)         :", rf(s.zscore(data1)))
+show("normalize(data1)      :", rf(s.normalize(data1)))
+show("percentile(data1, 25) :", rf(s.percentile(data1, 25)))
+show("percentile(data1, 50) :", rf(s.percentile(data1, 50)))
+show("percentile(data1, 75) :", rf(s.percentile(data1, 75)))
+show("quartiles(data1)      :", rf(s.quartiles(data1)))
+show("iqr(data1)            :", rf(s.iqr(data1)))
+
+show("--- stat stdlib: bivariate statistics ---")
+xs = [1, 2, 3, 4, 5]
+ys = [1, 3, 2, 5, 4]
+show("XS:", xs)
+show("YS:", ys)
+show("covariance(xs, ys)    :", rf(s.covariance(xs, ys)))
+show("covariance_s(xs, ys)  :", rf(s.covariance_s(xs, ys)))
+show("correlation(xs, ys)   :", rf(s.correlation(xs, ys)))
+
+show("--- stat stdlib: time series & frequency ---")
+data2 = [1, 2, 3, 4, 5, 6, 7]
+show("moving_average(w=3)   :", rf(s.moving_average(data2, 3)))
+samples = ["a", "b", "a", "c", "b", "a"]
+show("frequency(samples)    :", rf(s.frequency(samples)))
+
+show("--- stat stdlib: error handling ---")
+risk {
+    bad = s.mean([])
+} trap RunTimeError e {
+    show("Caught mean empty list error")
+}
+
+risk {
+    bad = s.geometric_mean([])
+} trap RunTimeError e {
+    show("Caught geometric_mean empty list error")
+}
+
+risk {
+    bad = s.geometric_mean([-2, 4])
+} trap RunTimeError e {
+    show("Caught geometric_mean negative value error")
+}
+
+risk {
+    bad = s.harmonic_mean([])
+} trap RunTimeError e {
+    show("Caught harmonic_mean empty list error")
+}
+
+risk {
+    bad = s.harmonic_mean([1, 0, 2])
+} trap RunTimeError e {
+    show("Caught harmonic_mean zero element error")
+}
+
+risk {
+    bad = s.median([])
+} trap RunTimeError e {
+    show("Caught median empty list error")
+}
+
+risk {
+    bad = s.mode([])
+} trap RunTimeError e {
+    show("Caught mode empty list error")
+}
+
+risk {
+    bad = s.variance([])
+} trap RunTimeError e {
+    show("Caught variance empty list error")
+}
+
+risk {
+    bad = s.variance_s([5])
+} trap RunTimeError e {
+    show("Caught variance_s < 2 elements error")
+}
+
+risk {
+    bad = s.zscore([3, 3, 3])
+} trap RunTimeError e {
+    show("Caught zscore zero stddev error")
+}
+
+risk {
+    bad = s.normalize([5, 5, 5])
+} trap RunTimeError e {
+    show("Caught normalize zero spread error")
+}
+
+risk {
+    bad = s.percentile([], 50)
+} trap RunTimeError e {
+    show("Caught percentile empty list error")
+}
+
+risk {
+    bad = s.covariance(xs, [1, 2])
+} trap RunTimeError e {
+    show("Caught covariance length mismatch error")
+}
+
+risk {
+    bad = s.covariance_s(xs, [1, 2])
+} trap RunTimeError e {
+    show("Caught covariance_s length mismatch error")
+}
+
+risk {
+    bad = s.covariance_s([1], [2])
+} trap RunTimeError e {
+    show("Caught covariance_s < 2 elements error")
+}
+
+risk {
+    bad = s.correlation(xs, [1, 2])
+} trap RunTimeError e {
+    show("Caught correlation length mismatch error")
+}
+
+risk {
+    bad = s.correlation([1, 1], [2, 3])
+} trap RunTimeError e {
+    show("Caught correlation zero stddev error")
+}
+
+risk {
+    bad = s.moving_average(data2, 0)
+} trap RunTimeError e {
+    show("Caught moving_average w <= 0 error")
+}
+
+risk {
+    bad = s.moving_average(data2, 10)
+} trap RunTimeError e {
+    show("Caught moving_average w > len error")
+}

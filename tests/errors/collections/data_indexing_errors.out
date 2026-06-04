@@ -1,0 +1,6 @@
+Error in tests/errors/collections/data_indexing_errors.sad:
+[E9001] Traceback (most recent call last):
+  File tests/errors/collections/data_indexing_errors.sad, line 2, in <program>
+    show(x[0])
+         ^^^
+RunTimeError: Type 'Number' is not scriptable/indexable

@@ -9,7 +9,7 @@ using namespace std;
 
 
 
-class List final : public DataType {
+class List final : public DataType, public enable_shared_from_this<List> {
 public:
     vector<shared_ptr<DataType>> elements;
 
@@ -18,6 +18,10 @@ public:
         set_pos();
         set_context();
     }
+
+    [[nodiscard]] string get_type_name() const override { return "List"; }
+
+    [[nodiscard]] OperationResult get_attr(const string& attr_name, const shared_ptr<Context>& calling_context) const override;
 
     [[nodiscard]] shared_ptr<DataType> copy() const override {
         auto new_list = make_shared<List>(this->elements);
@@ -50,20 +54,30 @@ public:
         return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
     }
 
-    [[nodiscard]] OperationResult getByIndex(const vector<shared_ptr<DataType>>& indexes) const override {
+    [[nodiscard]] OperationResult getByIndex(const vector<shared_ptr<DataType>>& indexes, const Position& pos_start = Position(), const Position& pos_end = Position()) const override {
         // Fast path: single integer index into a List (by far the most common case)
         if (indexes.size() == 1) {
             if (const auto num_idx = dynamic_cast<const Number*>(indexes[0].get())) {
-                if (holds_alternative<long long>(num_idx->value)) {
-                    long long idx = get<long long>(num_idx->value);
-                    if (idx < 0 || idx >= static_cast<long long>(elements.size())) {
-                        return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(
-                            indexes[0]->pos_start.value_or(Position()),
-                            indexes[0]->pos_end.value_or(Position()),
-                            "Index out of bounds", this->context));
-                    }
-                    return std::make_pair(elements[idx], nullptr);
+                if (num_idx->is_float) {
+                    return std::make_pair(nullptr, make_shared<IllegalOperationError>(
+                        indexes[0]->pos_start.value_or(Position()),
+                        indexes[0]->pos_end.value_or(Position()),
+                        "Invalid Index Type", this->context));
                 }
+                if (holds_alternative<double>(num_idx->value)) {
+                    return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(
+                        indexes[0]->pos_start.value_or(Position()),
+                        indexes[0]->pos_end.value_or(Position()),
+                        "Index out of bounds", this->context));
+                }
+                long long idx = get<long long>(num_idx->value);
+                if (idx < 0 || idx >= static_cast<long long>(elements.size())) {
+                    return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(
+                        indexes[0]->pos_start.value_or(Position()),
+                        indexes[0]->pos_end.value_or(Position()),
+                        "Index out of bounds", this->context));
+                }
+                return std::make_pair(elements[idx], nullptr);
             }
         }
 
@@ -87,27 +101,30 @@ public:
                     }
                 }
                 else if (const auto num_idx = dynamic_cast<const Number*>(idx.get())) {
-                    if (holds_alternative<long long>(num_idx->value)) {
-                        long long i = get<long long>(num_idx->value);
-                        if (const auto list_cur = dynamic_cast<const List*>(cur)) {
-                            cur_owned = list_cur->elements.at(i);
-                            cur = cur_owned.get();
-                        }
-                        else if (const auto str_cur = dynamic_cast<const String*>(cur)) {
-                            cur_owned = make_shared<String>(string(1, str_cur->value.at(i)));
-                            cur_owned->set_context(this->context);
-                            cur = cur_owned.get();
-                        }
-                        else {
-                            return std::make_pair(nullptr, make_shared<IllegalOperationError>(
-                                idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()),
-                                "Can't index a data type which is not iterable", this->context));
-                        }
+                    if (num_idx->is_float) {
+                        return std::make_pair(nullptr, make_shared<IllegalOperationError>(
+                            idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()),
+                            "Invalid Index Type", this->context));
+                    }
+                    if (holds_alternative<double>(num_idx->value)) {
+                        return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(
+                            idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()),
+                            "Index out of bounds", this->context));
+                    }
+                    long long i = get<long long>(num_idx->value);
+                    if (const auto list_cur = dynamic_cast<const List*>(cur)) {
+                        cur_owned = list_cur->elements.at(i);
+                        cur = cur_owned.get();
+                    }
+                    else if (const auto str_cur = dynamic_cast<const String*>(cur)) {
+                        cur_owned = make_shared<String>(string(1, str_cur->value.at(i)));
+                        cur_owned->set_context(this->context);
+                        cur = cur_owned.get();
                     }
                     else {
                         return std::make_pair(nullptr, make_shared<IllegalOperationError>(
                             idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()),
-                            "Invalid Index Type", this->context));
+                            "Can't index a data type which is not iterable", this->context));
                     }
                 }
                 else {
@@ -126,7 +143,7 @@ public:
         }
     }
 
-    [[nodiscard]] OperationResult assignIndex(const vector<shared_ptr<DataType>>& indexes, const shared_ptr<DataType>& val) const override {
+    [[nodiscard]] OperationResult assignIndex(const vector<shared_ptr<DataType>>& indexes, const shared_ptr<DataType>& val, const Position& pos_start = Position(), const Position& pos_end = Position()) const override {
         if (indexes.empty()) return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(this->pos_start.value_or(Position()), this->pos_end.value_or(Position()), "Index out of bounds", this->context));
 
         auto new_list = make_shared<List>(this->elements);
@@ -154,19 +171,21 @@ public:
                     }
                 }
                 else if (const auto num_idx = dynamic_cast<const Number*>(idx.get())) {
-                    if (holds_alternative<long long>(num_idx->value)) {
-                        if (const auto list_temp = dynamic_cast<List*>(current.get())) {
-                            current = list_temp->elements.at(get<long long>(num_idx->value));
-                        }
-                        else if (dynamic_cast<String*>(current.get())) {
-                            return std::make_pair(nullptr, make_shared<IllegalOperationError>(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Can't assign inside string beyond one level", this->context));
-                        }
-                        else {
-                            return std::make_pair(nullptr, make_shared<IllegalOperationError>(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Can't index a data type which is not iterable", this->context));
-                        }
+                    if (num_idx->is_float) {
+                        return std::make_pair(nullptr, make_shared<IllegalOperationError>(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Invalid Index Type", this->context));
+                    }
+                    if (holds_alternative<double>(num_idx->value)) {
+                        return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
+                    }
+                    long long idx_val = get<long long>(num_idx->value);
+                    if (const auto list_temp = dynamic_cast<List*>(current.get())) {
+                        current = list_temp->elements.at(idx_val);
+                    }
+                    else if (dynamic_cast<String*>(current.get())) {
+                        return std::make_pair(nullptr, make_shared<IllegalOperationError>(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Can't assign inside string beyond one level", this->context));
                     }
                     else {
-                        return std::make_pair(nullptr, make_shared<IllegalOperationError>(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Invalid Index Type", this->context));
+                        return std::make_pair(nullptr, make_shared<IllegalOperationError>(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Can't index a data type which is not iterable", this->context));
                     }
                 }
                 else {
@@ -186,8 +205,11 @@ public:
 
                 auto last_idx = indexes.back();
                 auto num_last_idx = dynamic_cast<const Number*>(last_idx.get());
-                if (!num_last_idx || !holds_alternative<long long>(num_last_idx->value)) {
+                if (!num_last_idx || num_last_idx->is_float) {
                     return std::make_pair(nullptr, make_shared<IllegalOperationError>(last_idx->pos_start.value_or(Position()), last_idx->pos_end.value_or(Position()), "Invalid Index Type", this->context));
+                }
+                if (holds_alternative<double>(num_last_idx->value)) {
+                    return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(last_idx->pos_start.value_or(Position()), last_idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
                 }
 
                 try {
@@ -238,7 +260,7 @@ public:
             new_list->set_context(this->context);
             return std::make_pair(std::static_pointer_cast<DataType>(new_list), nullptr);
         }
-        return std::make_pair(nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Cannot add List and " + operand->to_string(), context));
+        return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Cannot add '" + operand->get_type_name() + "' to a List", context));
     }
 
     [[nodiscard]] OperationResult subtract(const shared_ptr<DataType>& operand) const override {

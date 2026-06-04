@@ -1,0 +1,6 @@
+Error in tests/errors/operators/shift_overflow.sad:
+[E5001] Traceback (most recent call last):
+  File tests/errors/operators/shift_overflow.sad, line 1, in <program>
+    show(1 << 1000000000000000000)
+              ^^^^^^^^^^^^^^^^^^^
+IllegalOperationError: Shift count too large or result overflow

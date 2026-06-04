@@ -1,0 +1,103 @@
+show("--- Testing Global Helpers ---")
+show("len of string:", len("hello"))
+show("len of list:", len([1, 2, 3]))
+show("len of dict:", len({"a": 1, "b": 2}))
+
+show("range(5):", range(5))
+show("range(1, 5):", range(1, 5))
+show("range(1, 10, 2):", range(1, 10, 2))
+show("range(5, 1, -1):", range(5, 1, -1))
+
+show("--- Testing List Methods ---")
+a = [1, 2, 3]
+show("original a:", a)
+a = a.append(4)
+show("after append:", a)
+a = a.prepend(0)
+show("after prepend:", a)
+a = a.insert(2, 99)
+show("after insert:", a)
+p = a.pop()
+show("popped last:", p, "list now:", a)
+p2 = a.pop(2)
+show("popped index 2:", p2, "list now:", a)
+a = a.remove(2)
+show("after remove(2):", a)
+a = a.extend([5, 6, 7])
+show("after extend:", a)
+
+b = [3, 1, 4, 1, 5, 9]
+show("original b:", b)
+show("sorted b:", b.sort())
+show("sorted desc b:", b.sort(1))
+show("reversed b:", b.reverse())
+show("slice(1, 4) b:", b.slice(1, 4))
+show("join b:", b.join("-"))
+show("index_of 5 in b:", b.index_of(5))
+show("index_of 99 in b:", b.index_of(99))
+show("contains 4 in b:", b.contains(4))
+show("contains 99 in b:", b.contains(99))
+
+c = b.copy()
+c = c.clear()
+show("cleared copy of b:", c, "original b is untouched:", b)
+
+show("--- Testing String Methods ---")
+s = "  hello Sardine 123  "
+show("original s:", s)
+show("s.upper():", s.upper())
+show("s.lower():", s.lower())
+show("s.trim():", s.trim())
+
+s2 = "apple,banana,cherry"
+show("s2.split(','):", s2.split(","))
+show("s2.starts_with('apple'):", s2.starts_with("apple"))
+show("s2.starts_with('banana'):", s2.starts_with("banana"))
+show("s2.ends_with('cherry'):", s2.ends_with("cherry"))
+show("s2.replace('banana', 'orange'):", s2.replace("banana", "orange"))
+show("s2.find('banana'):", s2.find("banana"))
+show("s2.find('pear'):", s2.find("pear"))
+show("s2.contains('cherry'):", s2.contains("cherry"))
+show("s2.contains('pear'):", s2.contains("pear"))
+
+digit_str = "12345"
+alpha_str = "abcde"
+show("digit_str.is_digit():", digit_str.is_digit())
+show("digit_str.is_alpha():", digit_str.is_alpha())
+show("alpha_str.is_digit():", alpha_str.is_digit())
+show("alpha_str.is_alpha():", alpha_str.is_alpha())
+
+show("--- Testing Dict Methods ---")
+d = {"name": "Sardine", "type": "language", "version": 1}
+show("original d:", d)
+show("d.keys() sorted:", d.keys().sort())
+
+risk {
+    show("d.values() sorted:", d.values().sort())
+} trap IllegalOperationError e {
+    show("Caught expected error sorting mixed type values!")
+}
+
+show("d.entries():", d.entries())
+show("d.items():", d.items())
+show("d.get('name'):", d.get("name"))
+show("d.get('nonexistent', 'default_val'):", d.get("nonexistent", "default_val"))
+show("d.get('nonexistent'):", d.get("nonexistent"))
+show("d.has_key('type'):", d.has_key("type"))
+show("d.contains('nonexistent'):", d.contains("nonexistent"))
+
+popped_val = d.pop("type")
+show("popped type:", popped_val, "d now:", d)
+popped_def = d.pop("nonexistent", "not_found")
+show("popped nonexistent:", popped_def)
+
+# Since pop_item removes an item and returns it, and dict elements in python can be ordered, let's pop one.
+pop_pair = d.pop_item()
+show("popped item:", pop_pair, "d now:", d)
+
+d = d.update({"version": 2, "status": "active"})
+show("after update:", d)
+
+d_copy = d.copy()
+d_copy = d_copy.clear()
+show("cleared d_copy:", d_copy, "original d untouched:", d)

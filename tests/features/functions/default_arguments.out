@@ -1,3 +1,14 @@
 --- Test: Default Arguments ---
 Hello, World!
 Hello, SARDINE!
+--- Stress Test: Multiple defaults and partial overrides ---
+Default config: host:localhost,port:8080,debug:0
+Debug config: host:localhost,port:8080,debug:1
+Custom port config: host:google.com,port:9000,debug:0
+--- Stress Test: Mixed required and default arguments ---
+INFO: Default message.
+WARN: Disk full.
+ERROR: Crash!!!
+--- Stress Test: Missing required argument error trapping ---
+Caught expected ArgumentError:
+  Missing required argument 'prefix' for function 'format_msg'

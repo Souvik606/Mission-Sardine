@@ -1,0 +1,2 @@
+# Exponentiation division by zero: zero raised to a negative power
+show(0 ** -1)

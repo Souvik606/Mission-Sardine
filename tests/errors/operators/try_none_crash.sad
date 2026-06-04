@@ -1,0 +1,6 @@
+x = risk {
+    error("fail")
+} trap IllegalOperationError {
+    # handled
+}
+show(x.some_property)

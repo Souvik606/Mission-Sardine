@@ -1,0 +1,6 @@
+Error in tests/errors/collections/list_addition_violations.sad:
+[E5001] Traceback (most recent call last):
+  File tests/errors/collections/list_addition_violations.sad, line 3, in <program>
+    items = [1, 2] + foo
+                     ^^^
+IllegalOperationError: Cannot add 'Function' to a List

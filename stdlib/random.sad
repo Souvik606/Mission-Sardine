@@ -1,0 +1,261 @@
+# ============================================================
+# random.sad — Pseudo-Random Number Generator Library for Sardine
+# ============================================================
+# Uses a Linear Congruential Generator (LCG) for randomness.
+# The state is held inside the `rng` model — instantiate once
+# and call methods on your instance:
+#
+#   rng model instance:
+#     rng.rand()                       — float in [0.0, 1.0)
+#     rng.rand_nonzero()               — float in (0.0, 1.0)
+#     rng.uniform(lo, hi)              — float in [lo, hi)
+#     rng.randint(lo, hi)              — integer in [lo, hi] inclusive
+#     rng.coin_flip()                  — 0 or 1 with equal probability
+#     rng.pick(lst)                    — random element from list
+#     rng.picks(lst, k)                — k random elements WITH replacement
+#     rng.draw(lst, k)                 — k random elements WITHOUT replacement
+#     rng.shuffle(lst)                 — return a new shuffled copy of lst
+#     rng.randlist(n, lo, hi)          — list of n random integers in [lo,hi]
+#     rng.rand_floats(n)               — list of n random floats in [0.0, 1.0)
+#     rng.weighted_pick(items, weights)— weighted random pick
+#     rng.roll_dice(sides)             — simulate an n-sided die
+#     rng.roll_dice_n(sides, n)        — roll n dice and return list
+#     rng.bernoulli(p)                 — 1 with probability p, else 0
+#     rng.geometric(p)                 — geometric distribution sample
+#     rng.reseed(s)                    — reset the RNG to a new seed
+#
+#   Module-level helper:
+#     default_seed                     — a fixed starting seed value
+# ============================================================
+
+default_seed = 123456789
+
+model rng {
+    open attr <state>
+
+    init(s) {
+        state: s
+    }
+
+    # ── Internal: advance the LCG and return raw integer ──────
+    # LCG formula: state = (A * state + C) mod M
+    # Parameters from classic Borland C LCG
+    method _next() {
+        state = (1664525 * state + 1013904223) % 4294967296
+        yield state
+    }
+
+    # ── float in [0.0, 1.0) ──────────────────────────────────
+    method rand() {
+        yield _next() / 4294967296
+    }
+
+    # ── float in (0.0, 1.0) — never exactly zero ─────────────
+    method rand_nonzero() {
+        v = rand()
+        during v == 0 {
+            v = rand()
+        }
+        yield v
+    }
+
+    # ── float in [lo, hi) ────────────────────────────────────
+    method uniform(lo, hi) {
+        yield lo + rand() * (hi - lo)
+    }
+
+    # ── integer in [lo, hi] inclusive ────────────────────────
+    method randint(lo, hi) {
+        span = hi - lo + 1
+        yield lo + Integer(rand() * span)
+    }
+
+    # ── 0 or 1 with equal probability ────────────────────────
+    method coin_flip() {
+        when _next() % 2 == 0 {
+            yield 0
+        } otherwise {
+            yield 1
+        }
+    }
+
+    # ── random element from list ──────────────────────────────
+    method pick(lst) {
+        n = 0
+        trace item <- lst { n = n + 1 }
+        when n == 0 {
+            yield error("pick: list is empty")
+        } otherwise {
+            idx = Integer(rand() * n)
+            yield lst[idx]
+        }
+    }
+
+    # ── k elements WITH replacement ───────────────────────────
+    method picks(lst, k) {
+        n = 0
+        trace item <- lst { n = n + 1 }
+        when n == 0 {
+            yield error("picks: list is empty")
+        } otherwise {
+            result = []
+            i = 0
+            during i < k {
+                idx = Integer(rand() * n)
+                result = result + [lst[idx]]
+                i = i + 1
+            }
+            yield result
+        }
+    }
+
+    # ── k elements WITHOUT replacement (reservoir sampling) ───
+    method draw(lst, k) {
+        n = 0
+        trace item <- lst { n = n + 1 }
+        when k > n {
+            yield error("draw: k cannot be larger than the list size")
+        } orwhen k < 0 {
+            yield error("draw: k must be non-negative")
+        } otherwise {
+            pool = []
+            trace item <- lst { pool = pool + [item] }
+            result = []
+            i = 0
+            remaining = n
+            during i < k {
+                idx = Integer(rand() * remaining)
+                result = result + [pool[idx]]
+                pool[idx] = pool[remaining - 1]
+                remaining = remaining - 1
+                i = i + 1
+            }
+            yield result
+        }
+    }
+
+    # ── Fisher-Yates shuffle (returns a new shuffled list) ────
+    method shuffle(lst) {
+        n = 0
+        trace item <- lst { n = n + 1 }
+        shuffled = []
+        trace item <- lst { shuffled = shuffled + [item] }
+        i = n - 1
+        during i > 0 {
+            j = Integer(rand() * (i + 1))
+            temp = shuffled[i]
+            shuffled[i] = shuffled[j]
+            shuffled[j] = temp
+            i = i - 1
+        }
+        yield shuffled
+    }
+
+    # ── list of n random integers in [lo, hi] ─────────────────
+    method randlist(n, lo, hi) {
+        result = []
+        i = 0
+        during i < n {
+            result = result + [randint(lo, hi)]
+            i = i + 1
+        }
+        yield result
+    }
+
+    # ── list of n random floats in [0.0, 1.0) ─────────────────
+    method rand_floats(n) {
+        result = []
+        i = 0
+        during i < n {
+            result = result + [rand()]
+            i = i + 1
+        }
+        yield result
+    }
+
+    # ── weighted random pick ──────────────────────────────────
+    method weighted_pick(items, weights) {
+        n_items = 0
+        trace item <- items { n_items = n_items + 1 }
+        n_weights = 0
+        trace w <- weights { n_weights = n_weights + 1 }
+        when n_items == 0 {
+            yield error("weighted_pick: items list is empty")
+        } orwhen n_items != n_weights {
+            yield error("weighted_pick: items and weights must have the same length")
+        } otherwise {
+            total_weight = 0
+            trace w <- weights { total_weight = total_weight + w }
+            rv = rand() * total_weight
+            running = 0
+            idx = 0
+            found = n_items - 1
+            during idx < n_items {
+                running = running + weights[idx]
+                when running > rv {
+                    found = idx
+                    idx = n_items
+                } otherwise {
+                    idx = idx + 1
+                }
+            }
+            yield items[found]
+        }
+    }
+
+    # ── simulate an n-sided die (result: 1 to sides) ──────────
+    method roll_dice(sides) {
+        when sides < 2 {
+            yield error("roll_dice: a die must have at least 2 sides")
+        } otherwise {
+            yield randint(1, sides)
+        }
+    }
+
+    # ── roll n dice and return list of results ────────────────
+    method roll_dice_n(sides, n) {
+        when sides < 2 {
+            yield error("roll_dice_n: a die must have at least 2 sides")
+        } otherwise {
+            result = []
+            i = 0
+            during i < n {
+                result = result + [randint(1, sides)]
+                i = i + 1
+            }
+            yield result
+        }
+    }
+
+    # ── Bernoulli trial: 1 with prob p, 0 with prob (1-p) ─────
+    method bernoulli(p) {
+        when p < 0 or p > 1 {
+            yield error("bernoulli: probability p must be between 0 and 1")
+        } otherwise {
+            when rand() < p {
+                yield 1
+            } otherwise {
+                yield 0
+            }
+        }
+    }
+
+    # ── Geometric distribution ────────────────────────────────
+    method geometric(p) {
+        when p <= 0 or p > 1 {
+            yield error("geometric: probability p must be in (0, 1]")
+        } otherwise {
+            trials = 1
+            during rand() >= p {
+                trials = trials + 1
+            }
+            yield trials
+        }
+    }
+
+    # ── Reset the generator to a new seed ─────────────────────
+    method reseed(s) {
+        state = s
+        yield 0
+    }
+}

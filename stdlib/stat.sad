@@ -1,0 +1,441 @@
+# ============================================================
+# stat.sad — Statistics Standard Library for Sardine
+# ============================================================
+
+#   range(data)              — max - min
+#   mean(data)               — arithmetic mean
+#   geometric_mean(data)     — geometric mean
+#   harmonic_mean(data)      — harmonic mean
+#   median(data)             — middle value after sorting
+#   mode(data)               — most frequent value
+#   variance(data)           — population variance
+#   variance_s(data)         — sample variance (Bessel's correction)
+#   stddev(data)             — population standard deviation
+#   stddev_s(data)           — sample standard deviation
+#   zscore(data)             — list of z-scores
+#   normalize(data)          — min-max normalization to [0, 1]
+#   percentile(data, p)      — p-th percentile (0-100)
+#   quartiles(data)          — [Q1, Q2, Q3]
+#   iqr(data)                — interquartile range (Q3 - Q1)
+#   covariance(x, y)         — population covariance
+#   covariance_s(x, y)       — sample covariance
+#   correlation(x, y)        — Pearson correlation coefficient
+#   moving_average(data, w)  — simple moving average with window w
+#   frequency(data)          — dict of value -> count
+# ============================================================
+
+method _abs(n) {
+    when n < 0 {
+        yield -n
+    } otherwise {
+        yield n
+    }
+}
+
+method _sqrt(n) {
+    when n < 0 {
+        yield error("sqrt requires a non-negative number")
+    } orwhen n == 0 {
+        yield 0
+    } otherwise {
+        guess = n / 2.0
+        i = 0
+        during i < 50 {
+            better = (guess + n / guess) / 2.0
+            diff = better - guess
+            when diff < 0 {
+                diff = -diff
+            }
+            when diff < 0.000000001 {
+                i = 50
+            } otherwise {
+                guess = better
+                i = i + 1
+            }
+        }
+        yield guess
+    }
+}
+
+method _len(lst) {
+    count = 0
+    trace item <- lst {
+        count = count + 1
+    }
+    yield count
+}
+
+method _sum(data) {
+    total = 0
+    trace x <- data {
+        total = total + x
+    }
+    yield total
+}
+
+method _product(data) {
+    result = 1
+    trace x <- data {
+        result = result * x
+    }
+    yield result
+}
+
+method _min(data) {
+    when _len(data) == 0 {
+        yield error("min requires a non-empty list")
+    } otherwise {
+        best = data[0]
+        trace x <- data {
+            when x < best {
+                best = x
+            }
+        }
+        yield best
+    }
+}
+
+method _max(data) {
+    when _len(data) == 0 {
+        yield error("max requires a non-empty list")
+    } otherwise {
+        best = data[0]
+        trace x <- data {
+            when x > best {
+                best = x
+            }
+        }
+        yield best
+    }
+}
+
+method _sort(lst) {
+    n = _len(lst)
+    sorted = []
+    trace x <- lst {
+        sorted = sorted + [x]
+    }
+    i = 0
+    during i < n {
+        j = 0
+        during j < n - i - 1 {
+            when sorted[j] > sorted[j + 1] {
+                temp = sorted[j]
+                sorted[j] = sorted[j + 1]
+                sorted[j + 1] = temp
+            }
+            j = j + 1
+        }
+        i = i + 1
+    }
+    yield sorted
+}
+
+method _nth_root(val, n) {
+    when val <= 0 {
+        yield 0
+    } otherwise {
+        guess = val / n
+        i = 0
+        during i < 80 {
+            better = ((n - 1) * guess + val / (guess ** (n - 1))) / n
+            diff = better - guess
+            when diff < 0 {
+                diff = -diff
+            }
+            when diff < 0.0000000001 {
+                i = 80
+            } otherwise {
+                guess = better
+                i = i + 1
+            }
+        }
+        yield guess
+    }
+}
+
+# --- Public Statistical Functions ---
+
+method range(data) {
+    yield _max(data) - _min(data)
+}
+
+method mean(data) {
+    n = _len(data)
+    when n == 0 {
+        yield error("mean requires a non-empty list")
+    } otherwise {
+        yield _sum(data) / n
+    }
+}
+
+method geometric_mean(data) {
+    n = _len(data)
+    when n == 0 {
+        yield error("geometric_mean requires a non-empty list")
+    } otherwise {
+        p = _product(data)
+        when p < 0 {
+            yield error("geometric_mean requires all positive values")
+        } otherwise {
+            yield _nth_root(p, n)
+        }
+    }
+}
+
+method harmonic_mean(data) {
+    n = _len(data)
+    when n == 0 {
+        yield error("harmonic_mean requires a non-empty list")
+    } otherwise {
+        recip_sum = 0
+        has_zero = 0
+        trace x <- data {
+            when x == 0 {
+                has_zero = 1
+            } otherwise {
+                recip_sum = recip_sum + 1.0 / x
+            }
+        }
+        when has_zero {
+            yield error("harmonic_mean: list contains zero")
+        } otherwise {
+            yield n / recip_sum
+        }
+    }
+}
+
+method median(data) {
+    n = _len(data)
+    when n == 0 {
+        yield error("median requires a non-empty list")
+    } otherwise {
+        s = _sort(data)
+        mid = Integer(n / 2)
+        when n % 2 == 1 {
+            yield s[mid]
+        } otherwise {
+            yield (s[mid - 1] + s[mid]) / 2.0
+        }
+    }
+}
+
+method mode(data) {
+    when _len(data) == 0 {
+        yield error("mode requires a non-empty list")
+    } otherwise {
+        best_val = data[0]
+        best_count = 0
+        trace candidate <- data {
+            c = 0
+            trace x <- data {
+                when x == candidate {
+                    c = c + 1
+                }
+            }
+            when c > best_count {
+                best_count = c
+                best_val = candidate
+            }
+        }
+        yield best_val
+    }
+}
+
+method variance(data) {
+    n = _len(data)
+    when n == 0 {
+        yield error("variance requires a non-empty list")
+    } otherwise {
+        m = mean(data)
+        sq_sum = 0
+        trace x <- data {
+            diff = x - m
+            sq_sum = sq_sum + diff * diff
+        }
+        yield sq_sum / n
+    }
+}
+
+method variance_s(data) {
+    n = _len(data)
+    when n < 2 {
+        yield error("sample variance requires at least 2 values")
+    } otherwise {
+        m = mean(data)
+        sq_sum = 0
+        trace x <- data {
+            diff = x - m
+            sq_sum = sq_sum + diff * diff
+        }
+        yield sq_sum / (n - 1)
+    }
+}
+
+method stddev(data) {
+    yield _sqrt(variance(data))
+}
+
+method stddev_s(data) {
+    yield _sqrt(variance_s(data))
+}
+
+method zscore(data) {
+    m = mean(data)
+    s = stddev(data)
+    when s == 0 {
+        yield error("zscore: standard deviation is zero (all values are the same)")
+    } otherwise {
+        result = []
+        trace x <- data {
+            result = result + [(x - m) / s]
+        }
+        yield result
+    }
+}
+
+method normalize(data) {
+    lo = _min(data)
+    hi = _max(data)
+    spread = hi - lo
+    when spread == 0 {
+        yield error("normalize: all values are the same (range is zero)")
+    } otherwise {
+        result = []
+        trace x <- data {
+            result = result + [(x - lo) / spread]
+        }
+        yield result
+    }
+}
+
+method percentile(data, p) {
+    when _len(data) == 0 {
+        yield error("percentile requires a non-empty list")
+    } otherwise {
+        s = _sort(data)
+        n = _len(s)
+        idx = (p / 100.0) * (n - 1)
+        lo_idx = Integer(idx)
+        hi_idx = lo_idx + 1
+        frac = idx - lo_idx
+        when hi_idx >= n {
+            yield s[n - 1]
+        } otherwise {
+            yield s[lo_idx] + frac * (s[hi_idx] - s[lo_idx])
+        }
+    }
+}
+
+method quartiles(data) {
+    q1 = percentile(data, 25)
+    q2 = percentile(data, 50)
+    q3 = percentile(data, 75)
+    yield [q1, q2, q3]
+}
+
+method iqr(data) {
+    qs = quartiles(data)
+    yield qs[2] - qs[0]
+}
+
+method covariance(x, y) {
+    nx = _len(x)
+    ny = _len(y)
+    when nx != ny {
+        yield error("covariance: both lists must have the same length")
+    } otherwise {
+        mx = mean(x)
+        my = mean(y)
+        total = 0
+        i = 0
+        during i < nx {
+            total = total + (x[i] - mx) * (y[i] - my)
+            i = i + 1
+        }
+        yield total / nx
+    }
+}
+
+method covariance_s(x, y) {
+    nx = _len(x)
+    ny = _len(y)
+    when nx != ny {
+        yield error("covariance_s: both lists must have the same length")
+    } orwhen nx < 2 {
+        yield error("sample covariance requires at least 2 values")
+    } otherwise {
+        mx = mean(x)
+        my = mean(y)
+        total = 0
+        i = 0
+        during i < nx {
+            total = total + (x[i] - mx) * (y[i] - my)
+            i = i + 1
+        }
+        yield total / (nx - 1)
+    }
+}
+
+method correlation(x, y) {
+    cov = covariance(x, y)
+    sx = stddev(x)
+    sy = stddev(y)
+    when sx == 0 or sy == 0 {
+        yield error("correlation: standard deviation is zero in one of the lists")
+    } otherwise {
+        yield cov / (sx * sy)
+    }
+}
+
+method moving_average(data, w) {
+    n = _len(data)
+    when w <= 0 or w > n {
+        yield error("moving_average: window size must be between 1 and len(data)")
+    } otherwise {
+        result = []
+        i = w - 1
+        during i < n {
+            window_sum = 0
+            j = i - w + 1
+            during j <= i {
+                window_sum = window_sum + data[j]
+                j = j + 1
+            }
+            result = result + [window_sum / w]
+            i = i + 1
+        }
+        yield result
+    }
+}
+
+method frequency(data) {
+    keys = []
+    counts = []
+    trace x <- data {
+        found = 0
+        idx = 0
+        n = 0
+        trace k <- keys {
+            when k == x and found == 0 {
+                counts[idx] = counts[idx] + 1
+                found = 1
+            }
+            idx = idx + 1
+            n = n + 1
+        }
+        when found == 0 {
+            keys = keys + [x]
+            counts = counts + [1]
+        }
+    }
+    freq = {}
+    i = 0
+    n = 0
+    trace k <- keys { n = n + 1 }
+    during i < n {
+        freq[keys[i]] = counts[i]
+        i = i + 1
+    }
+    yield freq
+}

@@ -1,0 +1,9 @@
+method my_func() {}
+when my_func {
+    show("Functions are truthy")
+}
+
+model MyModel {}
+when MyModel {
+    show("Models are truthy")
+}

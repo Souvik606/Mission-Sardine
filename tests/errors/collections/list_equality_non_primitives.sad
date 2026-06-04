@@ -1,0 +1,5 @@
+method foo() {}
+items1 = [foo]
+items2 = [foo]
+show(items1 == items1)
+show(items1 == items2)

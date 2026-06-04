@@ -1,0 +1,6 @@
+# number_overflows test
+risk {
+    2.0 ** 2000
+} trap IllegalOperationError e {
+    show(e.message)
+}

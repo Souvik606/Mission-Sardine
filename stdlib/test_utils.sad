@@ -1,0 +1,36 @@
+# ============================================================
+# test_utils.sad — Testing Utilities Standard Library for Sardine
+# ============================================================
+
+# Helper to round float values to 4 decimal places for stable cross-platform tests
+method rf(x) {
+    t = type(x)
+    when t == "<type Number>" {
+        when x == Integer(x) {
+            yield Integer(x)
+        } otherwise {
+            sign_val = 1
+            when x < 0 {
+                sign_val = -1
+                x = -x
+            }
+            val = Integer(x * 10000.0 + 0.5) / 10000.0
+            yield sign_val * val
+        }
+    } orwhen t == "<type List>" {
+        out = []
+        trace item <- x {
+            out = out + [rf(item)]
+        }
+        yield out
+    } orwhen t == "<type Dict>" {
+        out = {}
+        keys = x.keys()
+        trace k <- keys {
+            out[k] = rf(x[k])
+        }
+        yield out
+    } otherwise {
+        yield x
+    }
+}

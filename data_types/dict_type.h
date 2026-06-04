@@ -3,13 +3,12 @@
 #include "data_type.h"
 #include "number_type.h"
 #include "string_type.h"
-#include "list_type.h"
 #include "../language_core/error.h"
 
 using namespace std;
 
-class Dict final : public DataType {
-private:
+class Dict final : public DataType, public enable_shared_from_this<Dict> {
+public:
     static string get_dict_key(const shared_ptr<DataType>& key) {
         if (const auto n = dynamic_cast<const Number*>(key.get())) {
             if (holds_alternative<long long>(n->value)) return "I:" + std::to_string(std::get<long long>(n->value));
@@ -25,9 +24,10 @@ public:
     unordered_map<string, shared_ptr<DataType>> elements;
     vector<string> keys_order;
 
-    [[nodiscard]] bool is_dict() const override {
-        return true;
-    }
+    [[nodiscard]] bool is_dict() const override { return true; }
+    [[nodiscard]] string get_type_name() const override { return "Dict"; }
+
+    [[nodiscard]] OperationResult get_attr(const string& attr_name, const shared_ptr<Context>& calling_context) const override;
 
     Dict() = default;
 
@@ -191,7 +191,7 @@ public:
         return { nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Cannot apply 'or' to a Dictionary", context) };
     }
 
-    OperationResult getByIndex(const vector<shared_ptr<DataType>>& indexes) const override {
+    OperationResult getByIndex(const vector<shared_ptr<DataType>>& indexes, const Position& pos_start = Position(), const Position& pos_end = Position()) const override {
         auto temp = copy();
         try {
             for (const auto& idx : indexes) {
@@ -202,42 +202,29 @@ public:
                             temp = dict_temp->elements[key];
                         }
                         else {
-                            return { nullptr, make_shared<DictKeyError>(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Key does not exist", context) };
+                            return { nullptr, make_shared<DictKeyError>(idx->pos_start.value_or(pos_start), idx->pos_end.value_or(pos_end), "Key does not exist", context) };
                         }
                     }
                     else {
-                        return { nullptr, make_shared<DictKeyError>(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Dictionary keys must be numbers or strings", context) };
+                        return { nullptr, make_shared<DictKeyError>(idx->pos_start.value_or(pos_start), idx->pos_end.value_or(pos_end), "Dictionary keys must be numbers or strings", context) };
                     }
                 }
                 else {
-                    auto num_idx = dynamic_cast<const Number*>(idx.get());
-                    if (num_idx && holds_alternative<long long>(num_idx->value)) {
-                        if (const auto list_temp = dynamic_cast<List*>(temp.get())) {
-                            temp = list_temp->elements.at(get<long long>(num_idx->value));
-                        }
-                        else if (const auto str_temp = dynamic_cast<String*>(temp.get())) {
-                            temp = make_shared<String>(string(1, str_temp->value.at(get<long long>(num_idx->value))));
-                            temp->set_context(context);
-                        }
-                        else {
-                            return { nullptr, make_shared<RunTimeError>(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Can't index a data type which is not iterable", context, "RunTimeError") };
-                        }
-                    }
-                    else {
-                        return { nullptr, make_shared<RunTimeError>(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Invalid Index Type", context) };
-                    }
+                    auto [next_temp, error] = temp->getByIndex({ idx }, pos_start, pos_end);
+                    if (error) return { nullptr, error };
+                    temp = next_temp;
                 }
             }
             return { temp, nullptr };
         }
         catch (const out_of_range&) {
             auto bad_idx = indexes.back();
-            return { nullptr, make_shared<RunTimeError>(bad_idx->pos_start.value_or(Position{}), bad_idx->pos_end.value_or(Position{}), "Index out of bounds", context, "RunTimeError") };
+            return { nullptr, make_shared<RunTimeError>(bad_idx->pos_start.value_or(pos_start), bad_idx->pos_end.value_or(pos_end), "Index out of bounds", context, "RunTimeError") };
         }
     }
 
-    OperationResult assignIndex(const vector<shared_ptr<DataType>>& indexes, const shared_ptr<DataType>& val) const override {
-        if (indexes.empty()) return { nullptr, make_shared<IndexOutOfBoundsError>(pos_start.value_or(Position{}), pos_end.value_or(Position{}), "Index out of bounds", context) };
+    OperationResult assignIndex(const vector<shared_ptr<DataType>>& indexes, const shared_ptr<DataType>& val, const Position& pos_start = Position(), const Position& pos_end = Position()) const override {
+        if (indexes.empty()) return { nullptr, make_shared<IndexOutOfBoundsError>(pos_start, pos_end, "Index out of bounds", context) };
 
         auto new_dict = dynamic_pointer_cast<Dict>(copy());
         shared_ptr<DataType> current = new_dict;
@@ -258,29 +245,17 @@ public:
                             current = dict_temp->elements[key];
                         }
                         else {
-                            return { nullptr, make_shared<DictKeyError>(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Key does not exist", context) };
+                            return { nullptr, make_shared<DictKeyError>(idx->pos_start.value_or(pos_start), idx->pos_end.value_or(pos_end), "Key does not exist", context) };
                         }
                     }
                     else {
-                        return { nullptr, make_shared<DictKeyError>(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Dictionary keys must be numbers or strings", context) };
+                        return { nullptr, make_shared<DictKeyError>(idx->pos_start.value_or(pos_start), idx->pos_end.value_or(pos_end), "Dictionary keys must be numbers or strings", context) };
                     }
                 }
                 else {
-                    auto num_idx = dynamic_cast<const Number*>(idx.get());
-                    if (num_idx && holds_alternative<long long>(num_idx->value)) {
-                        if (const auto list_temp = dynamic_cast<List*>(current.get())) {
-                            current = list_temp->elements.at(get<long long>(num_idx->value));
-                        }
-                        else if (dynamic_cast<String*>(current.get())) {
-                            return { nullptr, make_shared<RunTimeError>(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Can't assign inside string beyond one level", context, "RunTimeError") };
-                        }
-                        else {
-                            return { nullptr, make_shared<RunTimeError>(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Can't index a data type which is not iterable", context, "RunTimeError") };
-                        }
-                    }
-                    else {
-                        return { nullptr, make_shared<RunTimeError>(idx->pos_start.value_or(Position{}), idx->pos_end.value_or(Position{}), "Invalid Index Type", context) };
-                    }
+                    auto [next_current, error] = current->getByIndex({ idx }, pos_start, pos_end);
+                    if (error) return { nullptr, error };
+                    current = next_current;
                 }
             }
 
@@ -299,24 +274,18 @@ public:
                     updated_dict_ptr->elements[key] = val;
                 }
                 else {
-                    return { nullptr, make_shared<DictKeyError>(last_idx->pos_start.value_or(Position{}), last_idx->pos_end.value_or(Position{}), "Dictionary keys must be numbers or strings", context) };
+                    return { nullptr, make_shared<DictKeyError>(last_idx->pos_start.value_or(pos_start), last_idx->pos_end.value_or(pos_end), "Dictionary keys must be numbers or strings", context) };
                 }
             }
-            else if (dynamic_cast<List*>(current.get())) {
-                tie(updated_current, leaf_error) = current->assignIndex({ last_idx }, val);
-            }
-            else if (dynamic_cast<String*>(current.get())) {
-                tie(updated_current, leaf_error) = current->assignIndex({ last_idx }, val);
-            }
             else {
-                return { nullptr, make_shared<RunTimeError>(last_idx->pos_start.value_or(Position{}), last_idx->pos_end.value_or(Position{}), "Can't index a data type which is not iterable", context, "RunTimeError") };
+                tie(updated_current, leaf_error) = current->assignIndex({ last_idx }, val, pos_start, pos_end);
             }
 
             if (leaf_error) return { nullptr, leaf_error };
 
             shared_ptr<DataType> rebuilt = updated_current;
             for (size_t i = parent_chain.size(); i-- > 0;) {
-                auto [updated_parent, error] = parent_chain[i]->assignIndex({ parent_indexes[i] }, rebuilt);
+                auto [updated_parent, error] = parent_chain[i]->assignIndex({ parent_indexes[i] }, rebuilt, pos_start, pos_end);
                 if (error) return { nullptr, error };
                 rebuilt = updated_parent;
             }
@@ -325,7 +294,7 @@ public:
         }
         catch (const out_of_range&) {
             auto bad_idx = indexes.back();
-            return { nullptr, make_shared<RunTimeError>(bad_idx->pos_start.value_or(Position{}), bad_idx->pos_end.value_or(Position{}), "Index out of bounds", context, "RunTimeError") };
+            return { nullptr, make_shared<RunTimeError>(bad_idx->pos_start.value_or(pos_start), bad_idx->pos_end.value_or(pos_end), "Index out of bounds", context, "RunTimeError") };
         }
     }
 

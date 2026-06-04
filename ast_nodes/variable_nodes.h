@@ -40,46 +40,38 @@ public:
 
 class VariableAssignNode final : public Node {
 public:
-    vector<Token> var_name_toks;
+    vector<shared_ptr<Node>> left_nodes;
     vector<shared_ptr<Node>> value_nodes;
-    vector<vector<shared_ptr<Node>>> index_nodes;
 
-    explicit VariableAssignNode(vector<Token> tokens,
-                                vector<shared_ptr<Node>> values,
-                                vector<vector<shared_ptr<Node>>> indices = {})
-        : Node(tokens.front().pos_start, values.back()->pos_end),
-          var_name_toks(std::move(tokens)),
-          value_nodes(std::move(values)),
-          index_nodes(std::move(indices)) {
-
-        if (index_nodes.empty()) {
-            index_nodes.resize(var_name_toks.size());
-        }
-    }
+    explicit VariableAssignNode(vector<shared_ptr<Node>> lefts,
+                                vector<shared_ptr<Node>> values)
+        : Node(lefts.front()->pos_start.value_or(Position()), values.back()->pos_end.value_or(Position())),
+          left_nodes(std::move(lefts)),
+          value_nodes(std::move(values)) {}
 
     [[nodiscard]] std::string to_string() const override {
         stringstream ss;
-        for (size_t i = 0; i < var_name_toks.size(); ++i) {
-            string var_name = "invalid_variable_name";
-            if (var_name_toks[i].value.type() == typeid(string)) {
-                var_name = any_cast<string>(var_name_toks[i].value);
-            }
-
-            if (index_nodes[i].empty()) {
-                ss << "(" << var_name << ":" << value_nodes[i]->to_string() << ")";
-            } else {
-                ss << "((" << var_name << ":[";
-                for (size_t j = 0; j < index_nodes[i].size(); ++j) {
-                    ss << index_nodes[i][j]->to_string();
-                    if (j < index_nodes[i].size() - 1) ss << ", ";
-                }
-                ss << "]):" << value_nodes[i]->to_string() << ")";
-            }
-
-            if (i < var_name_toks.size() - 1) {
+        for (size_t i = 0; i < left_nodes.size(); ++i) {
+            ss << "(" << left_nodes[i]->to_string() << ":" << value_nodes[i]->to_string() << ")";
+            if (i < left_nodes.size() - 1) {
                 ss << ",";
             }
         }
         return ss.str();
+    }
+};
+
+class IndexAccessNode final : public Node {
+public:
+    shared_ptr<Node> object_node;
+    shared_ptr<Node> index_node;
+
+    explicit IndexAccessNode(shared_ptr<Node> obj, shared_ptr<Node> idx)
+        : Node(obj->pos_start, idx->pos_end),
+          object_node(std::move(obj)),
+          index_node(std::move(idx)) {}
+
+    [[nodiscard]] std::string to_string() const override {
+        return "(" + object_node->to_string() + "[" + index_node->to_string() + "])";
     }
 };

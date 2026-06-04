@@ -1,0 +1,2 @@
+# Bitwise shift count cannot be negative
+show(1 << -1)

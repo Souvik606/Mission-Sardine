@@ -1,0 +1,28 @@
+--- Test: Dictionary Operations & Methods ---
+--- Basic Dictionary Operators ---
+d1 + d2 (merge): {'a': 1, 'b': 20, 'c': 30}
+d3 - 'b' (remove key): {'a': 1, 'c': 30}
+d3 - 'nonexistent': {'a': 1, 'b': 20, 'c': 30}
+--- Dictionary Methods ---
+keys(): ['x', 'y', 'z']
+values(): [100, 200, 300]
+entries(): [['x', 100], ['y', 200], ['z', 300]]
+--- get() method ---
+get('x'): 100
+get('missing', 999): 999
+get('missing' no default): 0
+--- has_key() / contains() ---
+has_key('y'): 1
+has_key('missing'): 0
+--- pop() method ---
+pop('z'): 300
+dict after pop: {'x': 100, 'y': 200, 'z': 300}
+pop('missing' with default): 555
+--- pop_item() method ---
+pop_item(): ['second', 2]
+dict after pop_item: {'first': 1, 'second': 2}
+--- update() method ---
+after update: {'a': 1}
+--- copy() and clear() ---
+original after clear: {'a': 10}
+copy is preserved: {'a': 10}

@@ -1,0 +1,8 @@
+model Account {
+    secret attr <balance>
+    init(b) {
+        balance: b
+    }
+}
+a = Account(100)
+show(a.balance)

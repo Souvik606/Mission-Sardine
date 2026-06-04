@@ -1,0 +1,7 @@
+# string_overflow_indexing test
+s = "abc"
+risk {
+    show(s[100000000000000000000000000000000000000])
+} trap IndexOutOfBoundsError e {
+    show(e.message)
+}

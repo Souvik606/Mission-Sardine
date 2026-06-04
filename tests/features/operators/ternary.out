@@ -1,0 +1,14 @@
+--- Test: Ternary Operator ---
+--- Basic Ternary: Truthy ---
+Greater than 5
+--- Basic Ternary: Falsy ---
+5 or more
+--- Nested Ternary ---
+Grade for 85 is: B
+Grade for 95 is: A
+Grade for 65 is: D
+--- Ternary inside function call ---
+10
+-3
+--- Ternary in operations ---
+250

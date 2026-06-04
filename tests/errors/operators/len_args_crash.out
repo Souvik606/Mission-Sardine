@@ -1,0 +1,9 @@
+Error in tests/errors/operators/len_args_crash.sad:
+[E6001] Traceback (most recent call last):
+  File tests/errors/operators/len_args_crash.sad, line 1, in <program>
+    len(1, 2)
+    ^^^^^^^^
+  File tests/errors/operators/len_args_crash.sad, line 1, in len
+    len(1, 2)
+    ^
+ArgumentError: len() takes exactly 1 argument

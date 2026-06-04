@@ -1,0 +1,10 @@
+Error in tests/errors/modules/module_summon_errors.sad:
+[E8001] Traceback (most recent call last):
+  File tests/errors/modules/module_summon_errors.sad, line 1, in <program>
+    summon totally_nonexistent_module
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ModuleError: Module 'totally_nonexistent_module' not found. Searched:
+  tests/errors/modules/totally_nonexistent_module.sad
+  tests/errors/modules/totally_nonexistent_module.sard
+  sards/stdlib/totally_nonexistent_module.sad
+  sards/stdlib/totally_nonexistent_module.sard

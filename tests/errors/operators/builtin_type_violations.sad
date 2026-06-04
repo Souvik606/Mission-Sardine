@@ -1,0 +1,2 @@
+# Attempt to pass a non-primitive List value to type casters
+Integer([1, 2])

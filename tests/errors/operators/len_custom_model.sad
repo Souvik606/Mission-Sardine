@@ -1,0 +1,15 @@
+# len_custom_model test
+model MyModel {
+    method __len__() { yield 42 }
+}
+
+model AnotherModel {
+    open attr <length>
+    init() { length: 123 }
+}
+
+m = MyModel()
+show(len(m))
+
+a = AnotherModel()
+show(len(a))

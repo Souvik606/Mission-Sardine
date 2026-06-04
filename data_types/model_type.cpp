@@ -96,7 +96,8 @@ DataType::OperationResult ModelInstance::get_attr(const string &attr_name,
                     return {nullptr, make_shared<AttributeError>(
                         pos_start.value_or(Position()), pos_end.value_or(Position()),
                         "Cannot access secret attribute '" + attr_name + "'",
-                        calling_context)};
+                        calling_context,
+                        "'secret' attributes can only be accessed within the model that defines them.")};
                 }
             }
             else if (access == "guarded")
@@ -109,7 +110,8 @@ DataType::OperationResult ModelInstance::get_attr(const string &attr_name,
                     return {nullptr, make_shared<AttributeError>(
                         pos_start.value_or(Position()), pos_end.value_or(Position()),
                         "Cannot access guarded attribute '" + attr_name + "'",
-                        calling_context)};
+                        calling_context,
+                        "'guarded' attributes can only be accessed within the model or its subclasses.")};
                 }
             }
             // "open" or "" → always accessible
@@ -132,7 +134,8 @@ DataType::OperationResult ModelInstance::get_attr(const string &attr_name,
                 return {nullptr, make_shared<AttributeError>(
                     pos_start.value_or(Position()), pos_end.value_or(Position()),
                     "Cannot access secret method '" + attr_name + "'",
-                    calling_context)};
+                    calling_context,
+                    "'secret' methods can only be called from within the model that defines them.")};
             }
         }
         else if (access == "guarded")
@@ -144,7 +147,8 @@ DataType::OperationResult ModelInstance::get_attr(const string &attr_name,
                 return {nullptr, make_shared<AttributeError>(
                     pos_start.value_or(Position()), pos_end.value_or(Position()),
                     "Cannot access guarded method '" + attr_name + "'",
-                    calling_context)};
+                    calling_context,
+                    "'guarded' methods can only be called from within the model or its subclasses.")};
             }
         }
 
@@ -167,7 +171,7 @@ DataType::OperationResult ModelInstance::get_attr(const string &attr_name,
                 method_args,
                 false,
                 self_ptr);
-            method->set_context(context).set_pos(pos_start, pos_end);
+            method->set_context(context).set_pos(func_def->pos_start, func_def->pos_end);
             method->access_modifier_owner = method_owner;
             return {method, nullptr};
         }
@@ -254,7 +258,7 @@ DataType::OperationResult ModelInstance::_call_op_method(const string &method_na
         method_args,
         false,
         self_ptr);
-    func->set_context(context).set_pos(pos_start, pos_end);
+    func->set_context(context).set_pos(func_def->pos_start, func_def->pos_end);
 
     Interpreter interp;
     map<string, shared_ptr<DataType>> kw_args;

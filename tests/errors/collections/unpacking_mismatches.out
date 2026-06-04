@@ -1,0 +1,6 @@
+Error in tests/errors/collections/unpacking_mismatches.sad:
+[E9001] Traceback (most recent call last):
+  File tests/errors/collections/unpacking_mismatches.sad, line 1, in <program>
+    a, b, c = [1, 2]
+              ^^^^^^
+RunTimeError: ValueError: Expected 3 values, but got 2

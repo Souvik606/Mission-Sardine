@@ -1,0 +1,36 @@
+show("--- Test: Ternary Operator ---")
+
+show("--- Basic Ternary: Truthy ---")
+x = 10
+result = (x > 5) ? "Greater than 5" : "5 or less"
+show(result)
+
+show("--- Basic Ternary: Falsy ---")
+result = (x < 5) ? "Less than 5" : "5 or more"
+show(result)
+
+show("--- Nested Ternary ---")
+score = 85
+grade = (score >= 90) ? "A" : (score >= 80) ? "B" : (score >= 70) ? "C" : "D"
+show("Grade for 85 is:", grade)
+
+score = 95
+grade = (score >= 90) ? "A" : (score >= 80) ? "B" : (score >= 70) ? "C" : "D"
+show("Grade for 95 is:", grade)
+
+score = 65
+grade = (score >= 90) ? "A" : (score >= 80) ? "B" : (score >= 70) ? "C" : "D"
+show("Grade for 65 is:", grade)
+
+show("--- Ternary inside function call ---")
+method double_if_positive(val) {
+    yield (val > 0) ? (val * 2) : val
+}
+show(double_if_positive(5))
+show(double_if_positive(-3))
+
+show("--- Ternary in operations ---")
+a = 1
+b = 2
+val = ((a == b) ? 100 : 200) + 50
+show(val)

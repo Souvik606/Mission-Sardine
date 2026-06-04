@@ -1,0 +1,4 @@
+# Test f-string interpolation overflow protection
+val = 1 << 20000
+s = $"val is {val}"
+show(s)

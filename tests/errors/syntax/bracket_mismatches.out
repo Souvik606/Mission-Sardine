@@ -1,0 +1,5 @@
+Error in tests/errors/syntax/bracket_mismatches.sad:
+  [E2001] File tests/errors/syntax/bracket_mismatches.sad, line 1
+    x = (1 + 2
+              ^
+Invalid Syntax Error: Expected ')'

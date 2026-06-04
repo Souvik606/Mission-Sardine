@@ -1,0 +1,6 @@
+method foo() {}
+menu foo {
+    choice 1 {
+        show("one")
+    }
+}

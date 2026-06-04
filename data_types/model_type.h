@@ -106,7 +106,7 @@ public:
 
     bool is_descendant_of(const shared_ptr<ModelType>& other_model) const
     {
-        if (this == other_model.get()) return true;
+        if (this->name == other_model->name) return true;
         for (const auto& p : parents)
             if (p->is_descendant_of(other_model)) return true;
         return false;

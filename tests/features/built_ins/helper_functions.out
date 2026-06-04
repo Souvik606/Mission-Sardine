@@ -1,0 +1,62 @@
+--- Testing Global Helpers ---
+len of string: 5
+len of list: 3
+len of dict: 2
+range(5): [0, 1, 2, 3, 4]
+range(1, 5): [1, 2, 3, 4]
+range(1, 10, 2): [1, 3, 5, 7, 9]
+range(5, 1, -1): [5, 4, 3, 2]
+--- Testing List Methods ---
+original a: [1, 2, 3]
+after append: [1, 2, 3, 4]
+after prepend: [0, 1, 2, 3, 4]
+after insert: [0, 1, 99, 2, 3, 4]
+popped last: 4 list now: [0, 1, 99, 2, 3, 4]
+popped index 2: 99 list now: [0, 1, 99, 2, 3, 4]
+after remove(2): [0, 1, 99, 3, 4]
+after extend: [0, 1, 99, 3, 4, 5, 6, 7]
+original b: [3, 1, 4, 1, 5, 9]
+sorted b: [1, 1, 3, 4, 5, 9]
+sorted desc b: [9, 5, 4, 3, 1, 1]
+reversed b: [9, 5, 1, 4, 1, 3]
+slice(1, 4) b: [1, 4, 1]
+join b: 3-1-4-1-5-9
+index_of 5 in b: 4
+index_of 99 in b: -1
+contains 4 in b: 1
+contains 99 in b: 0
+cleared copy of b: [] original b is untouched: [3, 1, 4, 1, 5, 9]
+--- Testing String Methods ---
+original s:   hello Sardine 123  
+s.upper():   HELLO SARDINE 123  
+s.lower():   hello sardine 123  
+s.trim(): hello Sardine 123
+s2.split(','): ['apple', 'banana', 'cherry']
+s2.starts_with('apple'): 1
+s2.starts_with('banana'): 0
+s2.ends_with('cherry'): 1
+s2.replace('banana', 'orange'): apple,orange,cherry
+s2.find('banana'): 6
+s2.find('pear'): -1
+s2.contains('cherry'): 1
+s2.contains('pear'): 0
+digit_str.is_digit(): 1
+digit_str.is_alpha(): 0
+alpha_str.is_digit(): 0
+alpha_str.is_alpha(): 1
+--- Testing Dict Methods ---
+original d: {'name': 'Sardine', 'type': 'language', 'version': 1}
+d.keys() sorted: ['name', 'type', 'version']
+Caught expected error sorting mixed type values!
+d.entries(): [['name', 'Sardine'], ['type', 'language'], ['version', 1]]
+d.items(): [['name', 'Sardine'], ['type', 'language'], ['version', 1]]
+d.get('name'): Sardine
+d.get('nonexistent', 'default_val'): default_val
+d.get('nonexistent'): 0
+d.has_key('type'): 1
+d.contains('nonexistent'): 0
+popped type: language d now: {'name': 'Sardine', 'type': 'language', 'version': 1}
+popped nonexistent: not_found
+popped item: ['version', 1] d now: {'name': 'Sardine', 'type': 'language', 'version': 1}
+after update: {'name': 'Sardine', 'type': 'language', 'version': 2, 'status': 'active'}
+cleared d_copy: {} original d untouched: {'name': 'Sardine', 'type': 'language', 'version': 2, 'status': 'active'}

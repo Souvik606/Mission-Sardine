@@ -1,9 +1,10 @@
 Inside risk block, before error
-Caught an error: Traceback (most recent call last):
+Caught an error: [E5002] Traceback (most recent call last):
   File tests/features/error_handling/risk_trap.sad, line 3, in <program>
         a = 10 / 0
                  ^
 DivisionByZeroError: Division by zero
+  Hint: Check that the divisor is not zero before dividing. Example: `when b != 0 { result = a / b }`
 Inside clean block
 ---
 Inside another risk block

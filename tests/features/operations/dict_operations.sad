@@ -1,0 +1,51 @@
+show("--- Test: Dictionary Operations & Methods ---")
+
+show("--- Basic Dictionary Operators ---")
+d1 = {"a": 1, "b": 2}
+d2 = {"b": 20, "c": 30}
+show("d1 + d2 (merge):", d1 + d2)
+
+# Subtraction operator removes a key from dictionary
+d3 = d1 + d2
+d4 = d3 - "b"
+show("d3 - 'b' (remove key):", d4)
+
+# Subtracting non-existent key should leave it unchanged
+show("d3 - 'nonexistent':", d3 - "nonexistent")
+
+show("--- Dictionary Methods ---")
+d = {"x": 100, "y": 200, "z": 300}
+show("keys():", d.keys())
+show("values():", d.values())
+show("entries():", d.entries())
+
+show("--- get() method ---")
+show("get('x'):", d.get("x"))
+show("get('missing', 999):", d.get("missing", 999))
+show("get('missing' no default):", d.get("missing"))
+
+show("--- has_key() / contains() ---")
+show("has_key('y'):", d.has_key("y"))
+show("has_key('missing'):", d.has_key("missing"))
+
+show("--- pop() method ---")
+show("pop('z'):", d.pop("z"))
+show("dict after pop:", d)
+show("pop('missing' with default):", d.pop("missing", 555))
+
+show("--- pop_item() method ---")
+d_pop = {"first": 1, "second": 2}
+show("pop_item():", d_pop.pop_item())
+show("dict after pop_item:", d_pop)
+
+show("--- update() method ---")
+d_update = {"a": 1}
+d_update.update({"b": 2, "c": 3})
+show("after update:", d_update)
+
+show("--- copy() and clear() ---")
+d_orig = {"a": 10}
+d_copy = d_orig.copy()
+d_orig.clear()
+show("original after clear:", d_orig)
+show("copy is preserved:", d_copy)

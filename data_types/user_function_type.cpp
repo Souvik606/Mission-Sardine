@@ -2,6 +2,8 @@
 #include "number_type.h"
 #include "../language_core/interpreter.h"
 #include "../language_core/symbol_table.h"
+#include "../language_core/constants.h"
+#include "../language_core/error.h"
 #include <map>
 #include <unordered_map>
 
@@ -28,7 +30,8 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>> &pos_args, co
 
     if (instance)
     {
-        exec_context = make_shared<Context>(this->name, traceback_parent, this->pos_start);
+        traceback_parent = instance->context;
+        exec_context = make_shared<Context>("method " + this->name, traceback_parent, this->pos_start);
 
         auto inst_sym = interpreter.get_instance_symbol_table(instance);
         if (!inst_sym)
@@ -49,6 +52,14 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>> &pos_args, co
         const auto new_symbol_table = make_shared<SymbolTable>();
         new_symbol_table->parent = this->context ? this->context->symbol_table : nullptr;
         exec_context->symbol_table = new_symbol_table;
+    }
+
+    if (exec_context->depth > MAX_RECURSION_DEPTH)
+    {
+        return res.failure(StackDepthExceededError(
+            this->pos_start.value_or(Position()), this->pos_end.value_or(Position()),
+            "Maximum recursion depth exceeded (" + std::to_string(MAX_RECURSION_DEPTH) + ")",
+            exec_context));
     }
 
     // check_and_populate_args logic:

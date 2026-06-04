@@ -8,8 +8,9 @@ check(5) is false
 <type String> two
 <type Number> 3.0
 --- Risk/Trap with complex operation ---
-Caught expected error: Traceback (most recent call last):
+Caught expected error: [E5001] Traceback (most recent call last):
   File tests/features/combinations/complex_expressions.sad, line 37, in <program>
         y = x + 5
                 ^
 IllegalOperationError: Expected a String type
+  Hint: Cannot concatenate String and Number. Try converting with 'String(5)' or wrap in an f-string.
