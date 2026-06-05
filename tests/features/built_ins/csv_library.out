@@ -1,0 +1,9 @@
+--- Testing CSV Standard Library ---
+headers: ['id', 'name', 'role']
+row 1 id: 1
+row 1 name: Sardine Language
+row 1 role: Interpreter
+row 2 id: 2
+row 2 name: Standard Dev
+row 2 role: Engineer
+row 3 is Null: True

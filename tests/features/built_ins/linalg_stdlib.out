@@ -26,10 +26,10 @@ vec.zeros(4) : [0, 0, 0, 0]
 vec.ones(3)  : [1, 1, 1]
 --- vec invalid ops ---
 Caught expected error: [E5001] Traceback (most recent call last):
-  File sards/stdlib/linalg.sad, line 316, in <program>
+  File sards/stdlib/linalg.sad, line 317, in <program>
         method __add__(other) {
                ^^^^^^^^^^^^^^^^
-  File sards/stdlib/linalg.sad, line 321, in method __add__
+  File sards/stdlib/linalg.sad, line 322, in method __add__
                     yield error("vec +: vectors must have the same size")
                           ^
 IllegalOperationError: vec +: vectors must have the same size
@@ -63,26 +63,26 @@ m3 ** 0        : [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
 m3 ** 2        : [[16, 22, 11], [20, 25, 4], [5, 16, 39]]
 --- mat invalid ops ---
 Caught expected error: [E5001] Traceback (most recent call last):
-  File sards/stdlib/linalg.sad, line 809, in <program>
+  File sards/stdlib/linalg.sad, line 811, in <program>
         method __add__(other) {
                ^^^^^^^^^^^^^^^^
-  File sards/stdlib/linalg.sad, line 814, in method __add__
+  File sards/stdlib/linalg.sad, line 816, in method __add__
                     yield error("mat +: matrices must have the same shape")
                           ^
 IllegalOperationError: mat +: matrices must have the same shape
 Caught expected error: [E5001] Traceback (most recent call last):
-  File sards/stdlib/linalg.sad, line 861, in <program>
+  File sards/stdlib/linalg.sad, line 863, in <program>
         method __mul__(other) {
                ^^^^^^^^^^^^^^^^
-  File sards/stdlib/linalg.sad, line 880, in method __mul__
+  File sards/stdlib/linalg.sad, line 882, in method __mul__
                     yield error("mat * vec: column count must match vector size")
                           ^
 IllegalOperationError: mat * vec: column count must match vector size
 Caught expected error: [E5001] Traceback (most recent call last):
-  File sards/stdlib/linalg.sad, line 806, in <program>
+  File sards/stdlib/linalg.sad, line 808, in <program>
             yield inverse()
                   ^^^^^^^^^
-  File sards/stdlib/linalg.sad, line 584, in method inverse
+  File sards/stdlib/linalg.sad, line 586, in method inverse
                 yield error("inverse: requires a square matrix")
                       ^
 IllegalOperationError: inverse: requires a square matrix

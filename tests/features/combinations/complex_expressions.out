@@ -4,9 +4,9 @@
 check(15) is true
 check(5) is false
 --- Trace loop on list from function ---
-<type Number> 1
+<type Integer> 1
 <type String> two
-<type Number> 3.0
+<type Float> 3.0
 --- Risk/Trap with complex operation ---
 Caught expected error: [E5001] Traceback (most recent call last):
   File tests/features/combinations/complex_expressions.sad, line 37, in <program>

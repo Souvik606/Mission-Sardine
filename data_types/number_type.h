@@ -11,34 +11,43 @@ class Number final : public DataType {
 public:
     variant<long long, double> value;
     bool is_float = false;
+    bool is_boolean = false;
 
-    explicit Number(long long val, bool is_flt = false) : value(val), is_float(is_flt) {}
-    explicit Number(double val, bool is_flt = true) : value(val), is_float(is_flt) {}
+    static double round_to_13_dec(double val) {
+        return std::round(val * 1e13) / 1e13;
+    }
+
+    explicit Number(long long val, bool is_flt = false, bool is_bool = false) : value(val), is_float(is_flt), is_boolean(is_bool) {}
+    explicit Number(double val, bool is_flt = true) : value(val), is_float(is_flt), is_boolean(false) {}
     explicit Number(variant<long long, double> val) : value(std::move(val)) {
         is_float = holds_alternative<double>(value);
+        is_boolean = false;
     }
-    Number(variant<long long, double> val, bool is_flt) : value(std::move(val)), is_float(is_flt) {}
+    Number(variant<long long, double> val, bool is_flt, bool is_bool) : value(std::move(val)), is_float(is_flt), is_boolean(is_bool) {}
 
-    [[nodiscard]] string get_type_name() const override { return "Number"; }
+    [[nodiscard]] string get_type_name() const override {
+        if (is_boolean) return "Boolean";
+        return is_float ? "Float" : "Integer";
+    }
     // ── Small-integer cache ───────────────────────────────────────────────────
     static constexpr long long CACHE_MIN = -1;
     static constexpr long long CACHE_MAX = 256;
 
-    static shared_ptr<Number> make(long long v, bool is_flt = false) {
-        if (!is_flt && v >= CACHE_MIN && v <= CACHE_MAX) {
+    static shared_ptr<Number> make(long long v, bool is_flt = false, bool is_bool = false) {
+        if (!is_flt && !is_bool && v >= CACHE_MIN && v <= CACHE_MAX) {
             static shared_ptr<Number> cache[CACHE_MAX - CACHE_MIN + 1];
             static bool init = false;
             if (!init) {
                 for (long long i = CACHE_MIN; i <= CACHE_MAX; ++i)
-                    cache[i - CACHE_MIN] = shared_ptr<Number>(new Number(i, false));
+                    cache[i - CACHE_MIN] = shared_ptr<Number>(new Number(i, false, false));
                 init = true;
             }
             return cache[v - CACHE_MIN];
         }
-        return shared_ptr<Number>(new Number(v, is_flt));
+        return shared_ptr<Number>(new Number(v, is_flt, is_bool));
     }
 
-    static shared_ptr<Number> make_bool(bool b) { return make(b ? 1LL : 0LL, false); }
+    static shared_ptr<Number> make_bool(bool b) { return make(b ? 1LL : 0LL, false, true); }
 
 
     DataType& set_pos(const optional<Position>& start, const optional<Position>& end) override {
@@ -58,7 +67,7 @@ public:
 
     [[nodiscard]] shared_ptr<DataType> copy() const override {
         if (holds_alternative<long long>(this->value)) {
-            auto n = Number::make(get<long long>(this->value), this->is_float);
+            auto n = Number::make(get<long long>(this->value), this->is_float, this->is_boolean);
             n->set_pos(this->pos_start, this->pos_end);
             n->set_context(this->context);
             return static_pointer_cast<DataType>(n);
@@ -300,7 +309,14 @@ public:
 
     [[nodiscard]] OperationResult get_comparison_eq(const shared_ptr<DataType>& operand) const override {
         if (const auto other = dynamic_cast<const Number*>(operand.get())) {
-            const bool result = std::visit([](auto left, auto right) { return left == right; }, this->value, other->value);
+            bool result;
+            if (this->is_float || other->is_float) {
+                double left = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
+                double right = std::visit([](auto val) -> double { return static_cast<double>(val); }, other->value);
+                result = (round_to_13_dec(left) == round_to_13_dec(right));
+            } else {
+                result = std::visit([](auto left, auto right) { return left == right; }, this->value, other->value);
+            }
             return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(result)), nullptr);
         }
         return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
@@ -308,7 +324,14 @@ public:
 
     [[nodiscard]] OperationResult get_comparison_neq(const shared_ptr<DataType>& operand) const override {
         if (const auto other = dynamic_cast<const Number*>(operand.get())) {
-            const bool result = std::visit([](auto left, auto right) { return left != right; }, this->value, other->value);
+            bool result;
+            if (this->is_float || other->is_float) {
+                double left = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
+                double right = std::visit([](auto val) -> double { return static_cast<double>(val); }, other->value);
+                result = (round_to_13_dec(left) != round_to_13_dec(right));
+            } else {
+                result = std::visit([](auto left, auto right) { return left != right; }, this->value, other->value);
+            }
             return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(result)), nullptr);
         }
         return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
@@ -316,7 +339,14 @@ public:
 
     [[nodiscard]] OperationResult get_comparison_lt(const shared_ptr<DataType>& operand) const override {
         if (const auto other = dynamic_cast<const Number*>(operand.get())) {
-            const bool result = std::visit([](auto left, auto right) { return left < right; }, this->value, other->value);
+            bool result;
+            if (this->is_float || other->is_float) {
+                double left = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
+                double right = std::visit([](auto val) -> double { return static_cast<double>(val); }, other->value);
+                result = (round_to_13_dec(left) < round_to_13_dec(right));
+            } else {
+                result = std::visit([](auto left, auto right) { return left < right; }, this->value, other->value);
+            }
             return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(result)), nullptr);
         }
         return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
@@ -324,7 +354,14 @@ public:
 
     [[nodiscard]] OperationResult get_comparison_gt(const shared_ptr<DataType>& operand) const override {
         if (const auto other = dynamic_cast<const Number*>(operand.get())) {
-            const bool result = std::visit([](auto left, auto right) { return left > right; }, this->value, other->value);
+            bool result;
+            if (this->is_float || other->is_float) {
+                double left = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
+                double right = std::visit([](auto val) -> double { return static_cast<double>(val); }, other->value);
+                result = (round_to_13_dec(left) > round_to_13_dec(right));
+            } else {
+                result = std::visit([](auto left, auto right) { return left > right; }, this->value, other->value);
+            }
             return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(result)), nullptr);
         }
         return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
@@ -332,7 +369,14 @@ public:
 
     [[nodiscard]] OperationResult get_comparison_lte(const shared_ptr<DataType>& operand) const override {
         if (const auto other = dynamic_cast<const Number*>(operand.get())) {
-            const bool result = std::visit([](auto left, auto right) { return left <= right; }, this->value, other->value);
+            bool result;
+            if (this->is_float || other->is_float) {
+                double left = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
+                double right = std::visit([](auto val) -> double { return static_cast<double>(val); }, other->value);
+                result = (round_to_13_dec(left) <= round_to_13_dec(right));
+            } else {
+                result = std::visit([](auto left, auto right) { return left <= right; }, this->value, other->value);
+            }
             return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(result)), nullptr);
         }
         return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
@@ -340,7 +384,14 @@ public:
 
     [[nodiscard]] OperationResult get_comparison_gte(const shared_ptr<DataType>& operand) const override {
         if (const auto other = dynamic_cast<const Number*>(operand.get())) {
-            const bool result = std::visit([](auto left, auto right) { return left >= right; }, this->value, other->value);
+            bool result;
+            if (this->is_float || other->is_float) {
+                double left = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
+                double right = std::visit([](auto val) -> double { return static_cast<double>(val); }, other->value);
+                result = (round_to_13_dec(left) >= round_to_13_dec(right));
+            } else {
+                result = std::visit([](auto left, auto right) { return left >= right; }, this->value, other->value);
+            }
             return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(result)), nullptr);
         }
         return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
@@ -484,6 +535,9 @@ public:
     }
 
     [[nodiscard]] string to_string() const override {
+        if (is_boolean) {
+            return get<long long>(this->value) != 0 ? "True" : "False";
+        }
         if (holds_alternative<double>(this->value)) {
             double d = get<double>(this->value);
             if (std::isinf(d)) {
@@ -492,19 +546,17 @@ public:
             if (std::isnan(d)) {
                 return "NAN";
             }
-            char buf[64];
-            auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), d);
-            if (ec == std::errc{}) {
-                string s(buf, ptr - buf);
-                if (s.find('.') == string::npos && s.find('e') == string::npos && s.find('E') == string::npos) {
-                    s += ".0";
-                }
-                return s;
-            }
             ostringstream ss;
-            ss << std::setprecision(17) << d;
+            ss << std::fixed << std::setprecision(13) << d;
             string s = ss.str();
-            if (s.find('.') == string::npos && s.find('e') == string::npos && s.find('E') == string::npos) {
+            if (s.find('.') != string::npos) {
+                while (!s.empty() && s.back() == '0') {
+                    s.pop_back();
+                }
+                if (!s.empty() && s.back() == '.') {
+                    s += '0';
+                }
+            } else {
                 s += ".0";
             }
             return s;

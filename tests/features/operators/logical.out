@@ -1,16 +1,16 @@
 --- Test: Logical Operators ---
-true and true -> 1
-true and false -> 0
-false and true -> 0
-false and false -> 0
-true or true -> 1
-true or false -> 1
-false or true -> 1
-false or false -> 0
-not true -> 0
-not false -> 1
+true and true -> True
+true and false -> False
+false and true -> False
+false and false -> False
+true or true -> True
+true or false -> True
+false or true -> True
+false or false -> False
+not true -> False
+not false -> True
 --- Test: Operator Precedence ---
 5 + 2 * 3 -> 11
 (5 + 2) * 3 -> 21
-not 0 and 1 -> 1
-not (0 and 1) -> 1
+not 0 and 1 -> True
+not (0 and 1) -> True

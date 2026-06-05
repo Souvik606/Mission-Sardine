@@ -1,0 +1,8 @@
+x = {"a": 1, "b": 2}
+show(type(x))
+lst = [1, 2.5, True, False]
+show(lst)
+show(type(1.0 + 2.0))
+show(0.1 + 0.2 == 0.3)
+show(0.1 + 0.2 + 0.3 == 0.6)
+show(1.0 - 0.9)

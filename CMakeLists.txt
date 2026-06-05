@@ -24,4 +24,6 @@ add_executable(MissionSardine
         ast_nodes/foreach_nodes.h
         ast_nodes/summon_nodes.h
         data_types/module_type.h
-        data_types/super_proxy.h)
+        data_types/super_proxy.h
+        data_types/file_type.h
+        data_types/null_type.h)

@@ -1,6 +1,6 @@
 #include "model_type.h"
 #include "function_type.h"
-#include "number_type.h"
+#include "null_type.h"
 #include "../language_core/interpreter.h"
 #include "../language_core/symbol_table.h"
 #include "../language_core/context.h"
@@ -38,7 +38,7 @@ RunTimeResult ModelType::execute(const vector<shared_ptr<DataType>> &pos_args, c
             }
             else
             {
-                instance->symbol_table->set(attr_name, make_shared<Number>(0LL));
+                instance->symbol_table->set(attr_name, make_shared<Null>());
             }
         }
     }
@@ -280,6 +280,24 @@ DataType::OperationResult ModelInstance::_binary_op(const string &op_name, const
             return {nullptr, error};
         if (result)
             return {result, nullptr};
+    }
+
+    if (op_name == "get_comparison_eq")
+    {
+        if (dynamic_cast<const Null*>(other.get()) != nullptr) {
+            return {Number::make_bool(false), nullptr};
+        }
+        bool eq = (this == other.get());
+        return {Number::make_bool(eq), nullptr};
+    }
+    else if (op_name == "get_comparison_neq")
+    {
+        auto [eq_val, err] = get_comparison_eq(other);
+        if (err)
+            return {nullptr, err};
+        auto eq_num = dynamic_pointer_cast<Number>(eq_val);
+        bool neq = (eq_num && !eq_num->is_truthy());
+        return {Number::make_bool(neq), nullptr};
     }
 
     string symbol = op_name;

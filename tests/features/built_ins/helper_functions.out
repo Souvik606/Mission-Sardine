@@ -23,8 +23,8 @@ slice(1, 4) b: [1, 4, 1]
 join b: 3-1-4-1-5-9
 index_of 5 in b: 4
 index_of 99 in b: -1
-contains 4 in b: 1
-contains 99 in b: 0
+contains 4 in b: True
+contains 99 in b: False
 cleared copy of b: [] original b is untouched: [3, 1, 4, 1, 5, 9]
 --- Testing String Methods ---
 original s:   hello Sardine 123  
@@ -32,18 +32,18 @@ s.upper():   HELLO SARDINE 123
 s.lower():   hello sardine 123  
 s.trim(): hello Sardine 123
 s2.split(','): ['apple', 'banana', 'cherry']
-s2.starts_with('apple'): 1
-s2.starts_with('banana'): 0
-s2.ends_with('cherry'): 1
+s2.starts_with('apple'): True
+s2.starts_with('banana'): False
+s2.ends_with('cherry'): True
 s2.replace('banana', 'orange'): apple,orange,cherry
 s2.find('banana'): 6
 s2.find('pear'): -1
-s2.contains('cherry'): 1
-s2.contains('pear'): 0
-digit_str.is_digit(): 1
-digit_str.is_alpha(): 0
-alpha_str.is_digit(): 0
-alpha_str.is_alpha(): 1
+s2.contains('cherry'): True
+s2.contains('pear'): False
+digit_str.is_digit(): True
+digit_str.is_alpha(): False
+alpha_str.is_digit(): False
+alpha_str.is_alpha(): True
 --- Testing Dict Methods ---
 original d: {'name': 'Sardine', 'type': 'language', 'version': 1}
 d.keys() sorted: ['name', 'type', 'version']
@@ -53,8 +53,8 @@ d.items(): [['name', 'Sardine'], ['type', 'language'], ['version', 1]]
 d.get('name'): Sardine
 d.get('nonexistent', 'default_val'): default_val
 d.get('nonexistent'): 0
-d.has_key('type'): 1
-d.contains('nonexistent'): 0
+d.has_key('type'): True
+d.contains('nonexistent'): False
 popped type: language d now: {'name': 'Sardine', 'type': 'language', 'version': 1}
 popped nonexistent: not_found
 popped item: ['version', 1] d now: {'name': 'Sardine', 'type': 'language', 'version': 1}

@@ -67,6 +67,14 @@ private:
     int call;
 
     int current_depth = 0;
+    int in_method_count = 0;
+
+    struct MethodCountGuard
+    {
+        int& counter;
+        explicit MethodCountGuard(int& cnt) : counter(cnt) { counter++; }
+        ~MethodCountGuard() { counter--; }
+    };
 
     ParseResult _enter_depth()
     {
@@ -437,6 +445,33 @@ private:
         return is_statement;
     }
 
+    optional<ParseResult> check_statement_separation(ParseResult& res, const vector<shared_ptr<Node>>& parsed_list)
+    {
+        if (!current_tok.has_value())
+            return nullopt;
+        if (current_tok->type == T_NEWLINE || current_tok->type == T_RPAREN2 || current_tok->type == T_EOF)
+            return nullopt;
+        if (!parsed_list.empty() && tok_index > 0 && tokens[tok_index - 1].type != T_NEWLINE)
+        {
+            string msg = "Expected newline to separate statements";
+            if (current_tok->type == T_KEYWORD &&
+                (any_cast<string>(current_tok->value) == "yield" ||
+                 any_cast<string>(current_tok->value) == "escape" ||
+                 any_cast<string>(current_tok->value) == "proceed"))
+            {
+                msg += ". Jump statements (like '" + any_cast<string>(current_tok->value) + "') must be on a new line.";
+            }
+            res.failure(InvalidSyntaxError(
+                current_tok->pos_start.value_or(Position()),
+                current_tok->pos_end.value_or(Position()),
+                msg
+            ));
+            return res;
+        }
+        return nullopt;
+    }
+
+
     ParseResult multiline()
     {
         ParseResult res;
@@ -730,6 +765,8 @@ private:
         res.register_advancement();
         advance();
 
+        MethodCountGuard guard(in_method_count);
+
         if (current_tok.has_value() && current_tok->type == T_IDENTIFIER)
         {
             var_name_tok = current_tok.value();
@@ -849,6 +886,10 @@ private:
 
         while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF)
         {
+            auto sep_err = check_statement_separation(res, body_nodes);
+            if (sep_err)
+                return *sep_err;
+
             if (current_tok->type == T_KEYWORD &&
                 (any_cast<string>(current_tok->value) == "escape" ||
                  any_cast<string>(current_tok->value) == "proceed" ||
@@ -900,7 +941,7 @@ private:
         res.register_advancement();
         advance();
 
-        return res.success(make_shared<FunctionDefinitionNode>(var_name_tok, arg_nodes, body_node, false, access_mod));
+        return res.success(make_shared<FunctionDefinitionNode>(var_name_tok, arg_nodes, body_node, true, access_mod));
     }
 
     ParseResult parse_arguments(vector<shared_ptr<Node>>& positional_args, vector<pair<Token, shared_ptr<Node>>>& keyword_args)
@@ -1166,6 +1207,10 @@ private:
 
         while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF)
         {
+            auto sep_err = check_statement_separation(res, body_nodes);
+            if (sep_err)
+                return *sep_err;
+
             if (current_tok->type == T_KEYWORD &&
                 (any_cast<string>(current_tok->value) == "escape" ||
                  any_cast<string>(current_tok->value) == "proceed" ||
@@ -1260,6 +1305,10 @@ private:
 
         while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF)
         {
+            auto sep_err = check_statement_separation(res, body_nodes);
+            if (sep_err)
+                return *sep_err;
+
             if (current_tok->type == T_KEYWORD &&
                 (any_cast<string>(current_tok->value) == "escape" ||
                  any_cast<string>(current_tok->value) == "proceed" ||
@@ -1371,6 +1420,10 @@ private:
 
         while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF)
         {
+            auto sep_err = check_statement_separation(res, body_nodes);
+            if (sep_err)
+                return *sep_err;
+
             if (current_tok->type == T_KEYWORD &&
                 (any_cast<string>(current_tok->value) == "escape" ||
                  any_cast<string>(current_tok->value) == "proceed" ||
@@ -1504,6 +1557,10 @@ private:
 
         while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF)
         {
+            auto sep_err = check_statement_separation(res, body_nodes);
+            if (sep_err)
+                return *sep_err;
+
             if (current_tok->type == T_KEYWORD &&
                 (any_cast<string>(current_tok->value) == "escape" ||
                  any_cast<string>(current_tok->value) == "proceed" ||
@@ -1607,6 +1664,10 @@ private:
 
         while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF)
         {
+            auto sep_err = check_statement_separation(res, body_nodes);
+            if (sep_err)
+                return *sep_err;
+
             if (current_tok->type == T_KEYWORD &&
                 (any_cast<string>(current_tok->value) == "escape" ||
                  any_cast<string>(current_tok->value) == "proceed" ||
@@ -1761,6 +1822,10 @@ private:
 
         while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF)
         {
+            auto sep_err = check_statement_separation(res, body_nodes);
+            if (sep_err)
+                return *sep_err;
+
             if (current_tok->type == T_KEYWORD &&
                 (any_cast<string>(current_tok->value) == "escape" ||
                  any_cast<string>(current_tok->value) == "proceed" ||
@@ -1853,6 +1918,10 @@ private:
 
             while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF)
             {
+                auto sep_err = check_statement_separation(res, body_nodes);
+                if (sep_err)
+                    return *sep_err;
+
                 if (current_tok->type == T_KEYWORD &&
                     (any_cast<string>(current_tok->value) == "escape" ||
                      any_cast<string>(current_tok->value) == "proceed" ||
@@ -2308,6 +2377,14 @@ private:
 
         if (any_cast<string>(current_tok->value) == "yield")
         {
+            if (in_method_count == 0)
+            {
+                return res.failure(InvalidSyntaxError(
+                    current_tok->pos_start.value_or(Position()),
+                    current_tok->pos_end.value_or(Position()),
+                    "'yield' is only allowed inside methods/functions"
+                ));
+            }
             auto start_pos = current_tok->pos_start.value_or(Position());
             res.register_advancement();
             advance();
@@ -2687,6 +2764,10 @@ private:
 
         while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF)
         {
+            auto sep_err = check_statement_separation(res, body_nodes);
+            if (sep_err)
+                return *sep_err;
+
             if (current_tok->type == T_KEYWORD &&
                 (any_cast<string>(current_tok->value) == "escape" ||
                  any_cast<string>(current_tok->value) == "proceed" ||
@@ -2743,7 +2824,7 @@ private:
         optional<Token> error_type = nullopt;
         optional<Token> error_name = nullopt;
 
-        if (current_tok.has_value() && current_tok->type == T_ERROR)
+        if (current_tok.has_value() && (current_tok->type == T_ERROR || current_tok->type == T_IDENTIFIER))
         {
             error_type = current_tok;
             res.register_advancement();
@@ -3593,6 +3674,10 @@ private:
 
         while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF)
         {
+            auto sep_err = check_statement_separation(res, body_nodes);
+            if (sep_err)
+                return *sep_err;
+
             if (current_tok->type == T_KEYWORD &&
                 (any_cast<string>(current_tok->value) == "yield" ||
                  any_cast<string>(current_tok->value) == "proceed" ||

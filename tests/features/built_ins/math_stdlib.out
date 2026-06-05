@@ -19,10 +19,10 @@ pow(2, 5)     : 32
 pow(1.5, 3)   : 3.375
 pow(4, 0)     : 1
 pow(2, -3)    : 0.125
-sqrt(16)      : 4.0
+sqrt(16)      : 4
 sqrt(2)       : 1.4142
 sqrt(0)       : 0
-cbrt(27)      : 3.0
+cbrt(27)      : 3
 cbrt(-8)      : -2
 cbrt(0)       : 0
 hypot(3, 4)   : 5.0
@@ -51,12 +51,12 @@ exp(1)        : 2.7183
 exp(-1)       : 0.3679
 ln(m.E)       : 1.0
 ln(1)         : 0
-log2(8)       : 3.0
+log2(8)       : 3
 log10(100)    : 1.9984
 log(27, 3)    : 3.0
 --- math stdlib: trigonometry ---
 sin(0)        : 0
-sin(m.PI/2)   : 1.0
+sin(m.PI/2)   : 1
 cos(0)        : 1
 cos(m.PI)     : -1
 tan(0)        : 0
@@ -95,6 +95,7 @@ combinations(5, 2)  : 10
 Caught sqrt(-1) error
 Caught ln(0) error
 Caught log with base 1 error
+Caught tan(PI/2) error
 Caught asin(2.5) error
 Caught acos(-1.5) error
 Caught atan2(0,0) error

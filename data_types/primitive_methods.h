@@ -5,6 +5,7 @@
 #include "string_type.h"
 #include "list_type.h"
 #include "dict_type.h"
+#include "null_type.h"
 #include "../language_core/error.h"
 
 using namespace std;
@@ -121,7 +122,7 @@ inline DataType::OperationResult String::get_attr(const string& attr_name, const
                 return { nullptr, make_shared<IllegalOperationError>(args[0]->pos_start.value_or(Position()), args[0]->pos_end.value_or(Position()), "Prefix must be a String", context) };
             }
             bool result = (str_self->value.rfind(prefix->value, 0) == 0);
-            return { make_shared<Number>(result ? 1LL : 0LL), nullptr };
+            return { Number::make_bool(result), nullptr };
         };
         shared_ptr<DataType> bound = make_shared<BoundMethod>("starts_with", self_ptr, impl);
         bound->set_context(calling_context).set_pos(pos_start, pos_end);
@@ -142,7 +143,7 @@ inline DataType::OperationResult String::get_attr(const string& attr_name, const
             if (str_self->value.length() >= suffix->value.length()) {
                 result = (str_self->value.compare(str_self->value.length() - suffix->value.length(), suffix->value.length(), suffix->value) == 0);
             }
-            return { make_shared<Number>(result ? 1LL : 0LL), nullptr };
+            return { Number::make_bool(result), nullptr };
         };
         shared_ptr<DataType> bound = make_shared<BoundMethod>("ends_with", self_ptr, impl);
         bound->set_context(calling_context).set_pos(pos_start, pos_end);
@@ -207,7 +208,7 @@ inline DataType::OperationResult String::get_attr(const string& attr_name, const
                 return { nullptr, make_shared<IllegalOperationError>(args[0]->pos_start.value_or(Position()), args[0]->pos_end.value_or(Position()), "Search term must be a String", context) };
             }
             bool result = (str_self->value.find(sub->value) != string::npos);
-            return { make_shared<Number>(result ? 1LL : 0LL), nullptr };
+            return { Number::make_bool(result), nullptr };
         };
         shared_ptr<DataType> bound = make_shared<BoundMethod>("contains", self_ptr, impl);
         bound->set_context(calling_context).set_pos(pos_start, pos_end);
@@ -221,7 +222,7 @@ inline DataType::OperationResult String::get_attr(const string& attr_name, const
                 return { nullptr, make_shared<ArgumentError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "is_digit() takes no arguments", context) };
             }
             bool all_digits = !str_self->value.empty() && all_of(str_self->value.begin(), str_self->value.end(), ::isdigit);
-            return { make_shared<Number>(all_digits ? 1LL : 0LL), nullptr };
+            return { Number::make_bool(all_digits), nullptr };
         };
         shared_ptr<DataType> bound = make_shared<BoundMethod>("is_digit", self_ptr, impl);
         bound->set_context(calling_context).set_pos(pos_start, pos_end);
@@ -235,7 +236,7 @@ inline DataType::OperationResult String::get_attr(const string& attr_name, const
                 return { nullptr, make_shared<ArgumentError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "is_alpha() takes no arguments", context) };
             }
             bool all_alpha = !str_self->value.empty() && all_of(str_self->value.begin(), str_self->value.end(), ::isalpha);
-            return { make_shared<Number>(all_alpha ? 1LL : 0LL), nullptr };
+            return { Number::make_bool(all_alpha), nullptr };
         };
         shared_ptr<DataType> bound = make_shared<BoundMethod>("is_alpha", self_ptr, impl);
         bound->set_context(calling_context).set_pos(pos_start, pos_end);
@@ -543,7 +544,7 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
                     break;
                 }
             }
-            return { make_shared<Number>(found ? 1LL : 0LL), nullptr };
+            return { Number::make_bool(found), nullptr };
         };
         shared_ptr<DataType> bound = make_shared<BoundMethod>("contains", self_ptr, impl);
         bound->set_context(calling_context).set_pos(pos_start, pos_end);
@@ -688,7 +689,7 @@ inline DataType::OperationResult Dict::get_attr(const string& attr_name, const s
                 if (args.size() == 2) {
                     return { args[1], nullptr };
                 }
-                return { make_shared<Number>(0LL), nullptr };
+                return { Number::make(0LL), nullptr };
             }
             return { dict_self->elements.at(key_str)->copy(), nullptr };
         };
@@ -709,7 +710,7 @@ inline DataType::OperationResult Dict::get_attr(const string& attr_name, const s
             }
             string key_str = dict_self->get_dict_key(key);
             bool found = (dict_self->elements.find(key_str) != dict_self->elements.end());
-            return { make_shared<Number>(found ? 1LL : 0LL), nullptr };
+            return { Number::make_bool(found), nullptr };
         };
         shared_ptr<DataType> bound = make_shared<BoundMethod>(attr_name, self_ptr, impl);
         bound->set_context(calling_context).set_pos(pos_start, pos_end);

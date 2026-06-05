@@ -125,8 +125,8 @@ public:
     [[nodiscard]] OperationResult modulus(const shared_ptr<DataType>& other) const override { return illegal_op_for_bound(this); }
     [[nodiscard]] OperationResult floor_divide(const shared_ptr<DataType>& other) const override { return illegal_op_for_bound(this); }
     [[nodiscard]] OperationResult exponent(const shared_ptr<DataType>& other) const override { return illegal_op_for_bound(this); }
-    [[nodiscard]] OperationResult get_comparison_eq(const shared_ptr<DataType>& other) const override { return illegal_op_for_bound(this); }
-    [[nodiscard]] OperationResult get_comparison_neq(const shared_ptr<DataType>& other) const override { return illegal_op_for_bound(this); }
+    [[nodiscard]] OperationResult get_comparison_eq(const shared_ptr<DataType>& other) const override;
+    [[nodiscard]] OperationResult get_comparison_neq(const shared_ptr<DataType>& other) const override;
     [[nodiscard]] OperationResult get_comparison_lt(const shared_ptr<DataType>& other) const override { return illegal_op_for_bound(this); }
     [[nodiscard]] OperationResult get_comparison_gt(const shared_ptr<DataType>& other) const override { return illegal_op_for_bound(this); }
     [[nodiscard]] OperationResult get_comparison_lte(const shared_ptr<DataType>& other) const override { return illegal_op_for_bound(this); }

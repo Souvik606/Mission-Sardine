@@ -140,43 +140,43 @@ public:
     [[nodiscard]] OperationResult exponent(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '**' to a String type", context)); }
 
     [[nodiscard]] OperationResult get_comparison_eq(const shared_ptr<DataType>& other) const override {
-        if (const auto o = dynamic_cast<const String*>(other.get())) return std::make_pair(std::static_pointer_cast<DataType>(make_shared<Number>(static_cast<long long>(this->value == o->value))), nullptr);
+        if (const auto o = dynamic_cast<const String*>(other.get())) return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(this->value == o->value)), nullptr);
         return std::make_pair(nullptr, make_shared<IllegalOperationError>(other->pos_start.value_or(Position()), other->pos_end.value_or(Position()), "Expected a String type", this->context));
     }
     [[nodiscard]] OperationResult get_comparison_neq(const shared_ptr<DataType>& other) const override {
-        if (const auto o = dynamic_cast<const String*>(other.get())) return std::make_pair(std::static_pointer_cast<DataType>(make_shared<Number>(static_cast<long long>(this->value != o->value))), nullptr);
+        if (const auto o = dynamic_cast<const String*>(other.get())) return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(this->value != o->value)), nullptr);
         return std::make_pair(nullptr, make_shared<IllegalOperationError>(other->pos_start.value_or(Position()), other->pos_end.value_or(Position()), "Expected a String type", this->context));
     }
     [[nodiscard]] OperationResult get_comparison_lt(const shared_ptr<DataType>& other) const override {
-        if (const auto o = dynamic_cast<const String*>(other.get())) return std::make_pair(std::static_pointer_cast<DataType>(make_shared<Number>(static_cast<long long>(this->value < o->value))), nullptr);
+        if (const auto o = dynamic_cast<const String*>(other.get())) return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(this->value < o->value)), nullptr);
         return std::make_pair(nullptr, make_shared<IllegalOperationError>(other->pos_start.value_or(Position()), other->pos_end.value_or(Position()), "Expected a String type", this->context));
     }
     [[nodiscard]] OperationResult get_comparison_gt(const shared_ptr<DataType>& other) const override {
-        if (const auto o = dynamic_cast<const String*>(other.get())) return std::make_pair(std::static_pointer_cast<DataType>(make_shared<Number>(static_cast<long long>(this->value > o->value))), nullptr);
+        if (const auto o = dynamic_cast<const String*>(other.get())) return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(this->value > o->value)), nullptr);
         return std::make_pair(nullptr, make_shared<IllegalOperationError>(other->pos_start.value_or(Position()), other->pos_end.value_or(Position()), "Expected a String type", this->context));
     }
     [[nodiscard]] OperationResult get_comparison_lte(const shared_ptr<DataType>& other) const override {
-        if (const auto o = dynamic_cast<const String*>(other.get())) return std::make_pair(std::static_pointer_cast<DataType>(make_shared<Number>(static_cast<long long>(this->value <= o->value))), nullptr);
+        if (const auto o = dynamic_cast<const String*>(other.get())) return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(this->value <= o->value)), nullptr);
         return std::make_pair(nullptr, make_shared<IllegalOperationError>(other->pos_start.value_or(Position()), other->pos_end.value_or(Position()), "Expected a String type", this->context));
     }
     [[nodiscard]] OperationResult get_comparison_gte(const shared_ptr<DataType>& other) const override {
-        if (const auto o = dynamic_cast<const String*>(other.get())) return std::make_pair(std::static_pointer_cast<DataType>(make_shared<Number>(static_cast<long long>(this->value >= o->value))), nullptr);
+        if (const auto o = dynamic_cast<const String*>(other.get())) return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(this->value >= o->value)), nullptr);
         return std::make_pair(nullptr, make_shared<IllegalOperationError>(other->pos_start.value_or(Position()), other->pos_end.value_or(Position()), "Expected a String type", this->context));
     }
     [[nodiscard]] OperationResult and_by(const shared_ptr<DataType>& other) const override {
         if (const auto o = dynamic_cast<const String*>(other.get())) {
-            return std::make_pair(std::static_pointer_cast<DataType>(make_shared<Number>(static_cast<long long>(is_truthy() && o->is_truthy()))), nullptr);
+            return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(is_truthy() && o->is_truthy())), nullptr);
         }
         return std::make_pair(nullptr, make_shared<IllegalOperationError>(other->pos_start.value_or(Position()), other->pos_end.value_or(Position()), "Expected a String type", this->context));
     }
     [[nodiscard]] OperationResult or_by(const shared_ptr<DataType>& other) const override {
         if (const auto o = dynamic_cast<const String*>(other.get())) {
-            return std::make_pair(std::static_pointer_cast<DataType>(make_shared<Number>(static_cast<long long>(is_truthy() || o->is_truthy()))), nullptr);
+            return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(is_truthy() || o->is_truthy())), nullptr);
         }
         return std::make_pair(nullptr, make_shared<IllegalOperationError>(other->pos_start.value_or(Position()), other->pos_end.value_or(Position()), "Expected a String type", this->context));
     }
     [[nodiscard]] OperationResult not_by() const override {
-        return std::make_pair(std::static_pointer_cast<DataType>(make_shared<Number>(static_cast<long long>(!is_truthy()))), nullptr);
+        return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(!is_truthy())), nullptr);
     }
 
     [[nodiscard]] OperationResult bitwise_and(const shared_ptr<DataType>& operand) const override { return std::make_pair(nullptr, make_shared<IllegalOperationError>(pos_start.value_or(Position()), pos_end.value_or(Position()), "Cannot apply '&' to a String type", this->context)); }

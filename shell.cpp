@@ -22,6 +22,8 @@
 #include "data_types/model_type.h"
 #include "data_types/module_type.h"
 #include "data_types/super_proxy.h"
+#include "data_types/file_type.h"
+#include "data_types/null_type.h"
 #include "data_types/primitive_methods.h"
 
 using namespace std;
@@ -78,7 +80,7 @@ RunTimeResult builtin_show(const Position& pos_start, const Position& pos_end, c
     ss << end_char;
     cout << ss.str();
     cout.flush();
-    return RunTimeResult().success(make_shared<Number>(0LL));
+    return RunTimeResult().success(make_shared<Null>());
 }
 
 RunTimeResult builtin_listen(const Position& pos_start, const Position& pos_end, const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args, const shared_ptr<Context>& context) {
@@ -105,8 +107,11 @@ RunTimeResult builtin_type(const Position& pos_start, const Position& pos_end, c
     const auto& value = args[0];
     string type_name = "<type Unknown>";
 
-    if (dynamic_pointer_cast<Number>(value)) {
-        type_name = "<type Number>";
+    if (auto num = dynamic_pointer_cast<Number>(value)) {
+        type_name = "<type " + num->get_type_name() + ">";
+    }
+    else if (dynamic_pointer_cast<Null>(value)) {
+        type_name = "<type Null>";
     }
     else if (dynamic_pointer_cast<String>(value)) {
         type_name = "<type String>";
@@ -116,6 +121,9 @@ RunTimeResult builtin_type(const Position& pos_start, const Position& pos_end, c
     }
     else if (dynamic_pointer_cast<Dict>(value)) {
         type_name = "<type Dict>";
+    }
+    else if (dynamic_pointer_cast<File>(value)) {
+        type_name = "<type File>";
     }
     else if (dynamic_pointer_cast<Function>(value)) {
         type_name = "<type Function>";
@@ -162,13 +170,13 @@ RunTimeResult builtin_integer(const Position& pos_start, const Position& pos_end
             }
         }
         long long int_val = std::visit([](auto v) { return static_cast<long long>(v); }, num->value);
-        return RunTimeResult().success(make_shared<Number>(int_val));
+        return RunTimeResult().success(make_shared<Number>(int_val, false, false));
     }
 
     if (const auto str = dynamic_pointer_cast<String>(value)) {
         try {
             long long int_val = stoll(str->value);
-            return RunTimeResult().success(make_shared<Number>(int_val));
+            return RunTimeResult().success(make_shared<Number>(int_val, false, false));
         }
         catch (...) {
             return RunTimeResult().failure(ArgumentError(
@@ -184,6 +192,57 @@ RunTimeResult builtin_integer(const Position& pos_start, const Position& pos_end
         "Argument must be a primitive value (Number or String)",
         context->parent ? context->parent : context
     ));
+}
+
+RunTimeResult builtin_float(const Position& pos_start, const Position& pos_end, const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args, const shared_ptr<Context>& context) {
+    if (args.size() != 1 || !kw_args.empty()) {
+        return RunTimeResult().failure(ArgumentError(
+            pos_start, pos_end,
+            "Float() takes exactly one argument",
+            context->parent ? context->parent : context
+        ));
+    }
+
+    const auto& value = args[0];
+
+    if (const auto num = dynamic_pointer_cast<Number>(value)) {
+        double d_val = std::visit([](auto v) { return static_cast<double>(v); }, num->value);
+        return RunTimeResult().success(make_shared<Number>(d_val, true));
+    }
+
+    if (const auto str = dynamic_pointer_cast<String>(value)) {
+        try {
+            double d_val = stod(str->value);
+            return RunTimeResult().success(make_shared<Number>(d_val, true));
+        }
+        catch (...) {
+            return RunTimeResult().failure(ArgumentError(
+                pos_start, pos_end,
+                "Argument must be a value convertible to a float",
+                context->parent ? context->parent : context
+            ));
+        }
+    }
+
+    return RunTimeResult().failure(ArgumentError(
+        pos_start, pos_end,
+        "Argument must be a primitive value (Number or String)",
+        context->parent ? context->parent : context
+    ));
+}
+
+RunTimeResult builtin_boolean(const Position& pos_start, const Position& pos_end, const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args, const shared_ptr<Context>& context) {
+    if (args.size() != 1 || !kw_args.empty()) {
+        return RunTimeResult().failure(ArgumentError(
+            pos_start, pos_end,
+            "Boolean() takes exactly one argument",
+            context->parent ? context->parent : context
+        ));
+    }
+
+    const auto& value = args[0];
+    bool b_val = value->is_truthy();
+    return RunTimeResult().success(Number::make_bool(b_val));
 }
 
 RunTimeResult builtin_string(const Position& pos_start, const Position& pos_end, const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args, const shared_ptr<Context>& context) {
@@ -311,6 +370,7 @@ string get_type_name(const shared_ptr<DataType>& value) {
     if (dynamic_pointer_cast<String>(value)) return "String";
     if (dynamic_pointer_cast<List>(value)) return "List";
     if (dynamic_pointer_cast<Dict>(value)) return "Dict";
+    if (dynamic_pointer_cast<File>(value)) return "File";
     if (dynamic_pointer_cast<Function>(value)) return "Function";
     if (dynamic_pointer_cast<BuiltInFunction>(value)) return "BuiltInFunction";
     if (dynamic_pointer_cast<ModelType>(value)) return "Model";
@@ -343,6 +403,29 @@ RunTimeResult builtin_error(const Position& pos_start, const Position& pos_end, 
     return RunTimeResult().failure(IllegalOperationError(
         pos_start, pos_end,
         msg,
+        context->parent ? context->parent : context
+    ));
+}
+
+RunTimeResult builtin_throw(const Position& pos_start, const Position& pos_end, const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args, const shared_ptr<Context>& context) {
+    if (!kw_args.empty() || args.size() != 1) {
+        return RunTimeResult().failure(ArgumentError(
+            pos_start, pos_end,
+            "throw() takes exactly one argument: a model instance",
+            context
+        ));
+    }
+    auto instance = dynamic_pointer_cast<ModelInstance>(args[0]);
+    if (!instance) {
+        return RunTimeResult().failure(ArgumentError(
+            pos_start, pos_end,
+            "throw() requires a model instance, got '" + get_type_name(args[0]) + "'. Define your error type with 'model' and pass an instance.",
+            context
+        ));
+    }
+    return RunTimeResult().failure(UserDefinedError(
+        pos_start, pos_end,
+        instance,
         context->parent ? context->parent : context
     ));
 }
@@ -588,6 +671,117 @@ RunTimeResult builtin_exit(const Position& pos_start, const Position& pos_end, c
     throw CleanExitException();
 }
 
+RunTimeResult builtin_fopen(const Position& pos_start, const Position& pos_end, const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args, const shared_ptr<Context>& context) {
+    shared_ptr<DataType> filepath_val = nullptr;
+    string mode_val = "r";
+
+    size_t total = args.size() + kw_args.size();
+    if (total < 1 || total > 2) {
+        return RunTimeResult().failure(ArgumentError(
+            pos_start, pos_end,
+            "fopen() takes 1 or 2 arguments: (path, mode='r')",
+            context->parent ? context->parent : context
+        ));
+    }
+
+    if (!args.empty()) filepath_val = args[0];
+    if (args.size() == 2) {
+        auto mode_str = dynamic_pointer_cast<String>(args[1]);
+        if (!mode_str) {
+            return RunTimeResult().failure(TypeError(
+                args[1]->pos_start.value_or(Position()), args[1]->pos_end.value_or(Position()),
+                "Mode argument must be a String",
+                context->parent ? context->parent : context
+            ));
+        }
+        mode_val = mode_str->value;
+    }
+
+    for (const auto& [k, v] : kw_args) {
+        if (k == "path") {
+            if (filepath_val) {
+                return RunTimeResult().failure(ArgumentError(pos_start, pos_end, "Multiple values for argument 'path'", context));
+            }
+            filepath_val = v;
+        } else if (k == "mode") {
+            if (args.size() == 2) {
+                return RunTimeResult().failure(ArgumentError(pos_start, pos_end, "Multiple values for argument 'mode'", context));
+            }
+            auto mode_str = dynamic_pointer_cast<String>(v);
+            if (!mode_str) {
+                return RunTimeResult().failure(TypeError(
+                    v->pos_start.value_or(Position()), v->pos_end.value_or(Position()),
+                    "Mode argument must be a String",
+                    context->parent ? context->parent : context
+                ));
+            }
+            mode_val = mode_str->value;
+        } else {
+            return RunTimeResult().failure(ArgumentError(
+                pos_start, pos_end,
+                "Unexpected keyword argument '" + k + "' for fopen()",
+                context->parent ? context->parent : context
+            ));
+        }
+    }
+
+    if (!filepath_val) {
+        return RunTimeResult().failure(ArgumentError(
+            pos_start, pos_end, "Missing required argument 'path' for fopen()",
+            context->parent ? context->parent : context
+        ));
+    }
+
+    auto filepath_str = dynamic_pointer_cast<String>(filepath_val);
+    if (!filepath_str) {
+        return RunTimeResult().failure(TypeError(
+            filepath_val->pos_start.value_or(Position()), filepath_val->pos_end.value_or(Position()),
+            "Path argument must be a String",
+            context->parent ? context->parent : context
+        ));
+    }
+
+    if (mode_val != "r" && mode_val != "w" && mode_val != "a") {
+        return RunTimeResult().failure(FileIOError(
+            pos_start, pos_end,
+            "Invalid open mode '" + mode_val + "'. Supported modes are: 'r', 'w', 'a'",
+            context->parent ? context->parent : context
+        ));
+    }
+
+    const string& path = filepath_str->value;
+    FILE* fp = nullptr;
+#ifdef _WIN32
+    fopen_s(&fp, path.c_str(), mode_val.c_str());
+#else
+    fp = fopen(path.c_str(), mode_val.c_str());
+#endif
+
+    if (!fp) {
+        // Distinguish file-not-found from permission errors using errno
+        string msg;
+        if (errno == ENOENT) {
+            msg = "File not found: '" + path + "'";
+        } else if (errno == EACCES) {
+            msg = "Permission denied: '" + path + "'";
+        } else {
+            msg = "Failed to open file '" + path + "': " + strerror(errno);
+        }
+        return RunTimeResult().failure(FileIOError(
+            filepath_val->pos_start.value_or(Position()),
+            filepath_val->pos_end.value_or(Position()),
+            msg,
+            context->parent ? context->parent : context
+        ));
+    }
+
+    auto desc = make_shared<FileDescriptor>(fp);
+    auto file_obj = make_shared<File>(path, mode_val, desc);
+    file_obj->set_pos(pos_start, pos_end);
+    file_obj->set_context(context);
+    return RunTimeResult().success(file_obj);
+}
+
 struct RunResult {
     shared_ptr<DataType> value = nullptr;
     shared_ptr<Error> error = nullptr;
@@ -664,22 +858,28 @@ void run_file(const string& filepath) {
 }
 
 int main(int argc, char* argv[]) {
-    global_symbol_table->set("None", make_shared<Number>(0LL));
-    global_symbol_table->set("null", make_shared<Number>(0LL));
-    global_symbol_table->set("True", make_shared<Number>(1LL));
-    global_symbol_table->set("False", make_shared<Number>(0LL));
+    auto null_val = make_shared<Null>();
+    global_symbol_table->set("Null", null_val);
+    global_symbol_table->set("None", null_val);
+    global_symbol_table->set("null", null_val);
+    global_symbol_table->set("True", Number::make_bool(true));
+    global_symbol_table->set("False", Number::make_bool(false));
 
     global_symbol_table->set("show", make_shared<BuiltInFunction>("show", builtin_show));
     global_symbol_table->set("listen", make_shared<BuiltInFunction>("listen", builtin_listen));
     global_symbol_table->set("type", make_shared<BuiltInFunction>("type", builtin_type));
     global_symbol_table->set("Integer", make_shared<BuiltInFunction>("Integer", builtin_integer));
+    global_symbol_table->set("Float", make_shared<BuiltInFunction>("Float", builtin_float));
+    global_symbol_table->set("Boolean", make_shared<BuiltInFunction>("Boolean", builtin_boolean));
     global_symbol_table->set("String", make_shared<BuiltInFunction>("String", builtin_string));
     global_symbol_table->set("super", make_shared<BuiltInFunction>("super", builtin_super));
     global_symbol_table->set("is_a", make_shared<BuiltInFunction>("is_a", builtin_is_a));
     global_symbol_table->set("error", make_shared<BuiltInFunction>("error", builtin_error));
+    global_symbol_table->set("throw", make_shared<BuiltInFunction>("throw", builtin_throw));
     global_symbol_table->set("len", make_shared<BuiltInFunction>("len", builtin_len));
     global_symbol_table->set("range", make_shared<BuiltInFunction>("range", builtin_range));
     global_symbol_table->set("exit", make_shared<BuiltInFunction>("exit", builtin_exit));
+    global_symbol_table->set("fopen", make_shared<BuiltInFunction>("fopen", builtin_fopen));
 
     vector<string> args;
     for (int i = 0; i < argc; ++i) {

@@ -91,7 +91,8 @@ model vec {
     }
 
     method _is_number(value) {
-        yield type(value) == "<type Number>"
+        t = type(value)
+        yield t == "<type Integer>" or t == "<type Float>" or t == "<type Boolean>"
     }
 
     method _sqrt(n) {
@@ -432,7 +433,8 @@ model mat {
     }
 
     method _is_number(value) {
-        yield type(value) == "<type Number>"
+        t = type(value)
+        yield t == "<type Integer>" or t == "<type Float>" or t == "<type Boolean>"
     }
 
     method _sqrt(n) {

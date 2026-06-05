@@ -358,3 +358,32 @@ public:
         return make_shared<StackDepthExceededError>(*this);
     }
 };
+
+class FileIOError final : public RunTimeError {
+public:
+    FileIOError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context, string hint = "")
+        : RunTimeError(pos_start, pos_end, details, std::move(context), "FileIOError", "E9006",
+                       hint.empty() ? "Verify that the path is correct, the file exists, and you have necessary permissions." : std::move(hint)) {
+    }
+
+    [[nodiscard]] shared_ptr<Error> clone() const override {
+        return make_shared<FileIOError>(*this);
+    }
+};
+
+class DataType;
+
+class UserDefinedError final : public RunTimeError {
+public:
+    shared_ptr<DataType> instance;
+
+    UserDefinedError(const Position& pos_start, const Position& pos_end, shared_ptr<DataType> inst, shared_ptr<Context> context, string hint = "");
+
+    [[nodiscard]] shared_ptr<Error> clone() const override {
+        return make_shared<UserDefinedError>(*this);
+    }
+
+private:
+    static string get_name_from_instance(const shared_ptr<DataType>& inst);
+    static string get_details_from_instance(const shared_ptr<DataType>& inst);
+};

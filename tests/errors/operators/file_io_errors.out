@@ -1,0 +1,7 @@
+--- Testing File I/O Error Trapping ---
+Caught non-existent file error successfully!
+Caught invalid mode error successfully!
+Caught read from write-only file error successfully!
+Caught write to read-only file error successfully!
+Caught operation on closed file error successfully!
+Caught tracing over closed file error successfully!

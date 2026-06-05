@@ -1,0 +1,32 @@
+a = 0.1
+b = 0.2
+show(a + b == 0.3)
+show(True)
+show(False)
+show(1 == 1)
+show(1 > 2)
+show(type(1))
+show(type(1.5))
+show(type(True))
+show(not True)
+show(not False)
+show(True + 3)
+show(True + 1.5)
+show(type(True + 3))
+show(type(True + 1.5))
+show(10 / 3)
+show(10 // 3)
+show(Float(5))
+show(Integer(3))
+show(Boolean(0))
+show(Boolean(42))
+cycle i = 1 : 5 {
+  show(i)
+}
+lst = [1, 2, 3]
+trace el <- lst {
+  show(el)
+}
+when True {
+  show("truthy branch works")
+}
