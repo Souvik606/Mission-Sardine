@@ -168,13 +168,42 @@ public:
         {
             return RunTimeResult().failure(RunTimeError({}, {}, "Internal error: Cannot visit null node", context));
         }
-        const Node &node_ref = *node;
-        const std::type_index type_idx = typeid(node_ref);
-        if (const auto it = visit_methods.find(type_idx); it != visit_methods.end())
+        try
         {
-            return it->second(node, context);
+            const Node &node_ref = *node;
+            const std::type_index type_idx = typeid(node_ref);
+            if (const auto it = visit_methods.find(type_idx); it != visit_methods.end())
+            {
+                return it->second(node, context);
+            }
+            return no_visit_method(node);
         }
-        return no_visit_method(node);
+        catch (const CleanExitException &e)
+        {
+            throw;
+        }
+        catch (const std::exception &e)
+        {
+            return RunTimeResult().failure(RunTimeError(
+                node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
+                "Internal System Exception: " + string(e.what()),
+                context,
+                "InternalSystemError",
+                "E9999",
+                "An unexpected C++ exception occurred during execution."
+            ));
+        }
+        catch (...)
+        {
+            return RunTimeResult().failure(RunTimeError(
+                node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
+                "Unknown Internal System Exception",
+                context,
+                "InternalSystemError",
+                "E9999",
+                "An unexpected C++ exception occurred during execution."
+            ));
+        }
     }
 
 private:
@@ -1946,9 +1975,13 @@ private:
 
         string resolved_path = "";
         for (const auto& path : candidates) {
-            if (fs::is_regular_file(path)) {
-                resolved_path = fs::absolute(path).string();
-                break;
+            std::error_code ec;
+            if (fs::is_regular_file(path, ec) && !ec) {
+                auto abs_path = fs::absolute(path, ec);
+                if (!ec) {
+                    resolved_path = abs_path.string();
+                    break;
+                }
             }
         }
 

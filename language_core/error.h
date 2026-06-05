@@ -5,6 +5,14 @@
 #include "position.h"
 using namespace std;
 
+class CleanExitException : public std::exception {
+public:
+    [[nodiscard]] const char* what() const noexcept override {
+        return "CleanExitException";
+    }
+};
+
+
 class Error {
 public:
     virtual ~Error() = default;

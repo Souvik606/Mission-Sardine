@@ -348,13 +348,6 @@ RunTimeResult builtin_is_a(const Position& pos_start, const Position& pos_end, c
     return RunTimeResult().success(make_shared<Number>(result ? 1LL : 0LL));
 }
 
-class CleanExitException : public std::exception {
-public:
-    [[nodiscard]] const char* what() const noexcept override {
-        return "CleanExitException";
-    }
-};
-
 bool is_integer(const shared_ptr<DataType>& arg, long long& out_val) {
     auto num = dynamic_pointer_cast<Number>(arg);
     if (!num || num->is_float) return false;
@@ -789,29 +782,53 @@ struct RunResult {
 
 RunResult run(const string& filename, const string& text) {
     RunResult out;
+    try {
+        Lexer lexer(filename, text);
+        auto [tokens, lexer_error] = lexer.enumerate_tokens();
+        if (lexer_error) {
+            out.error = lexer_error;
+            return out;
+        }
 
-    Lexer lexer(filename, text);
-    auto [tokens, lexer_error] = lexer.enumerate_tokens();
-    if (lexer_error) {
-        out.error = lexer_error;
+        Parser parser(std::move(tokens));
+        ParseResult ast = parser.parse();
+        if (ast.error) {
+            out.error = ast.error;
+            return out;
+        }
+
+        Interpreter interpreter;
+        auto context = make_shared<Context>("<program>");
+        context->symbol_table = global_symbol_table;
+        RunTimeResult result = interpreter.visit(ast.node, context);
+
+        out.value = result.value;
+        out.error = result.error;
         return out;
     }
-
-    Parser parser(std::move(tokens));
-    ParseResult ast = parser.parse();
-    if (ast.error) {
-        out.error = ast.error;
+    catch (const CleanExitException& e) {
+        throw;
+    }
+    catch (const std::exception& e) {
+        out.error = make_shared<RunTimeError>(
+            Position(), Position(),
+            "Internal System Exception: " + string(e.what()),
+            make_shared<Context>("<program>"),
+            "InternalSystemError", "E9999",
+            "An unexpected C++ exception occurred during execution."
+        );
         return out;
     }
-
-    Interpreter interpreter;
-    auto context = make_shared<Context>("<program>");
-    context->symbol_table = global_symbol_table;
-    RunTimeResult result = interpreter.visit(ast.node, context);
-
-    out.value = result.value;
-    out.error = result.error;
-    return out;
+    catch (...) {
+        out.error = make_shared<RunTimeError>(
+            Position(), Position(),
+            "Unknown Internal System Exception",
+            make_shared<Context>("<program>"),
+            "InternalSystemError", "E9999",
+            "An unexpected C++ exception occurred during execution."
+        );
+        return out;
+    }
 }
 
 inline string get_relative_path(const string& file_path) {
