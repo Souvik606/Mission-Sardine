@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <chrono>
 
 #include "language_core/error.h"
 #include "language_core/constants.h"
@@ -776,6 +777,71 @@ RunTimeResult builtin_fopen(const Position& pos_start, const Position& pos_end, 
     return RunTimeResult().success(file_obj);
 }
 
+struct ProfileGuard {
+    chrono::high_resolution_clock::time_point lex_start;
+    chrono::high_resolution_clock::time_point lex_end;
+    chrono::high_resolution_clock::time_point parse_start;
+    chrono::high_resolution_clock::time_point parse_end;
+    chrono::high_resolution_clock::time_point interpret_start;
+    chrono::high_resolution_clock::time_point interpret_end;
+
+    bool has_lex_end = false;
+    bool has_parse_start = false;
+    bool has_parse_end = false;
+    bool has_interpret_start = false;
+    bool has_interpret_end = false;
+
+    ProfileGuard() {
+        if (PROFILE_MODE) {
+            lex_start = chrono::high_resolution_clock::now();
+        }
+    }
+
+    void mark_lex_end() {
+        if (PROFILE_MODE) {
+            lex_end = chrono::high_resolution_clock::now();
+            has_lex_end = true;
+        }
+    }
+
+    void mark_parse_start() {
+        if (PROFILE_MODE) {
+            parse_start = chrono::high_resolution_clock::now();
+            has_parse_start = true;
+        }
+    }
+
+    void mark_parse_end() {
+        if (PROFILE_MODE) {
+            parse_end = chrono::high_resolution_clock::now();
+            has_parse_end = true;
+        }
+    }
+
+    void mark_interpret_start() {
+        if (PROFILE_MODE) {
+            interpret_start = chrono::high_resolution_clock::now();
+            has_interpret_start = true;
+        }
+    }
+
+    void mark_interpret_end() {
+        if (PROFILE_MODE) {
+            interpret_end = chrono::high_resolution_clock::now();
+            has_interpret_end = true;
+        }
+    }
+
+    ~ProfileGuard() {
+        if (PROFILE_MODE) {
+            double lex_dur = has_lex_end ? chrono::duration<double, milli>(lex_end - lex_start).count() : 0.0;
+            double parse_dur = has_parse_end ? chrono::duration<double, milli>(parse_end - parse_start).count() : 0.0;
+            double interpret_dur = has_interpret_end ? chrono::duration<double, milli>(interpret_end - interpret_start).count() : 0.0;
+            cerr << "{\"profile\": {\"lex_ms\": " << lex_dur << ", \"parse_ms\": " << parse_dur << ", \"interpret_ms\": " << interpret_dur << "}}" << endl;
+        }
+    }
+};
+
 struct RunResult {
     shared_ptr<DataType> value = nullptr;
     shared_ptr<Error> error = nullptr;
@@ -783,9 +849,11 @@ struct RunResult {
 
 RunResult run(const string& filename, const string& text) {
     RunResult out;
+    ProfileGuard profile_guard;
     try {
         Lexer lexer(filename, text);
         auto [tokens, lexer_error] = lexer.enumerate_tokens();
+        profile_guard.mark_lex_end();
 
         if (EDUCATIONAL_MODE) {
             cout << "--- EDUCATIONAL_MODE_OUTPUT_START ---" << endl;
@@ -798,8 +866,10 @@ RunResult run(const string& filename, const string& text) {
                 }
                 
                 vector<Token> tokens_copy = tokens;
+                profile_guard.mark_parse_start();
                 Parser parser(std::move(tokens));
                 ParseResult ast = parser.parse();
+                profile_guard.mark_parse_end();
 
                 string ast_json = "null";
                 string err_json = "null";
@@ -819,10 +889,12 @@ RunResult run(const string& filename, const string& text) {
                     return out;
                 }
 
+                profile_guard.mark_interpret_start();
                 Interpreter interpreter;
                 auto context = make_shared<Context>("<program>");
                 context->symbol_table = global_symbol_table;
                 RunTimeResult result = interpreter.visit(ast.node, context);
+                profile_guard.mark_interpret_end();
 
                 out.value = result.value;
                 out.error = result.error;
@@ -842,8 +914,10 @@ RunResult run(const string& filename, const string& text) {
                 }
                 cout << endl;
 
+                profile_guard.mark_parse_start();
                 Parser parser(std::move(tokens));
                 ParseResult ast = parser.parse();
+                profile_guard.mark_parse_end();
 
                 cout << "--- AST Tree ---" << endl;
                 if (ast.error) {
@@ -860,10 +934,12 @@ RunResult run(const string& filename, const string& text) {
                     return out;
                 }
 
+                profile_guard.mark_interpret_start();
                 Interpreter interpreter;
                 auto context = make_shared<Context>("<program>");
                 context->symbol_table = global_symbol_table;
                 RunTimeResult result = interpreter.visit(ast.node, context);
+                profile_guard.mark_interpret_end();
 
                 out.value = result.value;
                 out.error = result.error;
@@ -876,17 +952,21 @@ RunResult run(const string& filename, const string& text) {
             return out;
         }
 
+        profile_guard.mark_parse_start();
         Parser parser(std::move(tokens));
         ParseResult ast = parser.parse();
+        profile_guard.mark_parse_end();
         if (ast.error) {
             out.error = ast.error;
             return out;
         }
 
+        profile_guard.mark_interpret_start();
         Interpreter interpreter;
         auto context = make_shared<Context>("<program>");
         context->symbol_table = global_symbol_table;
         RunTimeResult result = interpreter.visit(ast.node, context);
+        profile_guard.mark_interpret_end();
 
         out.value = result.value;
         out.error = result.error;
@@ -1003,6 +1083,11 @@ int main(int argc, char* argv[]) {
         JSON_OUTPUT = true;
         EDUCATIONAL_MODE = true;
         args.erase(it_json);
+    }
+    auto it_profile = find(args.begin(), args.end(), "--profile");
+    if (it_profile != args.end()) {
+        PROFILE_MODE = true;
+        args.erase(it_profile);
     }
 
     if (args.size() > 1) {

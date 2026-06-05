@@ -1,0 +1,71 @@
+method fannkuch(n) {
+    p = range(0, n)
+    q = range(0, n)
+    s = range(0, n)
+    sign = 1
+    max_flips = 0
+    sum_flips = 0
+    
+    during 1 {
+        cycle i = 0:(n - 1) {
+            q[i] = p[i]
+        }
+        
+        flips = 0
+        f = q[0]
+        during f != 0 {
+            i = 0
+            j = f
+            during i < j {
+                temp = q[i]
+                q[i] = q[j]
+                q[j] = temp
+                i = i + 1
+                j = j - 1
+            }
+            flips = flips + 1
+            f = q[0]
+        }
+        
+        when flips > max_flips {
+            max_flips = flips
+        }
+        sum_flips = sum_flips + sign * flips
+        
+        # next permutation
+        when sign == 1 {
+            temp = p[0]
+            p[0] = p[1]
+            p[1] = temp
+            sign = -1
+        } otherwise {
+            temp = p[1]
+            p[1] = p[2]
+            p[2] = temp
+            sign = 1
+            
+            i = 2
+            during i < n {
+                sx = s[i]
+                when sx != 0 {
+                    s[i] = sx - 1
+                    escape
+                }
+                when i == n - 1 {
+                    yield sum_flips
+                }
+                s[i] = i
+                t = p[0]
+                j = 0
+                during j < i {
+                    p[j] = p[j + 1]
+                    j = j + 1
+                }
+                p[i] = t
+                i = i + 1
+            }
+        }
+    }
+}
+
+show("fannkuch sum(7) =", fannkuch(7))
