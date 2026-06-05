@@ -8,6 +8,7 @@
 #include "language_core/lexer.h"
 #include "ast_results/parse_result.h"
 #include "language_core/parser.h"
+#include "ast_nodes/node_json.h"
 #include "ast_results/runtime_result.h"
 #include "language_core/interpreter.h"
 #include "language_core/context.h"
@@ -785,6 +786,91 @@ RunResult run(const string& filename, const string& text) {
     try {
         Lexer lexer(filename, text);
         auto [tokens, lexer_error] = lexer.enumerate_tokens();
+
+        if (EDUCATIONAL_MODE) {
+            cout << "--- EDUCATIONAL_MODE_OUTPUT_START ---" << endl;
+            if (JSON_OUTPUT) {
+                if (lexer_error) {
+                    cout << "{\"tokens\":null,\"ast\":null,\"error\":" << error_to_json(lexer_error) << "}" << endl;
+                    cout << "--- EDUCATIONAL_MODE_OUTPUT_END ---" << endl;
+                    out.error = lexer_error;
+                    return out;
+                }
+                
+                vector<Token> tokens_copy = tokens;
+                Parser parser(std::move(tokens));
+                ParseResult ast = parser.parse();
+
+                string ast_json = "null";
+                string err_json = "null";
+                if (ast.error) {
+                    err_json = error_to_json(ast.error);
+                } else if (ast.node) {
+                    ast_json = node_to_json(ast.node);
+                }
+
+                cout << "{\"tokens\":" << token_vector_to_json(tokens_copy)
+                     << ",\"ast\":" << ast_json
+                     << ",\"error\":" << err_json << "}" << endl;
+                cout << "--- EDUCATIONAL_MODE_OUTPUT_END ---" << endl;
+
+                if (ast.error) {
+                    out.error = ast.error;
+                    return out;
+                }
+
+                Interpreter interpreter;
+                auto context = make_shared<Context>("<program>");
+                context->symbol_table = global_symbol_table;
+                RunTimeResult result = interpreter.visit(ast.node, context);
+
+                out.value = result.value;
+                out.error = result.error;
+                return out;
+            } else {
+                if (lexer_error) {
+                    cout << "--- Tokens ---" << endl;
+                    cout << "[Lexer Error: " << lexer_error->details << "]" << endl;
+                    cout << "--- EDUCATIONAL_MODE_OUTPUT_END ---" << endl;
+                    out.error = lexer_error;
+                    return out;
+                }
+
+                cout << "--- Tokens ---" << endl;
+                for (const auto& token : tokens) {
+                    cout << token.to_string() << endl;
+                }
+                cout << endl;
+
+                Parser parser(std::move(tokens));
+                ParseResult ast = parser.parse();
+
+                cout << "--- AST Tree ---" << endl;
+                if (ast.error) {
+                    cout << "[Parser Error: " << ast.error->details << "]" << endl;
+                } else if (ast.node) {
+                    cout << ast.node->to_string() << endl;
+                } else {
+                    cout << "null" << endl;
+                }
+                cout << "--- EDUCATIONAL_MODE_OUTPUT_END ---" << endl;
+
+                if (ast.error) {
+                    out.error = ast.error;
+                    return out;
+                }
+
+                Interpreter interpreter;
+                auto context = make_shared<Context>("<program>");
+                context->symbol_table = global_symbol_table;
+                RunTimeResult result = interpreter.visit(ast.node, context);
+
+                out.value = result.value;
+                out.error = result.error;
+                return out;
+            }
+        }
+
         if (lexer_error) {
             out.error = lexer_error;
             return out;
@@ -906,6 +992,17 @@ int main(int argc, char* argv[]) {
     if (it != args.end()) {
         UNBOUNDED_MODE = true;
         args.erase(it);
+    }
+    auto it_edu = find(args.begin(), args.end(), "--edu");
+    if (it_edu != args.end()) {
+        EDUCATIONAL_MODE = true;
+        args.erase(it_edu);
+    }
+    auto it_json = find(args.begin(), args.end(), "--json");
+    if (it_json != args.end()) {
+        JSON_OUTPUT = true;
+        EDUCATIONAL_MODE = true;
+        args.erase(it_json);
     }
 
     if (args.size() > 1) {
