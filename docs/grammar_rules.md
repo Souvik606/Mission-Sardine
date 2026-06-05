@@ -25,15 +25,15 @@ initializer-list: initializer-item ((COMMA NEWLINE* | NEWLINE+) initializer-item
 
 initializer-item: IDENTIFIER COLON expression
 
-jump-statements: KEYWORD:proceed | KEYWORD:escape | KEYWORD:yield expression (COMMA expression)*
+jump-statements: KEYWORD:proceed | KEYWORD:escape | KEYWORD:yield (expression (COMMA expression)*)?
 
 statements: IDENTIFIER (LPAREN3 expression RPAREN3)* (COMMA IDENTIFIER (LPAREN3 expression RPAREN3)*)* (EQUAL | PLUSEQUAL | MINUSEQUAL | MULEQUAL | DIVIDEEQUAL | MODULUSEQUAL | FLOOREQUAL | EXPEQUAL | BITOREQUAL | BITXOREQUAL | BITANDEQUAL | LSHIFTEQUAL | RSHIFTEQUAL) expression (COMMA expression)*
 
 switch-statement: KEYWORD:menu ternary-expression LPAREN2 NEWLINE* (case-statement* NEWLINE*)* default-statement? NEWLINE* (case-statement* NEWLINE*)* RPAREN2
 
-case-statement: KEYWORD:choice ternary-expression LPAREN2 ((expression | statements) RPAREN2) | (NEWLINE multiline RPAREN2)
+case-statement: KEYWORD:choice ternary-expression LPAREN2 (multiline | jump-statements)* RPAREN2
 
-default-statement: KEYWORD:fallback LPAREN2 ((expression | statements) RPAREN2) | (NEWLINE multiline RPAREN2)
+default-statement: KEYWORD:fallback LPAREN2 (multiline | jump-statements)* RPAREN2
 
 expression: ternary-expression
 
