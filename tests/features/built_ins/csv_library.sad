@@ -1,0 +1,30 @@
+show("--- Testing CSV Standard Library ---")
+
+# 1. Summon the csv standard library
+summon * from csv
+
+# 2. Write CSV file
+writer = CSVWriter("tests/features/built_ins/test_data.csv", "w")
+writer.write_row(["id", "name", "role"])
+writer.write_row([1, "Sardine Language", "Interpreter"])
+writer.write_row([2, "Standard Dev", "Engineer"])
+writer.close()
+
+# 3. Read CSV using CSVReader and dictionary rows
+reader = CSVReader("tests/features/built_ins/test_data.csv")
+show("headers:", reader.headers)
+
+r1 = reader.read_dict_row()
+r2 = reader.read_dict_row()
+r3 = reader.read_dict_row() # should be Null
+
+show("row 1 id:", r1.get("id"))
+show("row 1 name:", r1.get("name"))
+show("row 1 role:", r1.get("role"))
+
+show("row 2 id:", r2.get("id"))
+show("row 2 name:", r2.get("name"))
+show("row 2 role:", r2.get("role"))
+
+show("row 3 is Null:", r3 == Null)
+reader.close()

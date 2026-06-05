@@ -1,0 +1,22 @@
+model BaseError {
+    open attr <message>
+    init(message) {
+        message: message
+    }
+}
+
+model NetworkError: BaseError {
+    open attr <code>
+    init(code, message) {
+        code: code,
+        message: message
+    }
+}
+
+risk {
+    throw(NetworkError(503, "Service unavailable"))
+}
+trap BaseError e {
+    show(e.code)
+    show(e.message)
+}

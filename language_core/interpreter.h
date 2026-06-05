@@ -25,9 +25,14 @@
 #include "../data_types/model_type.h"
 #include "../ast_nodes/fstring_nodes.h"
 #include "../ast_nodes/foreach_nodes.h"
+#include "../data_types/module_type.h"
+#include "../ast_nodes/fstring_nodes.h"
+#include "../ast_nodes/foreach_nodes.h"
 #include "../ast_nodes/summon_nodes.h"
 #include "../data_types/module_type.h"
 #include "../data_types/super_proxy.h"
+#include "../data_types/file_type.h"
+#include "../data_types/null_type.h"
 #include "../ast_nodes/comprehension_nodes.h"
 #include <filesystem>
 namespace fs = std::filesystem;
@@ -163,13 +168,42 @@ public:
         {
             return RunTimeResult().failure(RunTimeError({}, {}, "Internal error: Cannot visit null node", context));
         }
-        const Node &node_ref = *node;
-        const std::type_index type_idx = typeid(node_ref);
-        if (const auto it = visit_methods.find(type_idx); it != visit_methods.end())
+        try
         {
-            return it->second(node, context);
+            const Node &node_ref = *node;
+            const std::type_index type_idx = typeid(node_ref);
+            if (const auto it = visit_methods.find(type_idx); it != visit_methods.end())
+            {
+                return it->second(node, context);
+            }
+            return no_visit_method(node);
         }
-        return no_visit_method(node);
+        catch (const CleanExitException &e)
+        {
+            throw;
+        }
+        catch (const std::exception &e)
+        {
+            return RunTimeResult().failure(RunTimeError(
+                node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
+                "Internal System Exception: " + string(e.what()),
+                context,
+                "InternalSystemError",
+                "E9999",
+                "An unexpected C++ exception occurred during execution."
+            ));
+        }
+        catch (...)
+        {
+            return RunTimeResult().failure(RunTimeError(
+                node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
+                "Unknown Internal System Exception",
+                context,
+                "InternalSystemError",
+                "E9999",
+                "An unexpected C++ exception occurred during execution."
+            ));
+        }
     }
 
 private:
@@ -391,7 +425,7 @@ private:
 
         if (node->return_null)
         {
-            return res.success(std::static_pointer_cast<DataType>(Number::make(0LL)));
+            return res.success(std::static_pointer_cast<DataType>(make_shared<Null>()));
         }
         else
         {
@@ -580,7 +614,7 @@ private:
         }
 
         if (node->return_null) {
-            return res.success(std::static_pointer_cast<DataType>(Number::make(0LL)));
+            return res.success(std::static_pointer_cast<DataType>(make_shared<Null>()));
         } else {
             auto list_val = make_shared<List>(elements);
             list_val->set_context(context);
@@ -684,7 +718,7 @@ private:
 
             if (c->return_null)
             {
-                elements.push_back(std::static_pointer_cast<DataType>(make_shared<Number>(0LL)));
+                elements.push_back(std::static_pointer_cast<DataType>(make_shared<Null>()));
             }
             else
             {
@@ -697,7 +731,7 @@ private:
 
         if (node->return_null)
         {
-            auto null_val = make_shared<Number>(0LL);
+            auto null_val = make_shared<Null>();
             null_val->set_context(context).set_pos(node->pos_start, node->pos_end);
             return res.success(std::static_pointer_cast<DataType>(null_val));
         }
@@ -728,7 +762,7 @@ private:
                     return res;
 
                 if (get<2>(case_tuple))
-                    return res.success(std::static_pointer_cast<DataType>(make_shared<Number>(0LL)));
+                    return res.success(std::static_pointer_cast<DataType>(make_shared<Null>()));
                 return res.success(expr_value);
             }
         }
@@ -740,11 +774,11 @@ private:
                 return res;
 
             if (node->else_case->second)
-                return res.success(std::static_pointer_cast<DataType>(make_shared<Number>(0LL)));
+                return res.success(std::static_pointer_cast<DataType>(make_shared<Null>()));
             return res.success(else_value);
         }
 
-        return res.success(std::static_pointer_cast<DataType>(make_shared<Number>(0LL)));
+        return res.success(std::static_pointer_cast<DataType>(make_shared<Null>()));
     }
 
     RunTimeResult visit_VariableUseNode(const shared_ptr<VariableUseNode> &node, const shared_ptr<Context> &context)
@@ -1074,7 +1108,7 @@ private:
     RunTimeResult visit_ReturnNode(const shared_ptr<ReturnNode> &node, const shared_ptr<Context> &context)
     {
         RunTimeResult res;
-        shared_ptr<DataType> value = std::static_pointer_cast<DataType>(make_shared<Number>(0LL));
+        shared_ptr<DataType> value = std::static_pointer_cast<DataType>(make_shared<Null>());
         if (node->node_to_return)
         {
             value = res.register_result(visit(node->node_to_return, context));
@@ -1101,10 +1135,12 @@ private:
         if (res.should_return())
             return res;
 
-        if (dynamic_pointer_cast<Function>(left) ||
-            dynamic_pointer_cast<BuiltInFunction>(left) ||
-            dynamic_pointer_cast<Module>(left) ||
-            dynamic_pointer_cast<ModelType>(left))
+        if ((dynamic_pointer_cast<Function>(left) ||
+             dynamic_pointer_cast<BuiltInFunction>(left) ||
+             dynamic_pointer_cast<Module>(left) ||
+             dynamic_pointer_cast<ModelType>(left)) &&
+            node->operator_token.type != T_EE &&
+            node->operator_token.type != T_NEQ)
         {
             string op_symbol = node->operator_token.type;
             if (op_symbol == T_KEYWORD && node->operator_token.value.type() == typeid(string)) {
@@ -1156,9 +1192,23 @@ private:
         else if (node->operator_token.type == T_RSHIFT)
             tie(result, error) = left->rshift(right);
         else if (node->operator_token.type == T_EE)
-            tie(result, error) = left->get_comparison_eq(right);
+        {
+            if (dynamic_cast<const Null*>(left.get()) || dynamic_cast<const Null*>(right.get())) {
+                bool eq = (left->get_type_name() == right->get_type_name());
+                result = Number::make_bool(eq);
+            } else {
+                tie(result, error) = left->get_comparison_eq(right);
+            }
+        }
         else if (node->operator_token.type == T_NEQ)
-            tie(result, error) = left->get_comparison_neq(right);
+        {
+            if (dynamic_cast<const Null*>(left.get()) || dynamic_cast<const Null*>(right.get())) {
+                bool neq = (left->get_type_name() != right->get_type_name());
+                result = Number::make_bool(neq);
+            } else {
+                tie(result, error) = left->get_comparison_neq(right);
+            }
+        }
         else if (node->operator_token.type == T_LT)
             tie(result, error) = left->get_comparison_lt(right);
         else if (node->operator_token.type == T_GT)
@@ -1334,9 +1384,28 @@ private:
                 {
                     matches = true;
                 }
-                else if (find(ERROR_TYPES.begin(), ERROR_TYPES.end(), caught_err) == ERROR_TYPES.end())
+                else if (find(ERROR_TYPES.begin(), ERROR_TYPES.end(), caught_err) != ERROR_TYPES.end())
                 {
-                    return res.failure(InvalidErrorTypeError(trap_node->pos_start.value_or(Position{}), trap_node->pos_end.value_or(Position{}), "'" + caught_err + "' is not a valid error type", context));
+                    matches = false;
+                }
+                else
+                {
+                    auto model_val = context->symbol_table->get(caught_err);
+                    auto model_class = dynamic_pointer_cast<ModelType>(model_val);
+                    if (!model_class)
+                    {
+                        return res.failure(InvalidErrorTypeError(trap_node->pos_start.value_or(Position{}), trap_node->pos_end.value_or(Position{}), "'" + caught_err + "' is not a valid error type", context));
+                    }
+                    if (auto user_err = dynamic_cast<const UserDefinedError*>(error.get()))
+                    {
+                        if (auto model_inst = dynamic_pointer_cast<ModelInstance>(user_err->instance))
+                        {
+                            if (model_inst->model->is_descendant_of(model_class))
+                            {
+                                matches = true;
+                            }
+                        }
+                    }
                 }
             }
 
@@ -1347,31 +1416,40 @@ private:
 
                 if (trap_node->error_name)
                 {
-                    auto exception_model = make_shared<ModelType>(
-                        error->error_name,
-                        vector<AttrInfo>(),
-                        vector<shared_ptr<Node>>(),
-                        nullptr,
-                        unordered_map<string, MethodInfo>(),
-                        vector<shared_ptr<ModelType>>()
-                    );
-                    exception_model->set_context(trap_context).set_pos(trap_node->pos_start, trap_node->pos_end);
+                    shared_ptr<DataType> e_instance;
+                    if (auto user_err = dynamic_cast<const UserDefinedError*>(error.get()))
+                    {
+                        e_instance = user_err->instance;
+                    }
+                    else
+                    {
+                        auto exception_model = make_shared<ModelType>(
+                            error->error_name,
+                            vector<AttrInfo>(),
+                            vector<shared_ptr<Node>>(),
+                            nullptr,
+                            unordered_map<string, MethodInfo>(),
+                            vector<shared_ptr<ModelType>>()
+                        );
+                        exception_model->set_context(trap_context).set_pos(trap_node->pos_start, trap_node->pos_end);
 
-                    auto e_instance = make_shared<ModelInstance>(exception_model);
-                    e_instance->set_context(trap_context).set_pos(trap_node->pos_start, trap_node->pos_end);
+                        auto mi = make_shared<ModelInstance>(exception_model);
+                        mi->set_context(trap_context).set_pos(trap_node->pos_start, trap_node->pos_end);
 
-                    auto err_type = make_shared<String>(error->error_name);
-                    err_type->set_pos(trap_node->pos_start, trap_node->pos_end).set_context(trap_context);
+                        auto err_type = make_shared<String>(error->error_name);
+                        err_type->set_pos(trap_node->pos_start, trap_node->pos_end).set_context(trap_context);
 
-                    auto err_message = make_shared<String>(error->details);
-                    err_message->set_pos(trap_node->pos_start, trap_node->pos_end).set_context(trap_context);
+                        auto err_message = make_shared<String>(error->details);
+                        err_message->set_pos(trap_node->pos_start, trap_node->pos_end).set_context(trap_context);
 
-                    auto err_traceback = make_shared<String>(error->to_string());
-                    err_traceback->set_pos(trap_node->pos_start, trap_node->pos_end).set_context(trap_context);
+                        auto err_traceback = make_shared<String>(error->to_string());
+                        err_traceback->set_pos(trap_node->pos_start, trap_node->pos_end).set_context(trap_context);
 
-                    e_instance->set_attr("type", err_type);
-                    e_instance->set_attr("message", err_message);
-                    e_instance->set_attr("traceback", err_traceback);
+                        mi->set_attr("type", err_type);
+                        mi->set_attr("message", err_message);
+                        mi->set_attr("traceback", err_traceback);
+                        e_instance = mi;
+                    }
 
                     trap_context->symbol_table->set(any_cast<string>(trap_node->error_name->value), e_instance);
                 }
@@ -1796,6 +1874,60 @@ private:
                 ));
             }
         }
+        else if (auto file_val = dynamic_pointer_cast<File>(collection))
+        {
+            if (num_vars == 1)
+            {
+                string var_name = any_cast<string>(var_name_tokens[0].value);
+
+                // Check for closed file before iteration (matches Python logic)
+                if (!file_val->descriptor || file_val->descriptor->is_closed()) {
+                    return res.failure(FileIOError(
+                        file_val->pos_start.value_or(node->pos_start.value_or(Position())),
+                        file_val->pos_end.value_or(node->pos_end.value_or(Position())),
+                        "I/O operation on closed file.",
+                        context
+                    ));
+                }
+
+                try {
+                    vector<string> lines = file_val->read_lines();
+                    for (const auto& line : lines) {
+                        auto line_str = make_shared<String>(line);
+                        line_str->set_context(context).set_pos(node->pos_start, node->pos_end);
+                        context->symbol_table->set(var_name, line_str);
+
+                        res.register_result(visit(node->body_node, context));
+                        if (res.should_return() && !res.loop_continue && !res.loop_or_switch_break)
+                            return res;
+                        if (res.loop_continue) {
+                            res.loop_continue = false;
+                            continue;
+                        }
+                        if (res.loop_or_switch_break) {
+                            res.loop_or_switch_break = false;
+                            break;
+                        }
+                    }
+                } catch (const exception& e) {
+                    return res.failure(FileIOError(
+                        file_val->pos_start.value_or(node->pos_start.value_or(Position())),
+                        file_val->pos_end.value_or(node->pos_end.value_or(Position())),
+                        string("Failed to read file lines: ") + e.what(),
+                        context
+                    ));
+                }
+            }
+            else
+            {
+                return res.failure(RunTimeError(
+                    node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
+                    "File trace expects exactly 1 variable, but got " + std::to_string(num_vars),
+                    context,
+                    "ArgumentError"
+                ));
+            }
+        }
         else
         {
             return res.failure(RunTimeError(
@@ -1806,7 +1938,7 @@ private:
             ));
         }
 
-        return res.success(make_shared<Number>(0LL));
+        return res.success(make_shared<Null>());
     }
 
     RunTimeResult visit_SummonNode(const shared_ptr<SummonNode> &node, const shared_ptr<Context> &context)
@@ -1817,7 +1949,7 @@ private:
         // ── 1. Resolve the file path ────────────────────────────────────
         string source_dir = ".";
         if (node->pos_start.has_value()) {
-            string fn = node->pos_start->file_name;
+            string fn = (node->pos_start->file_name) ? *node->pos_start->file_name : "";
             if (!fn.empty() && fn != "<stdin>") {
                 auto path = fs::path(fn).parent_path();
                 if (!path.empty()) {
@@ -1843,9 +1975,13 @@ private:
 
         string resolved_path = "";
         for (const auto& path : candidates) {
-            if (fs::is_regular_file(path)) {
-                resolved_path = fs::absolute(path).string();
-                break;
+            std::error_code ec;
+            if (fs::is_regular_file(path, ec) && !ec) {
+                auto abs_path = fs::absolute(path, ec);
+                if (!ec) {
+                    resolved_path = abs_path.string();
+                    break;
+                }
             }
         }
 
@@ -2171,6 +2307,33 @@ private:
                     str_ch->set_context(context);
                     str_ch->set_pos(node->pos_start.value_or(Position()), node->pos_end.value_or(Position()));
                     items.push_back(str_ch);
+                }
+            }
+            else if (auto file_coll = dynamic_pointer_cast<File>(collection))
+            {
+                if (!file_coll->descriptor || file_coll->descriptor->is_closed()) {
+                    return res.failure(FileIOError(
+                        file_coll->pos_start.value_or(node->pos_start.value_or(Position())),
+                        file_coll->pos_end.value_or(node->pos_end.value_or(Position())),
+                        "I/O operation on closed file.",
+                        context
+                    ));
+                }
+                try {
+                    vector<string> file_lines = file_coll->read_lines();
+                    for (const auto& fl : file_lines) {
+                        auto ls = make_shared<String>(fl);
+                        ls->set_context(context);
+                        ls->set_pos(node->pos_start.value_or(Position()), node->pos_end.value_or(Position()));
+                        items.push_back(ls);
+                    }
+                } catch (const exception& e) {
+                    return res.failure(FileIOError(
+                        file_coll->pos_start.value_or(node->pos_start.value_or(Position())),
+                        file_coll->pos_end.value_or(node->pos_end.value_or(Position())),
+                        string("Failed to read file lines: ") + e.what(),
+                        context
+                    ));
                 }
             }
             else

@@ -5,6 +5,14 @@
 #include "position.h"
 using namespace std;
 
+class CleanExitException : public std::exception {
+public:
+    [[nodiscard]] const char* what() const noexcept override {
+        return "CleanExitException";
+    }
+};
+
+
 class Error {
 public:
     virtual ~Error() = default;
@@ -26,8 +34,8 @@ public:
     }
 
     [[nodiscard]] virtual string to_string() const {
-        string rel_path = get_relative_path(pos_start.file_name);
-        string snippet = string_with_arrows(pos_start.file_text, pos_start, pos_end);
+        string rel_path = pos_start.file_name ? get_relative_path(*pos_start.file_name) : "";
+        string snippet = pos_start.file_text ? string_with_arrows(*pos_start.file_text, pos_start, pos_end) : "";
         stringstream ss;
         ss << "  [" << error_code << "] File " << (rel_path.empty() ? "<unknown>" : rel_path) << ", line " << (pos_start.line + 1) << "\n"
            << snippet << "\n"
@@ -96,6 +104,41 @@ protected:
         }
 
         string indent = "    ";
+
+        // Smart Truncation for exceptionally long lines (e.g. minified files or flat expressions)
+        const int MAX_LINE_LENGTH = 120;
+        if ((int)line.size() > MAX_LINE_LENGTH) {
+            int error_width = col_end - col_start;
+            int remaining = MAX_LINE_LENGTH - error_width;
+            int left_padding = max(0, remaining / 2);
+
+            int start_idx = max(0, col_start - left_padding);
+            int end_idx = min((int)line.size(), start_idx + MAX_LINE_LENGTH);
+
+            // Re-adjust start_idx if near the end of the line to show more left context
+            if (end_idx - start_idx < MAX_LINE_LENGTH) {
+                start_idx = max(0, end_idx - MAX_LINE_LENGTH);
+            }
+
+            string truncated = line.substr(start_idx, end_idx - start_idx);
+
+            int offset = -start_idx;
+            if (start_idx > 0) {
+                truncated = "..." + truncated;
+                offset += 3;
+            }
+            if (end_idx < (int)line.size()) {
+                truncated += "...";
+            }
+
+            int new_col_start = max(0, min((int)truncated.size(), col_start + offset));
+            int new_col_end = max(new_col_start + 1, min((int)truncated.size(), col_end + offset));
+
+            string snippet = indent + truncated + "\n";
+            snippet += indent + string(new_col_start, ' ') + string(new_col_end - new_col_start, '^');
+            return snippet;
+        }
+
         string snippet = indent + line + "\n";
         snippet += indent + string(col_start, ' ') + string(col_end - col_start, '^');
         return snippet;
@@ -162,14 +205,14 @@ public:
             string rel_path;
             string snippet;
             string line_str;
-            if (pos.file_name.empty()) {
+            if (!pos.file_name || pos.file_name->empty()) {
                 rel_path = "<unknown>";
                 snippet = "";
                 line_str = "?";
             } else {
-                rel_path = get_relative_path(pos.file_name);
+                rel_path = get_relative_path(*pos.file_name);
                 Position end_pos = (ctx->parent == nullptr) ? this->pos_end : pos;
-                snippet = string_with_arrows(pos.file_text, pos, end_pos);
+                snippet = pos.file_text ? string_with_arrows(*pos.file_text, pos, end_pos) : "";
                 line_str = std::to_string(pos.line + 1);
             }
 
@@ -357,4 +400,33 @@ public:
     [[nodiscard]] shared_ptr<Error> clone() const override {
         return make_shared<StackDepthExceededError>(*this);
     }
+};
+
+class FileIOError final : public RunTimeError {
+public:
+    FileIOError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context, string hint = "")
+        : RunTimeError(pos_start, pos_end, details, std::move(context), "FileIOError", "E9006",
+                       hint.empty() ? "Verify that the path is correct, the file exists, and you have necessary permissions." : std::move(hint)) {
+    }
+
+    [[nodiscard]] shared_ptr<Error> clone() const override {
+        return make_shared<FileIOError>(*this);
+    }
+};
+
+class DataType;
+
+class UserDefinedError final : public RunTimeError {
+public:
+    shared_ptr<DataType> instance;
+
+    UserDefinedError(const Position& pos_start, const Position& pos_end, shared_ptr<DataType> inst, shared_ptr<Context> context, string hint = "");
+
+    [[nodiscard]] shared_ptr<Error> clone() const override {
+        return make_shared<UserDefinedError>(*this);
+    }
+
+private:
+    static string get_name_from_instance(const shared_ptr<DataType>& inst);
+    static string get_details_from_instance(const shared_ptr<DataType>& inst);
 };

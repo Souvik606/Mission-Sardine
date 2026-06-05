@@ -11,6 +11,7 @@ public:
     shared_ptr<Error> error = nullptr;
     shared_ptr<Node> node;
     int advance_count = 0;
+    bool is_fatal = false;
 
     int last_registered_advance_count = 0;
     int to_reverse_count = 0;
@@ -28,6 +29,9 @@ public:
     shared_ptr<Node> register_node(const ParseResult& res) {
         last_registered_advance_count = res.advance_count;
         this->advance_count += res.advance_count;
+        if (res.is_fatal) {
+            this->is_fatal = true;
+        }
         if (res.error) {
             this->error = res.error;
         }
@@ -47,6 +51,11 @@ public:
     }
 
     shared_ptr<Node> try_register(const ParseResult& res) {
+        if (res.is_fatal) {
+            this->error = res.error;
+            this->is_fatal = true;
+            return nullptr;
+        }
         if (res.error) {
             this->to_reverse_count = res.advance_count;
             return nullptr;

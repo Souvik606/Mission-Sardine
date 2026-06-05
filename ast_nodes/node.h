@@ -9,6 +9,7 @@ class Node {
 public:
     optional<Position> pos_start;
     optional<Position> pos_end;
+    int depth = 1;
 
     Node(optional<Position> start, optional<Position> end)
         : pos_start(std::move(start)), pos_end(std::move(end)) {

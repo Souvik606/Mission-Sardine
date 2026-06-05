@@ -12,8 +12,8 @@ get('x'): 100
 get('missing', 999): 999
 get('missing' no default): 0
 --- has_key() / contains() ---
-has_key('y'): 1
-has_key('missing'): 0
+has_key('y'): True
+has_key('missing'): False
 --- pop() method ---
 pop('z'): 300
 dict after pop: {'x': 100, 'y': 200, 'z': 300}

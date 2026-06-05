@@ -9,4 +9,4 @@ Caught expected unpack error for too few variables:
   ValueError: Expected 2 values, but got 3
 --- Stress Test: Unpacking a Non-iterable Primitive ---
 Caught expected unpack error on integer:
-  Cannot unpack non-iterable type 'Number'
+  Cannot unpack non-iterable type 'Integer'

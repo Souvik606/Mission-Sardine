@@ -5,7 +5,7 @@
 # Helper to round float values to 4 decimal places for stable cross-platform tests
 method rf(x) {
     t = type(x)
-    when t == "<type Number>" {
+    when t == "<type Integer>" or t == "<type Float>" or t == "<type Boolean>" {
         when x == Integer(x) {
             yield Integer(x)
         } otherwise {

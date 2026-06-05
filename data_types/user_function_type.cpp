@@ -1,5 +1,5 @@
 #include "function_type.h"
-#include "number_type.h"
+#include "null_type.h"
 #include "../language_core/interpreter.h"
 #include "../language_core/symbol_table.h"
 #include "../language_core/constants.h"
@@ -141,7 +141,7 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>> &pos_args, co
 
     if (this->return_null)
     {
-        auto val = make_shared<Number>(0LL);
+        auto val = make_shared<Null>();
         val->set_context(exec_context).set_pos(this->pos_start, this->pos_end);
         return res.success(std::static_pointer_cast<DataType>(val));
     }

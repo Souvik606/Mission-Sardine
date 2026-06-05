@@ -1,0 +1,13 @@
+model AppError {
+    open attr <message>
+    init(message) {
+        message: message
+    }
+}
+
+risk {
+    throw(AppError("caught by wildcard"))
+}
+trap {
+    show("wildcard caught it")
+}

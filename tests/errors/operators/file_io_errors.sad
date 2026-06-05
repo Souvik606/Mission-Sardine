@@ -1,0 +1,53 @@
+show("--- Testing File I/O Error Trapping ---")
+
+# 1. Non-existent file in read mode
+risk {
+    f = fopen("non_existent_file.txt", "r")
+} trap FileIOError e {
+    show("Caught non-existent file error successfully!")
+}
+
+# 2. Invalid open mode
+risk {
+    f = fopen("test_temp.txt", "invalid_mode")
+} trap FileIOError e {
+    show("Caught invalid mode error successfully!")
+}
+
+# 3. Read from write-only file
+risk {
+    f = fopen("tests/features/built_ins/test_temp.txt", "w")
+    f.read()
+} trap FileIOError e {
+    show("Caught read from write-only file error successfully!")
+    f.close()
+}
+
+# 4. Write to read-only file
+risk {
+    f = fopen("tests/features/built_ins/test_temp.txt", "r")
+    f.write("some text")
+} trap FileIOError e {
+    show("Caught write to read-only file error successfully!")
+    f.close()
+}
+
+# 5. Read/write on closed file
+risk {
+    f = fopen("tests/features/built_ins/test_temp.txt", "r")
+    f.close()
+    f.read()
+} trap FileIOError e {
+    show("Caught operation on closed file error successfully!")
+}
+
+# 6. Trace over closed file
+risk {
+    f = fopen("tests/features/built_ins/test_temp.txt", "r")
+    f.close()
+    trace line <- f {
+        show(line)
+    }
+} trap FileIOError e {
+    show("Caught tracing over closed file error successfully!")
+}

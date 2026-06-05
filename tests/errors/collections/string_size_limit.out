@@ -1,0 +1,6 @@
+Error in tests/errors/collections/string_size_limit.sad:
+[E9005] Traceback (most recent call last):
+  File tests/errors/collections/string_size_limit.sad, line 2, in <program>
+    s * 400000
+        ^^^^^^
+ValueError: String size limit exceeded (max 1,000,000 characters)

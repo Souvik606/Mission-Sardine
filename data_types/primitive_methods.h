@@ -5,6 +5,7 @@
 #include "string_type.h"
 #include "list_type.h"
 #include "dict_type.h"
+#include "null_type.h"
 #include "../language_core/error.h"
 
 using namespace std;
@@ -36,10 +37,16 @@ inline DataType::OperationResult String::get_attr(const string& attr_name, const
             string d = delim->value;
             size_t pos = 0;
             while ((pos = s.find(d)) != string::npos) {
+                if (parts.size() >= 1000000) {
+                    return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "Split size limit exceeded (max 1,000,000 elements)", context) };
+                }
                 auto part = make_shared<String>(s.substr(0, pos));
                 part->set_context(context);
                 parts.push_back(part);
                 s.erase(0, pos + d.length());
+            }
+            if (parts.size() >= 1000000) {
+                return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "Split size limit exceeded (max 1,000,000 elements)", context) };
             }
             auto last_part = make_shared<String>(s);
             last_part->set_context(context);
@@ -121,7 +128,7 @@ inline DataType::OperationResult String::get_attr(const string& attr_name, const
                 return { nullptr, make_shared<IllegalOperationError>(args[0]->pos_start.value_or(Position()), args[0]->pos_end.value_or(Position()), "Prefix must be a String", context) };
             }
             bool result = (str_self->value.rfind(prefix->value, 0) == 0);
-            return { make_shared<Number>(result ? 1LL : 0LL), nullptr };
+            return { Number::make_bool(result), nullptr };
         };
         shared_ptr<DataType> bound = make_shared<BoundMethod>("starts_with", self_ptr, impl);
         bound->set_context(calling_context).set_pos(pos_start, pos_end);
@@ -142,7 +149,7 @@ inline DataType::OperationResult String::get_attr(const string& attr_name, const
             if (str_self->value.length() >= suffix->value.length()) {
                 result = (str_self->value.compare(str_self->value.length() - suffix->value.length(), suffix->value.length(), suffix->value) == 0);
             }
-            return { make_shared<Number>(result ? 1LL : 0LL), nullptr };
+            return { Number::make_bool(result), nullptr };
         };
         shared_ptr<DataType> bound = make_shared<BoundMethod>("ends_with", self_ptr, impl);
         bound->set_context(calling_context).set_pos(pos_start, pos_end);
@@ -163,8 +170,14 @@ inline DataType::OperationResult String::get_attr(const string& attr_name, const
             string s = str_self->value;
             string from = old_str->value;
             string to = new_str->value;
+            if (from.empty()) {
+                return { nullptr, make_shared<ValueError>(args[0]->pos_start.value_or(Position()), args[0]->pos_end.value_or(Position()), "Replace target string cannot be empty", context) };
+            }
             size_t start_pos = 0;
             while((start_pos = s.find(from, start_pos)) != string::npos) {
+                if (s.length() - from.length() + to.length() > 1000000) {
+                    return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "String size limit exceeded (max 1,000,000 characters)", context) };
+                }
                 s.replace(start_pos, from.length(), to);
                 start_pos += to.length();
             }
@@ -207,7 +220,7 @@ inline DataType::OperationResult String::get_attr(const string& attr_name, const
                 return { nullptr, make_shared<IllegalOperationError>(args[0]->pos_start.value_or(Position()), args[0]->pos_end.value_or(Position()), "Search term must be a String", context) };
             }
             bool result = (str_self->value.find(sub->value) != string::npos);
-            return { make_shared<Number>(result ? 1LL : 0LL), nullptr };
+            return { Number::make_bool(result), nullptr };
         };
         shared_ptr<DataType> bound = make_shared<BoundMethod>("contains", self_ptr, impl);
         bound->set_context(calling_context).set_pos(pos_start, pos_end);
@@ -221,7 +234,7 @@ inline DataType::OperationResult String::get_attr(const string& attr_name, const
                 return { nullptr, make_shared<ArgumentError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "is_digit() takes no arguments", context) };
             }
             bool all_digits = !str_self->value.empty() && all_of(str_self->value.begin(), str_self->value.end(), ::isdigit);
-            return { make_shared<Number>(all_digits ? 1LL : 0LL), nullptr };
+            return { Number::make_bool(all_digits), nullptr };
         };
         shared_ptr<DataType> bound = make_shared<BoundMethod>("is_digit", self_ptr, impl);
         bound->set_context(calling_context).set_pos(pos_start, pos_end);
@@ -235,7 +248,7 @@ inline DataType::OperationResult String::get_attr(const string& attr_name, const
                 return { nullptr, make_shared<ArgumentError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "is_alpha() takes no arguments", context) };
             }
             bool all_alpha = !str_self->value.empty() && all_of(str_self->value.begin(), str_self->value.end(), ::isalpha);
-            return { make_shared<Number>(all_alpha ? 1LL : 0LL), nullptr };
+            return { Number::make_bool(all_alpha), nullptr };
         };
         shared_ptr<DataType> bound = make_shared<BoundMethod>("is_alpha", self_ptr, impl);
         bound->set_context(calling_context).set_pos(pos_start, pos_end);
@@ -260,6 +273,9 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             if (args.size() != 1 || !kw_args.empty()) {
                 return { nullptr, make_shared<ArgumentError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "append() takes exactly 1 argument", context) };
             }
+            if (list_self->elements.size() >= 1000000) {
+                return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", context) };
+            }
             list_self->elements.push_back(args[0]);
             return { list_self, nullptr };
         };
@@ -274,6 +290,9 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             if (args.size() != 1 || !kw_args.empty()) {
                 return { nullptr, make_shared<ArgumentError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "prepend() takes exactly 1 argument", context) };
             }
+            if (list_self->elements.size() >= 1000000) {
+                return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", context) };
+            }
             list_self->elements.insert(list_self->elements.begin(), args[0]);
             return { list_self, nullptr };
         };
@@ -287,6 +306,9 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             auto list_self = dynamic_pointer_cast<List>(self);
             if (args.size() != 2 || !kw_args.empty()) {
                 return { nullptr, make_shared<ArgumentError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "insert() takes exactly 2 arguments: (index, item)", context) };
+            }
+            if (list_self->elements.size() >= 1000000) {
+                return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", context) };
             }
             auto num_idx = dynamic_pointer_cast<Number>(args[0]);
             if (!num_idx || num_idx->is_float) {
@@ -543,7 +565,7 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
                     break;
                 }
             }
-            return { make_shared<Number>(found ? 1LL : 0LL), nullptr };
+            return { Number::make_bool(found), nullptr };
         };
         shared_ptr<DataType> bound = make_shared<BoundMethod>("contains", self_ptr, impl);
         bound->set_context(calling_context).set_pos(pos_start, pos_end);
@@ -559,6 +581,9 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             auto other = dynamic_pointer_cast<List>(args[0]);
             if (!other) {
                 return { nullptr, make_shared<IllegalOperationError>(args[0]->pos_start.value_or(Position()), args[0]->pos_end.value_or(Position()), "Argument to extend() must be a List", context) };
+            }
+            if (list_self->elements.size() + other->elements.size() > 1000000) {
+                return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", context) };
             }
             for (const auto& el : other->elements) {
                 list_self->elements.push_back(el->copy());
@@ -688,7 +713,7 @@ inline DataType::OperationResult Dict::get_attr(const string& attr_name, const s
                 if (args.size() == 2) {
                     return { args[1], nullptr };
                 }
-                return { make_shared<Number>(0LL), nullptr };
+                return { Number::make(0LL), nullptr };
             }
             return { dict_self->elements.at(key_str)->copy(), nullptr };
         };
@@ -709,7 +734,7 @@ inline DataType::OperationResult Dict::get_attr(const string& attr_name, const s
             }
             string key_str = dict_self->get_dict_key(key);
             bool found = (dict_self->elements.find(key_str) != dict_self->elements.end());
-            return { make_shared<Number>(found ? 1LL : 0LL), nullptr };
+            return { Number::make_bool(found), nullptr };
         };
         shared_ptr<DataType> bound = make_shared<BoundMethod>(attr_name, self_ptr, impl);
         bound->set_context(calling_context).set_pos(pos_start, pos_end);
@@ -777,6 +802,15 @@ inline DataType::OperationResult Dict::get_attr(const string& attr_name, const s
             auto other = dynamic_pointer_cast<Dict>(args[0]);
             if (!other) {
                 return { nullptr, make_shared<IllegalOperationError>(args[0]->pos_start.value_or(Position()), args[0]->pos_end.value_or(Position()), "Argument to update() must be a Dictionary", context) };
+            }
+            size_t combined_keys = dict_self->elements.size();
+            for (const auto& key : other->keys_order) {
+                if (dict_self->elements.find(key) == dict_self->elements.end()) {
+                    combined_keys++;
+                }
+            }
+            if (combined_keys > 100000) {
+                return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "Dictionary size limit exceeded (max 100,000 elements)", context) };
             }
             for (const auto& key : other->keys_order) {
                 if (dict_self->elements.find(key) == dict_self->elements.end()) {

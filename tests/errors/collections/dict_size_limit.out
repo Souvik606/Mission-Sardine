@@ -1,0 +1,6 @@
+Error in tests/errors/collections/dict_size_limit.sad:
+[E9005] Traceback (most recent call last):
+  File tests/errors/collections/dict_size_limit.sad, line 3, in <program>
+    d[100001] = 100001
+      ^^^^^^
+ValueError: Dictionary size limit exceeded (max 100,000 elements)

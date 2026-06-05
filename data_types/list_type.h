@@ -24,7 +24,16 @@ public:
     [[nodiscard]] OperationResult get_attr(const string& attr_name, const shared_ptr<Context>& calling_context) const override;
 
     [[nodiscard]] shared_ptr<DataType> copy() const override {
-        auto new_list = make_shared<List>(this->elements);
+        vector<shared_ptr<DataType>> copy_elements;
+        copy_elements.reserve(elements.size());
+        for (const auto& element : elements) {
+            if (element) {
+                copy_elements.push_back(element->copy());
+            } else {
+                copy_elements.push_back(nullptr);
+            }
+        }
+        auto new_list = make_shared<List>(std::move(copy_elements));
         new_list->set_pos(this->pos_start, this->pos_end);
         new_list->set_context(this->context);
         return std::static_pointer_cast<DataType>(new_list);
@@ -247,11 +256,17 @@ public:
     [[nodiscard]] OperationResult add(const shared_ptr<DataType>& operand) const override {
         auto new_list = make_shared<List>(this->elements);
         if (dynamic_cast<const Number*>(operand.get()) || dynamic_cast<const String*>(operand.get()) || operand->is_dict()) {
+            if (new_list->elements.size() >= 1000000) {
+                return std::make_pair(nullptr, make_shared<ValueError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", this->context));
+            }
             new_list->elements.push_back(operand);
             new_list->set_context(this->context);
             return std::make_pair(std::static_pointer_cast<DataType>(new_list), nullptr);
         }
         if (const auto other_list = dynamic_cast<const List*>(operand.get())) {
+            if (new_list->elements.size() + other_list->elements.size() > 1000000) {
+                return std::make_pair(nullptr, make_shared<ValueError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", this->context));
+            }
             new_list->elements.insert(
                 new_list->elements.end(),
                 other_list->elements.begin(),
@@ -289,7 +304,11 @@ public:
                 if (*int_val < 0) {
                     return std::make_pair(nullptr, make_shared<IllegalOperationError>(num->pos_start.value_or(Position()), num->pos_end.value_or(Position()), "List repetition cannot be negative", this->context));
                 }
+                if (*int_val > 0 && this->elements.size() > 1000000 / *int_val) {
+                    return std::make_pair(nullptr, make_shared<ValueError>(num->pos_start.value_or(Position()), num->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", this->context));
+                }
                 vector<shared_ptr<DataType>> new_elements;
+                new_elements.reserve(this->elements.size() * (*int_val));
                 for (long long i = 0; i < *int_val; ++i) {
                     new_elements.insert(new_elements.end(), this->elements.begin(), this->elements.end());
                 }
@@ -332,22 +351,23 @@ public:
 
     [[nodiscard]] OperationResult get_comparison_eq(const shared_ptr<DataType>& other) const override {
         if (const auto o = dynamic_cast<const List*>(other.get())) {
-            if (this->elements.size() != o->elements.size()) {
-                auto res = make_shared<Number>(0LL);
+            auto new_list_copy = dynamic_pointer_cast<List>(this->copy());
+            if (new_list_copy->elements.size() != o->elements.size()) {
+                auto res = Number::make_bool(false);
                 res->set_context(this->context);
                 return std::make_pair(std::static_pointer_cast<DataType>(res), nullptr);
             }
 
             bool all_match = true;
-            for (size_t i = 0; i < this->elements.size(); ++i) {
-                auto [is_eq, error] = this->elements[i]->get_comparison_eq(o->elements[i]);
+            for (size_t i = 0; i < new_list_copy->elements.size(); ++i) {
+                auto [is_eq, error] = new_list_copy->elements[i]->get_comparison_eq(o->elements[i]);
                 if (error || !is_eq || !is_eq->is_truthy()) {
                     all_match = false;
                     break;
                 }
             }
 
-            auto res = make_shared<Number>(static_cast<long long>(all_match));
+            auto res = Number::make_bool(all_match);
             res->set_context(this->context);
             return std::make_pair(std::static_pointer_cast<DataType>(res), nullptr);
         }
@@ -358,7 +378,7 @@ public:
         auto [eq_res, error] = get_comparison_eq(other);
         if (error) return std::make_pair(nullptr, error);
 
-        auto res = make_shared<Number>(static_cast<long long>(!eq_res->is_truthy()));
+        auto res = Number::make_bool(!eq_res->is_truthy());
         res->set_context(this->context);
         return std::make_pair(std::static_pointer_cast<DataType>(res), nullptr);
     }

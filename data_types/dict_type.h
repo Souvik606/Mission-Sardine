@@ -49,7 +49,7 @@ public:
         new_dict->set_context(context);
         new_dict->keys_order = this->keys_order;
         for (const auto& key : keys_order) {
-            new_dict->elements[key] = elements.at(key);
+            new_dict->elements[key] = elements.at(key)->copy();
         }
         return new_dict;
     }
@@ -81,6 +81,15 @@ public:
 
     OperationResult add(const shared_ptr<DataType>& operand) const override {
         if (const auto other_dict = dynamic_cast<const Dict*>(operand.get())) {
+            size_t combined_keys = this->elements.size();
+            for (const auto& key : other_dict->keys_order) {
+                if (this->elements.find(key) == this->elements.end()) {
+                    combined_keys++;
+                }
+            }
+            if (combined_keys > 100000) {
+                return { nullptr, make_shared<ValueError>(operand->pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Dictionary size limit exceeded (max 100,000 elements)", this->context) };
+            }
             auto new_dict = dynamic_pointer_cast<Dict>(this->copy());
             for (const auto& key : other_dict->keys_order) {
                 if (new_dict->elements.find(key) == new_dict->elements.end()) {
@@ -110,24 +119,24 @@ public:
     OperationResult get_comparison_eq(const shared_ptr<DataType>& operand) const override {
         if (const auto other_dict = dynamic_cast<const Dict*>(operand.get())) {
             if (elements.size() != other_dict->elements.size()) {
-                return { make_shared<Number>(0LL), nullptr };
+                return { Number::make_bool(false), nullptr };
             }
             for (const auto& pair : elements) {
                 if (other_dict->elements.find(pair.first) == other_dict->elements.end()) {
-                    return { make_shared<Number>(0LL), nullptr };
+                    return { Number::make_bool(false), nullptr };
                 }
                 const auto& other_value = other_dict->elements.at(pair.first);
                 if (const auto left_string = dynamic_cast<const String*>(pair.second.get())) {
                     const auto right_string = dynamic_cast<const String*>(other_value.get());
                     if (!right_string || left_string->value != right_string->value) {
-                        return { make_shared<Number>(0LL), nullptr };
+                        return { Number::make_bool(false), nullptr };
                     }
                 }
                 else if (pair.second->to_string() != other_value->to_string()) {
-                    return { make_shared<Number>(0LL), nullptr };
+                    return { Number::make_bool(false), nullptr };
                 }
             }
-            return { make_shared<Number>(1LL), nullptr };
+            return { Number::make_bool(true), nullptr };
         }
         return { nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Expected a Dictionary", context) };
     }
@@ -138,7 +147,7 @@ public:
             return eq_res;
         }
         if (auto t_num = dynamic_cast<Number*>(eq_res.first.get())) {
-            return { make_shared<Number>(t_num->is_truthy() ? 0LL : 1LL), nullptr };
+            return { Number::make_bool(!t_num->is_truthy()), nullptr };
         }
         return eq_res;
     }
@@ -269,6 +278,9 @@ public:
                 if (dynamic_cast<const Number*>(last_idx.get()) || dynamic_cast<const String*>(last_idx.get())) {
                     string key = get_dict_key(last_idx);
                     if (updated_dict_ptr->elements.find(key) == updated_dict_ptr->elements.end()) {
+                        if (updated_dict_ptr->elements.size() >= 100000) {
+                            return { nullptr, make_shared<ValueError>(last_idx->pos_start.value_or(pos_start), last_idx->pos_end.value_or(pos_end), "Dictionary size limit exceeded (max 100,000 elements)", context) };
+                        }
                         updated_dict_ptr->keys_order.push_back(key);
                     }
                     updated_dict_ptr->elements[key] = val;

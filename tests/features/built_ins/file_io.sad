@@ -1,0 +1,48 @@
+show("--- Testing File I/O Happy Path ---")
+
+# 1. Open in write mode and write text
+f = fopen("tests/features/built_ins/test_temp.txt", "w")
+show("file is open:", f)
+f.write("Line 1: Hello from Sardine!\n")
+f.lwrite("Line 2: Enhanced line writing.")
+f.close()
+
+# 2. Open in read mode (default) and read all
+f2 = fopen("tests/features/built_ins/test_temp.txt")
+show("file2 is open:", f2)
+content = f2.read()
+show("content:")
+show(content)
+f2.close()
+
+# 3. Open in append mode and append content
+f3 = fopen("tests/features/built_ins/test_temp.txt", "a")
+f3.lwrite("Line 3: Appended content.")
+f3.close()
+
+# 4. Open in read mode and read line by line
+f4 = fopen("tests/features/built_ins/test_temp.txt", "r")
+l1 = f4.lread()
+l2 = f4.lread()
+l3 = f4.lread()
+l4 = f4.lread() # should be empty string
+show("Line 1 trimmed:", l1.trim())
+show("Line 2 trimmed:", l2.trim())
+show("Line 3 trimmed:", l3.trim())
+show("Line 4 is empty:", len(l4) == 0)
+f4.close()
+show("file4 is closed:", f4)
+
+# 5. Open in read mode and test trace loop iteration
+show("--- Testing File Line Iteration via trace ---")
+f5 = fopen("tests/features/built_ins/test_temp.txt", "r")
+trace line <- f5 {
+    show("trace line:", line.trim())
+}
+f5.close()
+
+# 6. Open and test List Comprehension iteration
+f6 = fopen("tests/features/built_ins/test_temp.txt", "r")
+lines = [l.trim() trace l <- f6]
+show("comprehension lines:", lines)
+f6.close()

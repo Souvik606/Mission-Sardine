@@ -78,5 +78,6 @@ const vector<string> KEYWORDS = {
 const vector<string> ERROR_TYPES = {
     "RunTimeError", "IllegalOperationError", "DivisionByZeroError", "IndexOutOfBoundsError",
     "NameError", "ArgumentError", "InvalidErrorTypeError", "DictKeyError", "NotImplementedError",
-    "AttributeError", "TypeError", "ModuleError", "ValueError", "StackDepthExceededError"
+    "AttributeError", "TypeError", "ModuleError", "ValueError", "StackDepthExceededError",
+    "FileIOError"
 };

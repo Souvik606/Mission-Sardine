@@ -35,7 +35,7 @@ geometric(0.2)      : 2
 --- random stdlib: reseeding & reproducibility ---
 Seeded 999 series 1 : [63, 90, 85, 65, 19]
 Seeded 999 series 2 : [63, 90, 85, 65, 19]
-Series are equal    : 1
+Series are equal    : True
 --- random stdlib: error handling ---
 Caught empty list pick error
 Caught empty list picks error

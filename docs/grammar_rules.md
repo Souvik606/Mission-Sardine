@@ -1,7 +1,7 @@
 ```grammar
 multiline: NEWLINE* (singleline)* (NEWLINE* (singleline))* NEWLINE*
 
-singleline: call | statements | if-expression | for-expression | while-expression | switch-statement | function-definition | exception-handling | class-definition | foreach-expression | summon-statement
+singleline: expression | statements | jump-statements | if-expression | for-expression | while-expression | switch-statement | function-definition | exception-handling | class-definition | foreach-expression | summon-statement
 
 class-definition: KEYWORD:model IDENTIFIER (COLON IDENTIFIER (COMMA IDENTIFIER)*)? LPAREN2 NEWLINE* (class-member NEWLINE*)* RPAREN2
 
@@ -13,23 +13,27 @@ attr-list: attr-item (COMMA attr-item)*
 
 attr-item: IDENTIFIER (EQUAL expression)?
 
-constructor-definition: KEYWORD:init LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN LPAREN2 NEWLINE* (initializer-list)? (multiline | jump-statements)* NEWLINE* RPAREN2
+constructor-definition: KEYWORD:init LPAREN parameter-list? RPAREN LPAREN2 NEWLINE* (initializer-list)? (multiline | jump-statements)* NEWLINE* RPAREN2
 
-method-definition: (KEYWORD:open | KEYWORD:guarded | KEYWORD:secret)? KEYWORD:method IDENTIFIER? LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN LPAREN2 (multiline |jump-statements)* RPAREN2
+method-definition: (KEYWORD:open | KEYWORD:guarded | KEYWORD:secret)? KEYWORD:method IDENTIFIER? LPAREN parameter-list? RPAREN LPAREN2 (multiline |jump-statements)* RPAREN2
+
+parameter-list: parameter-item (COMMA parameter-item)*
+
+parameter-item: IDENTIFIER (EQUAL expression)?
 
 initializer-list: initializer-item ((COMMA NEWLINE* | NEWLINE+) initializer-item)*
 
 initializer-item: IDENTIFIER COLON expression
 
-jump-statements: KEYWORD:proceed | KEYWORD:escape | KEYWORD:yield expression (COMMA expression)*
+jump-statements: KEYWORD:proceed | KEYWORD:escape | KEYWORD:yield (expression (COMMA expression)*)?
 
 statements: IDENTIFIER (LPAREN3 expression RPAREN3)* (COMMA IDENTIFIER (LPAREN3 expression RPAREN3)*)* (EQUAL | PLUSEQUAL | MINUSEQUAL | MULEQUAL | DIVIDEEQUAL | MODULUSEQUAL | FLOOREQUAL | EXPEQUAL | BITOREQUAL | BITXOREQUAL | BITANDEQUAL | LSHIFTEQUAL | RSHIFTEQUAL) expression (COMMA expression)*
 
 switch-statement: KEYWORD:menu ternary-expression LPAREN2 NEWLINE* (case-statement* NEWLINE*)* default-statement? NEWLINE* (case-statement* NEWLINE*)* RPAREN2
 
-case-statement: KEYWORD:choice ternary-expression LPAREN2 ((expression | statements) RPAREN2) | (NEWLINE multiline RPAREN2)
+case-statement: KEYWORD:choice ternary-expression LPAREN2 (multiline | jump-statements)* RPAREN2
 
-default-statement: KEYWORD:fallback LPAREN2 ((expression | statements) RPAREN2) | (NEWLINE multiline RPAREN2)
+default-statement: KEYWORD:fallback LPAREN2 (multiline | jump-statements)* RPAREN2
 
 expression: ternary-expression
 
@@ -61,9 +65,17 @@ attr-access: factor (DOT IDENTIFIER)*
 
 factor: INT | FLOAT | STRING | FSTRING | IDENTIFIER (LPAREN3 expression RPAREN3)* | LPAREN expression RPAREN | list-expression | dict-expression
 
-dict-expression: LPAREN2 (expression COLON expression(COMMA expression COLON expression)*)? RPAREN2
+dict-expression: LPAREN2 (expression COLON expression (COMMA expression COLON expression)*)? RPAREN2 | dict-comprehension
 
-list-expression: LPAREN3 (expression(COMMA expression)*)? RPAREN3
+dict-comprehension: LPAREN2 expression COLON expression (cycle-comprehension-clause | trace-comprehension-clause) RPAREN2
+
+list-expression: LPAREN3 (expression (COMMA expression)*)? RPAREN3 | list-comprehension
+
+list-comprehension: LPAREN3 expression (cycle-comprehension-clause | trace-comprehension-clause) RPAREN3
+
+cycle-comprehension-clause: KEYWORD:cycle IDENTIFIER EQUAL expression COLON expression (COLON expression)? (KEYWORD:when expression)?
+
+trace-comprehension-clause: KEYWORD:trace IDENTIFIER (COMMA IDENTIFIER)* LARROW expression (KEYWORD:when expression)?
 
 exception-handling: try-expression NEWLINE* ( catch-expression NEWLINE* (catch-expression)* NEWLINE* finally-expression? | finally-expression)
 
@@ -83,13 +95,13 @@ summon-statement: KEYWORD:summon (summon-wildcard | summon-selective | summon-al
 
 summon-wildcard: MUL KEYWORD:from IDENTIFIER
 
-summon-selective: IDENTIFIER (KEYWORD:as IDENTIFIER)? (COMMA IDENTIFIER (KEYWORD:as IDENTIFIER)?)* KEYWORD:from IDENTIFIER
+summon-selective: (IDENTIFIER KEYWORD:as IDENTIFIER KEYWORD:from IDENTIFIER) | (IDENTIFIER (COMMA IDENTIFIER)* KEYWORD:from IDENTIFIER)
 
 summon-alias: IDENTIFIER KEYWORD:as IDENTIFIER
 
 summon-bare: IDENTIFIER
 
-function-definition: KEYWORD:method IDENTIFIER? LPAREN (IDENTIFIER (COMMA IDENTIFIER)*)? RPAREN LPAREN2 (multiline |jump-statements)* RPAREN2
+function-definition: KEYWORD:method IDENTIFIER? LPAREN parameter-list? RPAREN LPAREN2 (multiline |jump-statements)* RPAREN2
 
 if-expression: KEYWORD:when expression LPAREN2 (multiline | jump-statements)* RPAREN2 NEWLINE* (elif-expression | else-expression)?
 

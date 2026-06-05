@@ -1,0 +1,46 @@
+show("--- Testing Null primitive type ---")
+
+# 1. Null representation
+show("Null representation:", Null)
+
+# 2. Type testing
+show("Type of Null:", type(Null))
+
+# 3. Truthiness
+when Null {
+    show("Null is truthy? (Should not print)")
+} otherwise {
+    show("Null is falsy? (Correct)")
+}
+
+# 4. Comparisons
+show("Null == Null:", Null == Null)
+show("Null != Null:", Null != Null)
+show("Null == 5:", Null == 5)
+show("Null != 5:", Null != 5)
+show("5 == Null:", 5 == Null)
+show("5 != Null:", 5 != Null)
+
+# 5. Default returns
+method empty_func() {
+    # Returns Null implicitly
+}
+
+show("empty_func() return:", empty_func())
+
+method empty_return() {
+    yield
+}
+
+show("empty_return() return:", empty_return())
+
+# 6. Logical NOT on Null
+show("not Null:", not Null)
+
+# 7. Function and Method comparisons with Null
+method dummy() {}
+show("dummy == Null:", dummy == Null)
+show("Null == dummy:", Null == dummy)
+show("dummy != Null:", dummy != Null)
+show("Null != dummy:", Null != dummy)
+

@@ -3,4 +3,4 @@ Error in tests/errors/collections/data_indexing_errors.sad:
   File tests/errors/collections/data_indexing_errors.sad, line 2, in <program>
     show(x[0])
          ^^^
-RunTimeError: Type 'Number' is not scriptable/indexable
+RunTimeError: Type 'Integer' is not scriptable/indexable

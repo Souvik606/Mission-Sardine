@@ -60,14 +60,14 @@ public:
 
 class Lexer {
 public:
-    string filename;
-    string text;
+    shared_ptr<const string> filename;
+    shared_ptr<const string> text;
     Position pos;
     optional<char> current_char;
 
-    Lexer(const string& filename, const string& text)
-        : filename(filename),
-        text(text),
+    Lexer(const string& filename_str, const string& text_str)
+        : filename(make_shared<const string>(filename_str)),
+        text(make_shared<const string>(text_str)),
         pos(Position(-1, 0, -1, filename, text)),
         current_char(nullopt) {
         advance();
@@ -75,8 +75,8 @@ public:
 
     void advance() {
         pos.advance(current_char.value_or('\0'));
-        if (pos.index < text.length()) {
-            current_char = text[pos.index];
+        if (pos.index < text->length()) {
+            current_char = (*text)[pos.index];
         }
         else {
             current_char = nullopt;
@@ -435,7 +435,7 @@ public:
         vector<Token> tokens;
         while (current_char.has_value()) {
             char c = current_char.value();
-            if (c == ' ' || c == '\t') {
+            if (c == ' ' || c == '\t' || c == '\r') {
                 advance();
             }
             else if (c == ';') {

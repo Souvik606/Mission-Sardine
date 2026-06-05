@@ -2,7 +2,7 @@
 Data 1: [2, 4, 4, 4, 5, 5, 7, 9]
 range(data1)          : 7
 mean(data1)           : 5
-geometric_mean([2,8]) : 4.0
+geometric_mean([2,8]) : 4
 harmonic_mean([2,4])  : 2.6667
 median(data1)         : 4.5
 mode(data1)           : 4

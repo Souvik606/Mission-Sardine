@@ -67,25 +67,35 @@ private:
     int call;
 
     int current_depth = 0;
+    int in_method_count = 0;
 
-    ParseResult _enter_depth()
+    struct MethodCountGuard
+    {
+        int& counter;
+        explicit MethodCountGuard(int& cnt) : counter(cnt) { counter++; }
+        ~MethodCountGuard() { counter--; }
+    };
+
+    struct ParserDepthGuard
+    {
+        int& depth;
+        explicit ParserDepthGuard(int& d) : depth(d) { depth++; }
+        ~ParserDepthGuard() { depth--; }
+    };
+
+    ParseResult _check_depth()
     {
         ParseResult res;
-        current_depth++;
         if (current_depth > MAX_AST_DEPTH)
         {
             Position start = current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position();
             Position end = current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position();
+            res.is_fatal = true;
             return res.failure(InvalidSyntaxError(
                 start, end,
                 "Expression is too complex (maximum nesting depth of " + to_string(MAX_AST_DEPTH) + " exceeded)"));
         }
         return res;
-    }
-
-    void _exit_depth()
-    {
-        current_depth--;
     }
 
     ParseResult _parse_list_comp_cycle(ParseResult& res, shared_ptr<Node> expr_node, Position pos_start)
@@ -437,9 +447,40 @@ private:
         return is_statement;
     }
 
+    optional<ParseResult> check_statement_separation(ParseResult& res, const vector<shared_ptr<Node>>& parsed_list)
+    {
+        if (!current_tok.has_value())
+            return nullopt;
+        if (current_tok->type == T_NEWLINE || current_tok->type == T_RPAREN2 || current_tok->type == T_EOF)
+            return nullopt;
+        if (!parsed_list.empty() && tok_index > 0 && tokens[tok_index - 1].type != T_NEWLINE)
+        {
+            string msg = "Expected newline to separate statements";
+            if (current_tok->type == T_KEYWORD &&
+                (any_cast<string>(current_tok->value) == "yield" ||
+                 any_cast<string>(current_tok->value) == "escape" ||
+                 any_cast<string>(current_tok->value) == "proceed"))
+            {
+                msg += ". Jump statements (like '" + any_cast<string>(current_tok->value) + "') must be on a new line.";
+            }
+            res.failure(InvalidSyntaxError(
+                current_tok->pos_start.value_or(Position()),
+                current_tok->pos_end.value_or(Position()),
+                msg
+            ));
+            return res;
+        }
+        return nullopt;
+    }
+
+
     ParseResult multiline()
     {
         ParseResult res;
+        ParserDepthGuard guard(current_depth);
+        auto depth_res = _check_depth();
+        if (depth_res.error) return depth_res;
+
         vector<shared_ptr<Node>> statements_list;
         optional<Position> pos_start;
 
@@ -515,6 +556,10 @@ private:
     ParseResult singleline()
     {
         ParseResult res;
+        ParserDepthGuard guard(current_depth);
+        auto depth_res = _check_depth();
+        if (depth_res.error) return depth_res;
+
         if (!current_tok.has_value())
             return res;
         Token token = current_tok.value();
@@ -730,6 +775,8 @@ private:
         res.register_advancement();
         advance();
 
+        MethodCountGuard guard(in_method_count);
+
         if (current_tok.has_value() && current_tok->type == T_IDENTIFIER)
         {
             var_name_tok = current_tok.value();
@@ -849,6 +896,10 @@ private:
 
         while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF)
         {
+            auto sep_err = check_statement_separation(res, body_nodes);
+            if (sep_err)
+                return *sep_err;
+
             if (current_tok->type == T_KEYWORD &&
                 (any_cast<string>(current_tok->value) == "escape" ||
                  any_cast<string>(current_tok->value) == "proceed" ||
@@ -900,7 +951,7 @@ private:
         res.register_advancement();
         advance();
 
-        return res.success(make_shared<FunctionDefinitionNode>(var_name_tok, arg_nodes, body_node, false, access_mod));
+        return res.success(make_shared<FunctionDefinitionNode>(var_name_tok, arg_nodes, body_node, true, access_mod));
     }
 
     ParseResult parse_arguments(vector<shared_ptr<Node>>& positional_args, vector<pair<Token, shared_ptr<Node>>>& keyword_args)
@@ -1166,6 +1217,10 @@ private:
 
         while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF)
         {
+            auto sep_err = check_statement_separation(res, body_nodes);
+            if (sep_err)
+                return *sep_err;
+
             if (current_tok->type == T_KEYWORD &&
                 (any_cast<string>(current_tok->value) == "escape" ||
                  any_cast<string>(current_tok->value) == "proceed" ||
@@ -1260,6 +1315,10 @@ private:
 
         while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF)
         {
+            auto sep_err = check_statement_separation(res, body_nodes);
+            if (sep_err)
+                return *sep_err;
+
             if (current_tok->type == T_KEYWORD &&
                 (any_cast<string>(current_tok->value) == "escape" ||
                  any_cast<string>(current_tok->value) == "proceed" ||
@@ -1371,6 +1430,10 @@ private:
 
         while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF)
         {
+            auto sep_err = check_statement_separation(res, body_nodes);
+            if (sep_err)
+                return *sep_err;
+
             if (current_tok->type == T_KEYWORD &&
                 (any_cast<string>(current_tok->value) == "escape" ||
                  any_cast<string>(current_tok->value) == "proceed" ||
@@ -1504,6 +1567,10 @@ private:
 
         while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF)
         {
+            auto sep_err = check_statement_separation(res, body_nodes);
+            if (sep_err)
+                return *sep_err;
+
             if (current_tok->type == T_KEYWORD &&
                 (any_cast<string>(current_tok->value) == "escape" ||
                  any_cast<string>(current_tok->value) == "proceed" ||
@@ -1607,6 +1674,10 @@ private:
 
         while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF)
         {
+            auto sep_err = check_statement_separation(res, body_nodes);
+            if (sep_err)
+                return *sep_err;
+
             if (current_tok->type == T_KEYWORD &&
                 (any_cast<string>(current_tok->value) == "escape" ||
                  any_cast<string>(current_tok->value) == "proceed" ||
@@ -1761,6 +1832,10 @@ private:
 
         while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF)
         {
+            auto sep_err = check_statement_separation(res, body_nodes);
+            if (sep_err)
+                return *sep_err;
+
             if (current_tok->type == T_KEYWORD &&
                 (any_cast<string>(current_tok->value) == "escape" ||
                  any_cast<string>(current_tok->value) == "proceed" ||
@@ -1853,6 +1928,10 @@ private:
 
             while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF)
             {
+                auto sep_err = check_statement_separation(res, body_nodes);
+                if (sep_err)
+                    return *sep_err;
+
                 if (current_tok->type == T_KEYWORD &&
                     (any_cast<string>(current_tok->value) == "escape" ||
                      any_cast<string>(current_tok->value) == "proceed" ||
@@ -2150,6 +2229,13 @@ private:
             if (res.error)
                 return res;
             left_node = make_shared<BinaryOperationNode>(left_node, op_token, right_node);
+            if (left_node->depth > MAX_AST_DEPTH) {
+                return res.failure(InvalidSyntaxError(
+                    left_node->pos_start.value_or(Position()),
+                    left_node->pos_end.value_or(Position()),
+                    "Expression is too complex (maximum AST depth exceeded)"
+                ));
+            }
         }
 
         return res.success(left_node);
@@ -2308,6 +2394,14 @@ private:
 
         if (any_cast<string>(current_tok->value) == "yield")
         {
+            if (in_method_count == 0)
+            {
+                return res.failure(InvalidSyntaxError(
+                    current_tok->pos_start.value_or(Position()),
+                    current_tok->pos_end.value_or(Position()),
+                    "'yield' is only allowed inside methods/functions"
+                ));
+            }
             auto start_pos = current_tok->pos_start.value_or(Position());
             res.register_advancement();
             advance();
@@ -2349,13 +2443,13 @@ private:
     {
         ParseResult res;
 
-        auto depth_res = _enter_depth();
+        ParserDepthGuard guard(current_depth);
+        auto depth_res = _check_depth();
         if (depth_res.error) {
-            return res.failure(*depth_res.error);
+            return depth_res;
         }
 
         auto ternary_node = res.register_node(ternary_expression());
-        _exit_depth();
         if (res.error)
             return res;
 
@@ -2389,6 +2483,13 @@ private:
                 return res;
 
             left_node = make_shared<BinaryOperationNode>(left_node, operator_tok, right_node);
+            if (left_node->depth > MAX_AST_DEPTH) {
+                return res.failure(InvalidSyntaxError(
+                    left_node->pos_start.value_or(Position()),
+                    left_node->pos_end.value_or(Position()),
+                    "Expression is too complex (maximum AST depth exceeded)"
+                ));
+            }
         }
 
         auto node = res.register_node(res.success(left_node));
@@ -2420,6 +2521,13 @@ private:
                 return res;
 
             left_node = make_shared<BinaryOperationNode>(left_node, operator_tok, right_node);
+            if (left_node->depth > MAX_AST_DEPTH) {
+                return res.failure(InvalidSyntaxError(
+                    left_node->pos_start.value_or(Position()),
+                    left_node->pos_end.value_or(Position()),
+                    "Expression is too complex (maximum AST depth exceeded)"
+                ));
+            }
         }
 
         auto node = res.register_node(res.success(left_node));
@@ -2451,6 +2559,13 @@ private:
                 return res;
 
             left_node = make_shared<BinaryOperationNode>(left_node, operator_tok, right_node);
+            if (left_node->depth > MAX_AST_DEPTH) {
+                return res.failure(InvalidSyntaxError(
+                    left_node->pos_start.value_or(Position()),
+                    left_node->pos_end.value_or(Position()),
+                    "Expression is too complex (maximum AST depth exceeded)"
+                ));
+            }
         }
 
         auto node = res.register_node(res.success(left_node));
@@ -2482,6 +2597,13 @@ private:
                 return res;
 
             left_node = make_shared<BinaryOperationNode>(left_node, operator_tok, right_node);
+            if (left_node->depth > MAX_AST_DEPTH) {
+                return res.failure(InvalidSyntaxError(
+                    left_node->pos_start.value_or(Position()),
+                    left_node->pos_end.value_or(Position()),
+                    "Expression is too complex (maximum AST depth exceeded)"
+                ));
+            }
         }
 
         auto node = res.register_node(res.success(left_node));
@@ -2526,6 +2648,13 @@ private:
             if (res.error)
                 return res;
             left_node = make_shared<BinaryOperationNode>(left_node, operator_tok, right_node);
+            if (left_node->depth > MAX_AST_DEPTH) {
+                return res.failure(InvalidSyntaxError(
+                    left_node->pos_start.value_or(Position()),
+                    left_node->pos_end.value_or(Position()),
+                    "Expression is too complex (maximum AST depth exceeded)"
+                ));
+            }
         }
 
         auto node = res.register_node(res.success(left_node));
@@ -2555,6 +2684,13 @@ private:
             if (res.error)
                 return res;
             left_node = make_shared<BinaryOperationNode>(left_node, operator_tok, right_node);
+            if (left_node->depth > MAX_AST_DEPTH) {
+                return res.failure(InvalidSyntaxError(
+                    left_node->pos_start.value_or(Position()),
+                    left_node->pos_end.value_or(Position()),
+                    "Expression is too complex (maximum AST depth exceeded)"
+                ));
+            }
         }
 
         auto node = res.register_node(res.success(left_node));
@@ -2584,6 +2720,13 @@ private:
             if (res.error)
                 return res;
             left_node = make_shared<BinaryOperationNode>(left_node, op_token, right_node);
+            if (left_node->depth > MAX_AST_DEPTH) {
+                return res.failure(InvalidSyntaxError(
+                    left_node->pos_start.value_or(Position()),
+                    left_node->pos_end.value_or(Position()),
+                    "Expression is too complex (maximum AST depth exceeded)"
+                ));
+            }
         }
 
         auto node = res.register_node(res.success(left_node));
@@ -2687,6 +2830,10 @@ private:
 
         while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF)
         {
+            auto sep_err = check_statement_separation(res, body_nodes);
+            if (sep_err)
+                return *sep_err;
+
             if (current_tok->type == T_KEYWORD &&
                 (any_cast<string>(current_tok->value) == "escape" ||
                  any_cast<string>(current_tok->value) == "proceed" ||
@@ -2743,7 +2890,7 @@ private:
         optional<Token> error_type = nullopt;
         optional<Token> error_name = nullopt;
 
-        if (current_tok.has_value() && current_tok->type == T_ERROR)
+        if (current_tok.has_value() && (current_tok->type == T_ERROR || current_tok->type == T_IDENTIFIER))
         {
             error_type = current_tok;
             res.register_advancement();
@@ -3593,6 +3740,10 @@ private:
 
         while (current_tok.has_value() && current_tok->type != T_RPAREN2 && current_tok->type != T_EOF)
         {
+            auto sep_err = check_statement_separation(res, body_nodes);
+            if (sep_err)
+                return *sep_err;
+
             if (current_tok->type == T_KEYWORD &&
                 (any_cast<string>(current_tok->value) == "yield" ||
                  any_cast<string>(current_tok->value) == "proceed" ||
@@ -3820,7 +3971,7 @@ private:
         string raw = any_cast<string>(token.value);
         optional<Position> pos_start = token.pos_start;
         optional<Position> pos_end = token.pos_end;
-        string filename = pos_start.has_value() ? pos_start->file_name : "<fstring>";
+        string filename = (pos_start.has_value() && pos_start->file_name) ? *pos_start->file_name : "<fstring>";
 
         vector<pair<string, any>> parts;
         size_t i = 0;
