@@ -256,11 +256,17 @@ public:
     [[nodiscard]] OperationResult add(const shared_ptr<DataType>& operand) const override {
         auto new_list = make_shared<List>(this->elements);
         if (dynamic_cast<const Number*>(operand.get()) || dynamic_cast<const String*>(operand.get()) || operand->is_dict()) {
+            if (new_list->elements.size() >= 1000000) {
+                return std::make_pair(nullptr, make_shared<ValueError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", this->context));
+            }
             new_list->elements.push_back(operand);
             new_list->set_context(this->context);
             return std::make_pair(std::static_pointer_cast<DataType>(new_list), nullptr);
         }
         if (const auto other_list = dynamic_cast<const List*>(operand.get())) {
+            if (new_list->elements.size() + other_list->elements.size() > 1000000) {
+                return std::make_pair(nullptr, make_shared<ValueError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", this->context));
+            }
             new_list->elements.insert(
                 new_list->elements.end(),
                 other_list->elements.begin(),
@@ -298,7 +304,11 @@ public:
                 if (*int_val < 0) {
                     return std::make_pair(nullptr, make_shared<IllegalOperationError>(num->pos_start.value_or(Position()), num->pos_end.value_or(Position()), "List repetition cannot be negative", this->context));
                 }
+                if (*int_val > 0 && this->elements.size() > 1000000 / *int_val) {
+                    return std::make_pair(nullptr, make_shared<ValueError>(num->pos_start.value_or(Position()), num->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", this->context));
+                }
                 vector<shared_ptr<DataType>> new_elements;
+                new_elements.reserve(this->elements.size() * (*int_val));
                 for (long long i = 0; i < *int_val; ++i) {
                     new_elements.insert(new_elements.end(), this->elements.begin(), this->elements.end());
                 }

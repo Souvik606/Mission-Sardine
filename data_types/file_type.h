@@ -37,6 +37,9 @@ struct FileDescriptor {
         string result;
         char buf[4096];
         while (fgets(buf, sizeof(buf), fp)) {
+            if (result.length() + strlen(buf) > 10000000) {
+                throw std::length_error("File read size limit exceeded (max 10MB)");
+            }
             result += buf;
         }
         return result;
@@ -316,7 +319,13 @@ public:
         vector<string> lines;
         if (!descriptor || descriptor->is_closed() || !descriptor->fp) return lines;
         char buf[4096];
+        size_t total_bytes = 0;
         while (fgets(buf, sizeof(buf), descriptor->fp)) {
+            size_t len = strlen(buf);
+            total_bytes += len;
+            if (total_bytes > 10000000) {
+                throw std::length_error("File read size limit exceeded (max 10MB)");
+            }
             lines.emplace_back(buf);
         }
         return lines;

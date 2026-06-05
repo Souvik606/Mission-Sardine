@@ -1949,7 +1949,7 @@ private:
         // ── 1. Resolve the file path ────────────────────────────────────
         string source_dir = ".";
         if (node->pos_start.has_value()) {
-            string fn = node->pos_start->file_name;
+            string fn = (node->pos_start->file_name) ? *node->pos_start->file_name : "";
             if (!fn.empty() && fn != "<stdin>") {
                 auto path = fs::path(fn).parent_path();
                 if (!path.empty()) {

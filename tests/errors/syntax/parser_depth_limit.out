@@ -1,0 +1,5 @@
+Error in tests/errors/syntax/parser_depth_limit.sad:
+  [E2001] File tests/errors/syntax/parser_depth_limit.sad, line 30
+    when (True) {
+         ^
+Invalid Syntax Error: Expression is too complex (maximum nesting depth of 60 exceeded)

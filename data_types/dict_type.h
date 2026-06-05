@@ -81,6 +81,15 @@ public:
 
     OperationResult add(const shared_ptr<DataType>& operand) const override {
         if (const auto other_dict = dynamic_cast<const Dict*>(operand.get())) {
+            size_t combined_keys = this->elements.size();
+            for (const auto& key : other_dict->keys_order) {
+                if (this->elements.find(key) == this->elements.end()) {
+                    combined_keys++;
+                }
+            }
+            if (combined_keys > 100000) {
+                return { nullptr, make_shared<ValueError>(operand->pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Dictionary size limit exceeded (max 100,000 elements)", this->context) };
+            }
             auto new_dict = dynamic_pointer_cast<Dict>(this->copy());
             for (const auto& key : other_dict->keys_order) {
                 if (new_dict->elements.find(key) == new_dict->elements.end()) {
@@ -269,6 +278,9 @@ public:
                 if (dynamic_cast<const Number*>(last_idx.get()) || dynamic_cast<const String*>(last_idx.get())) {
                     string key = get_dict_key(last_idx);
                     if (updated_dict_ptr->elements.find(key) == updated_dict_ptr->elements.end()) {
+                        if (updated_dict_ptr->elements.size() >= 100000) {
+                            return { nullptr, make_shared<ValueError>(last_idx->pos_start.value_or(pos_start), last_idx->pos_end.value_or(pos_end), "Dictionary size limit exceeded (max 100,000 elements)", context) };
+                        }
                         updated_dict_ptr->keys_order.push_back(key);
                     }
                     updated_dict_ptr->elements[key] = val;

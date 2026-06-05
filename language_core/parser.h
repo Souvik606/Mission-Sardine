@@ -76,24 +76,26 @@ private:
         ~MethodCountGuard() { counter--; }
     };
 
-    ParseResult _enter_depth()
+    struct ParserDepthGuard
+    {
+        int& depth;
+        explicit ParserDepthGuard(int& d) : depth(d) { depth++; }
+        ~ParserDepthGuard() { depth--; }
+    };
+
+    ParseResult _check_depth()
     {
         ParseResult res;
-        current_depth++;
         if (current_depth > MAX_AST_DEPTH)
         {
             Position start = current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position();
             Position end = current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position();
+            res.is_fatal = true;
             return res.failure(InvalidSyntaxError(
                 start, end,
                 "Expression is too complex (maximum nesting depth of " + to_string(MAX_AST_DEPTH) + " exceeded)"));
         }
         return res;
-    }
-
-    void _exit_depth()
-    {
-        current_depth--;
     }
 
     ParseResult _parse_list_comp_cycle(ParseResult& res, shared_ptr<Node> expr_node, Position pos_start)
@@ -475,6 +477,10 @@ private:
     ParseResult multiline()
     {
         ParseResult res;
+        ParserDepthGuard guard(current_depth);
+        auto depth_res = _check_depth();
+        if (depth_res.error) return depth_res;
+
         vector<shared_ptr<Node>> statements_list;
         optional<Position> pos_start;
 
@@ -550,6 +556,10 @@ private:
     ParseResult singleline()
     {
         ParseResult res;
+        ParserDepthGuard guard(current_depth);
+        auto depth_res = _check_depth();
+        if (depth_res.error) return depth_res;
+
         if (!current_tok.has_value())
             return res;
         Token token = current_tok.value();
@@ -2219,6 +2229,13 @@ private:
             if (res.error)
                 return res;
             left_node = make_shared<BinaryOperationNode>(left_node, op_token, right_node);
+            if (left_node->depth > MAX_AST_DEPTH) {
+                return res.failure(InvalidSyntaxError(
+                    left_node->pos_start.value_or(Position()),
+                    left_node->pos_end.value_or(Position()),
+                    "Expression is too complex (maximum AST depth exceeded)"
+                ));
+            }
         }
 
         return res.success(left_node);
@@ -2426,13 +2443,13 @@ private:
     {
         ParseResult res;
 
-        auto depth_res = _enter_depth();
+        ParserDepthGuard guard(current_depth);
+        auto depth_res = _check_depth();
         if (depth_res.error) {
-            return res.failure(*depth_res.error);
+            return depth_res;
         }
 
         auto ternary_node = res.register_node(ternary_expression());
-        _exit_depth();
         if (res.error)
             return res;
 
@@ -2466,6 +2483,13 @@ private:
                 return res;
 
             left_node = make_shared<BinaryOperationNode>(left_node, operator_tok, right_node);
+            if (left_node->depth > MAX_AST_DEPTH) {
+                return res.failure(InvalidSyntaxError(
+                    left_node->pos_start.value_or(Position()),
+                    left_node->pos_end.value_or(Position()),
+                    "Expression is too complex (maximum AST depth exceeded)"
+                ));
+            }
         }
 
         auto node = res.register_node(res.success(left_node));
@@ -2497,6 +2521,13 @@ private:
                 return res;
 
             left_node = make_shared<BinaryOperationNode>(left_node, operator_tok, right_node);
+            if (left_node->depth > MAX_AST_DEPTH) {
+                return res.failure(InvalidSyntaxError(
+                    left_node->pos_start.value_or(Position()),
+                    left_node->pos_end.value_or(Position()),
+                    "Expression is too complex (maximum AST depth exceeded)"
+                ));
+            }
         }
 
         auto node = res.register_node(res.success(left_node));
@@ -2528,6 +2559,13 @@ private:
                 return res;
 
             left_node = make_shared<BinaryOperationNode>(left_node, operator_tok, right_node);
+            if (left_node->depth > MAX_AST_DEPTH) {
+                return res.failure(InvalidSyntaxError(
+                    left_node->pos_start.value_or(Position()),
+                    left_node->pos_end.value_or(Position()),
+                    "Expression is too complex (maximum AST depth exceeded)"
+                ));
+            }
         }
 
         auto node = res.register_node(res.success(left_node));
@@ -2559,6 +2597,13 @@ private:
                 return res;
 
             left_node = make_shared<BinaryOperationNode>(left_node, operator_tok, right_node);
+            if (left_node->depth > MAX_AST_DEPTH) {
+                return res.failure(InvalidSyntaxError(
+                    left_node->pos_start.value_or(Position()),
+                    left_node->pos_end.value_or(Position()),
+                    "Expression is too complex (maximum AST depth exceeded)"
+                ));
+            }
         }
 
         auto node = res.register_node(res.success(left_node));
@@ -2603,6 +2648,13 @@ private:
             if (res.error)
                 return res;
             left_node = make_shared<BinaryOperationNode>(left_node, operator_tok, right_node);
+            if (left_node->depth > MAX_AST_DEPTH) {
+                return res.failure(InvalidSyntaxError(
+                    left_node->pos_start.value_or(Position()),
+                    left_node->pos_end.value_or(Position()),
+                    "Expression is too complex (maximum AST depth exceeded)"
+                ));
+            }
         }
 
         auto node = res.register_node(res.success(left_node));
@@ -2632,6 +2684,13 @@ private:
             if (res.error)
                 return res;
             left_node = make_shared<BinaryOperationNode>(left_node, operator_tok, right_node);
+            if (left_node->depth > MAX_AST_DEPTH) {
+                return res.failure(InvalidSyntaxError(
+                    left_node->pos_start.value_or(Position()),
+                    left_node->pos_end.value_or(Position()),
+                    "Expression is too complex (maximum AST depth exceeded)"
+                ));
+            }
         }
 
         auto node = res.register_node(res.success(left_node));
@@ -2661,6 +2720,13 @@ private:
             if (res.error)
                 return res;
             left_node = make_shared<BinaryOperationNode>(left_node, op_token, right_node);
+            if (left_node->depth > MAX_AST_DEPTH) {
+                return res.failure(InvalidSyntaxError(
+                    left_node->pos_start.value_or(Position()),
+                    left_node->pos_end.value_or(Position()),
+                    "Expression is too complex (maximum AST depth exceeded)"
+                ));
+            }
         }
 
         auto node = res.register_node(res.success(left_node));
@@ -3905,7 +3971,7 @@ private:
         string raw = any_cast<string>(token.value);
         optional<Position> pos_start = token.pos_start;
         optional<Position> pos_end = token.pos_end;
-        string filename = pos_start.has_value() ? pos_start->file_name : "<fstring>";
+        string filename = (pos_start.has_value() && pos_start->file_name) ? *pos_start->file_name : "<fstring>";
 
         vector<pair<string, any>> parts;
         size_t i = 0;

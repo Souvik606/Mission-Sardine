@@ -1,0 +1,6 @@
+Error in tests/errors/collections/list_size_limit.sad:
+[E9005] Traceback (most recent call last):
+  File tests/errors/collections/list_size_limit.sad, line 2, in <program>
+    list * 400000
+           ^^^^^^
+ValueError: List size limit exceeded (max 1,000,000 elements)
