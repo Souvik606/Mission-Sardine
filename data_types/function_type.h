@@ -46,6 +46,7 @@ public:
                       shared_ptr<DataType> instance = nullptr);
 
     [[nodiscard]] string get_type_name() const override { return "Function"; }
+    [[nodiscard]] bool is_callable_type() const override { return true; }
 
     DataType& set_context(const shared_ptr<Context>& ctx) override {
         if (!this->closure_context) {

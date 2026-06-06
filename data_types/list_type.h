@@ -4,6 +4,7 @@
 #include "number_type.h"
 #include "string_type.h"
 #include "../language_core/error.h"
+#include "cow_containers.h"
 
 using namespace std;
 
@@ -11,7 +12,7 @@ using namespace std;
 
 class List final : public DataType, public enable_shared_from_this<List> {
 public:
-    vector<shared_ptr<DataType>> elements;
+    CowVector<shared_ptr<DataType>> elements;
 
     explicit List(vector<shared_ptr<DataType>> elements)
         : elements(std::move(elements)) {
@@ -19,21 +20,22 @@ public:
         set_context();
     }
 
+    explicit List(CowVector<shared_ptr<DataType>> elements)
+        : elements(std::move(elements)) {
+        set_pos();
+        set_context();
+    }
+
+    [[nodiscard]] bool is_mutable() const override { return true; }
+    void detach() { elements.detach(); }
+
     [[nodiscard]] string get_type_name() const override { return "List"; }
+    [[nodiscard]] bool is_list() const override { return true; }
 
     [[nodiscard]] OperationResult get_attr(const string& attr_name, const shared_ptr<Context>& calling_context) const override;
 
     [[nodiscard]] shared_ptr<DataType> copy() const override {
-        vector<shared_ptr<DataType>> copy_elements;
-        copy_elements.reserve(elements.size());
-        for (const auto& element : elements) {
-            if (element) {
-                copy_elements.push_back(element->copy());
-            } else {
-                copy_elements.push_back(nullptr);
-            }
-        }
-        auto new_list = make_shared<List>(std::move(copy_elements));
+        auto new_list = make_shared<List>(this->elements);
         new_list->set_pos(this->pos_start, this->pos_end);
         new_list->set_context(this->context);
         return std::static_pointer_cast<DataType>(new_list);
@@ -360,7 +362,8 @@ public:
 
             bool all_match = true;
             for (size_t i = 0; i < new_list_copy->elements.size(); ++i) {
-                auto [is_eq, error] = new_list_copy->elements[i]->get_comparison_eq(o->elements[i]);
+                auto left_copied = new_list_copy->elements[i]->copy();
+                auto [is_eq, error] = left_copied->get_comparison_eq(o->elements[i]);
                 if (error || !is_eq || !is_eq->is_truthy()) {
                     all_match = false;
                     break;

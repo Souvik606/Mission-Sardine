@@ -125,6 +125,8 @@ public:
         return result;
     }
 
+    [[nodiscard]] bool is_callable_type() const override { return true; }
+
     [[nodiscard]] bool is_truthy() const override { return true; }
 
     [[nodiscard]] OperationResult is_true() const override

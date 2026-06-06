@@ -5,11 +5,15 @@
 
 using namespace std;
 
+class DataType;
+
 class Node {
 public:
     optional<Position> pos_start;
     optional<Position> pos_end;
     int depth = 1;
+    mutable int node_type_id = -1;
+    mutable shared_ptr<DataType> cached_value = nullptr;
 
     Node(optional<Position> start, optional<Position> end)
         : pos_start(std::move(start)), pos_end(std::move(end)) {

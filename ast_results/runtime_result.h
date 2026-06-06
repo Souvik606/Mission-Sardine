@@ -33,6 +33,14 @@ public:
         return res.value;
     }
 
+    shared_ptr<DataType> register_result(RunTimeResult&& res) {
+        this->error = std::move(res.error);
+        this->func_return_value = std::move(res.func_return_value);
+        this->loop_continue = res.loop_continue;
+        this->loop_or_switch_break = res.loop_or_switch_break;
+        return std::move(res.value);
+    }
+
     RunTimeResult& success(shared_ptr<DataType> result_value) {
         this->reset();
         this->value = std::move(result_value);

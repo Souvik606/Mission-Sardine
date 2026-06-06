@@ -160,6 +160,14 @@ public:
         {
             return this->visit_IndexAccessNode(static_pointer_cast<IndexAccessNode>(node), context);
         };
+
+        // Populate optimized mapping structures
+        int id_counter = 0;
+        for (const auto &pair : visit_methods)
+        {
+            type_index_to_id[pair.first] = id_counter++;
+            visit_methods_vector.push_back(pair.second);
+        }
     }
 
     RunTimeResult visit(const shared_ptr<Node> &node, const shared_ptr<Context> &context)
@@ -170,13 +178,20 @@ public:
         }
         try
         {
-            const Node &node_ref = *node;
-            const std::type_index type_idx = typeid(node_ref);
-            if (const auto it = visit_methods.find(type_idx); it != visit_methods.end())
+            if (node->node_type_id == -1)
             {
-                return it->second(node, context);
+                const Node &node_ref = *node;
+                const std::type_index type_idx = typeid(node_ref);
+                if (const auto it = type_index_to_id.find(type_idx); it != type_index_to_id.end())
+                {
+                    node->node_type_id = it->second;
+                }
+                else
+                {
+                    return no_visit_method(node);
+                }
             }
-            return no_visit_method(node);
+            return visit_methods_vector[node->node_type_id](node, context);
         }
         catch (const CleanExitException &e)
         {
@@ -209,6 +224,8 @@ public:
 private:
     using VisitFunction = std::function<RunTimeResult(shared_ptr<Node>, shared_ptr<Context>)>;
     std::unordered_map<std::type_index, VisitFunction> visit_methods;
+    std::unordered_map<std::type_index, int> type_index_to_id;
+    vector<VisitFunction> visit_methods_vector;
 
     static RunTimeResult no_visit_method(const shared_ptr<Node> &node)
     {
@@ -247,6 +264,11 @@ private:
     RunTimeResult visit_StringNode(const shared_ptr<StringNode> &node, const shared_ptr<Context> &context)
     {
         RunTimeResult res;
+        if (node->cached_value)
+        {
+            node->cached_value->set_context(context).set_pos(node->pos_start, node->pos_end);
+            return res.success(node->cached_value);
+        }
         shared_ptr<String> str;
 
         if (node->token.value.type() == typeid(string))
@@ -259,6 +281,7 @@ private:
         }
 
         str->set_context(context).set_pos(node->pos_start, node->pos_end);
+        node->cached_value = str;
         return res.success(std::static_pointer_cast<DataType>(str));
     }
 
@@ -287,31 +310,47 @@ private:
     RunTimeResult visit_FunctionCallNode(const shared_ptr<FunctionCallNode> &node, const shared_ptr<Context> &context)
     {
         RunTimeResult res;
-        vector<shared_ptr<DataType>> pos_args;
-        map<string, shared_ptr<DataType>> kw_args;
+        static const map<string, shared_ptr<DataType>> empty_kw_args;
+        static const vector<shared_ptr<DataType>> empty_pos_args;
 
         auto call_value = res.register_result(visit(node->call_node, context));
         if (res.should_return())
             return res;
 
-        call_value = call_value->copy();
+        call_value = call_value->is_mutable() ? call_value->copy() : call_value;
         call_value->set_pos(node->pos_start, node->pos_end);
 
-        for (const auto &arg_node : node->positional_arg_nodes)
+        const vector<shared_ptr<DataType>>* pos_args_ptr = &empty_pos_args;
+        vector<shared_ptr<DataType>> pos_args_local;
+        if (!node->positional_arg_nodes.empty())
         {
-            pos_args.push_back(res.register_result(visit(arg_node, context)));
-            if (res.should_return())
-                return res;
+            pos_args_local.reserve(node->positional_arg_nodes.size());
+            for (const auto &arg_node : node->positional_arg_nodes)
+            {
+                pos_args_local.push_back(res.register_result(visit(arg_node, context)));
+                if (res.should_return())
+                    return res;
+            }
+            pos_args_ptr = &pos_args_local;
         }
 
-        for (const auto &p : node->keyword_arg_nodes)
+        const map<string, shared_ptr<DataType>>* kw_args_ptr = &empty_kw_args;
+        map<string, shared_ptr<DataType>> kw_args_local;
+        if (!node->keyword_arg_nodes.empty())
         {
-            const string &name = any_cast<string>(p.first.value);
-            auto val = res.register_result(visit(p.second, context));
-            if (res.should_return())
-                return res;
-            kw_args[name] = val;
+            for (const auto &p : node->keyword_arg_nodes)
+            {
+                const string &name = any_cast<string>(p.first.value);
+                auto val = res.register_result(visit(p.second, context));
+                if (res.should_return())
+                    return res;
+                kw_args_local[name] = val;
+            }
+            kw_args_ptr = &kw_args_local;
         }
+
+        const auto &pos_args = *pos_args_ptr;
+        const auto &kw_args = *kw_args_ptr;
 
         shared_ptr<DataType> return_value;
         if (auto func_to_call = dynamic_pointer_cast<Function>(call_value))
@@ -348,7 +387,7 @@ private:
 
         if (return_value)
         {
-            return_value = return_value->copy();
+            return_value = return_value->is_mutable() ? return_value->copy() : return_value;
             return_value->set_pos(node->pos_start, node->pos_end);
             if (!dynamic_pointer_cast<Function>(return_value) && !dynamic_pointer_cast<ModelType>(return_value)) {
                 return_value->set_context(context);
@@ -785,21 +824,56 @@ private:
     {
         RunTimeResult res;
         const string &var_name = any_cast<string>(node->var_name_tok.value);
-        shared_ptr<DataType> value = context->symbol_table->get(var_name);
+        shared_ptr<DataType> value = nullptr;
 
-        if (!value)
+        if (node->cached_symbol_table_id == context->symbol_table->id && node->cached_value_ptr)
         {
-            auto this_val = context->symbol_table->get("this");
-            if (this_val)
+            value = *node->cached_value_ptr;
+        }
+        else
+        {
+            value = context->symbol_table->get(var_name);
+            if (!value)
             {
-                if (auto inst = dynamic_pointer_cast<ModelInstance>(this_val))
+                auto this_val = context->symbol_table->get("this");
+                if (this_val)
                 {
-                    value = inst->symbol_table->get(var_name);
-                    if (!value)
+                    if (auto inst = dynamic_pointer_cast<ModelInstance>(this_val))
                     {
-                        auto [method_val, err] = inst->get_attr(var_name, *this, context);
-                        if (!err && method_val)
-                            value = method_val;
+                        value = inst->symbol_table->get(var_name);
+                        if (!value)
+                        {
+                            auto [method_val, err] = inst->get_attr(var_name, *this, context);
+                            if (!err && method_val)
+                                value = method_val;
+                        }
+                    }
+                }
+            }
+
+            if (value)
+            {
+                const SymbolTable* found_table = nullptr;
+                const shared_ptr<DataType>* ptr = context->symbol_table->get_ptr(var_name, found_table);
+                if (ptr && *ptr == value)
+                {
+                    node->cached_symbol_table_id = context->symbol_table->id;
+                    node->cached_value_ptr = ptr;
+                }
+                else
+                {
+                    auto this_val = context->symbol_table->get("this");
+                    if (this_val)
+                    {
+                        if (auto inst = dynamic_pointer_cast<ModelInstance>(this_val))
+                        {
+                            const shared_ptr<DataType>* inst_ptr = inst->symbol_table->get_ptr(var_name, found_table);
+                            if (inst_ptr && *inst_ptr == value)
+                            {
+                                node->cached_symbol_table_id = context->symbol_table->id;
+                                node->cached_value_ptr = inst_ptr;
+                            }
+                        }
                     }
                 }
             }
@@ -814,7 +888,7 @@ private:
 
         if (node->index_node.empty())
         {
-            auto copied = value->copy();
+            auto copied = value->is_mutable() ? value->copy() : value;
             copied->set_pos(node->pos_start, node->pos_end);
             if (!dynamic_pointer_cast<Function>(copied) && !dynamic_pointer_cast<ModelType>(copied))
             {
@@ -837,7 +911,7 @@ private:
         if (error)
             return res.failure(*error);
 
-        auto copied = indexed_val->copy();
+        auto copied = indexed_val->is_mutable() ? indexed_val->copy() : indexed_val;
         copied->set_pos(node->pos_start, node->pos_end);
         if (!dynamic_pointer_cast<Function>(copied) && !dynamic_pointer_cast<ModelType>(copied))
         {
@@ -1020,21 +1094,42 @@ private:
                 }
                 else
                 {
-                    auto this_val = context->symbol_table->get("this");
-                    auto this_inst = dynamic_pointer_cast<ModelInstance>(this_val);
-                    bool is_attr = false;
-                    if (this_inst && this_inst->model->find_attribute(var_name) != nullptr)
+                    if (var_use->cached_symbol_table_id == context->symbol_table->id && var_use->cached_value_ptr)
                     {
-                        is_attr = true;
-                    }
-
-                    if (is_attr)
-                    {
-                        this_inst->set_attr(var_name, value);
+                        *const_cast<shared_ptr<DataType>*>(var_use->cached_value_ptr) = value;
                     }
                     else
                     {
-                        context->symbol_table->set(var_name, value);
+                        auto this_val = context->symbol_table->get("this");
+                        auto this_inst = dynamic_pointer_cast<ModelInstance>(this_val);
+                        bool is_attr = false;
+                        if (this_inst && this_inst->model->find_attribute(var_name) != nullptr)
+                        {
+                            is_attr = true;
+                        }
+
+                        if (is_attr)
+                        {
+                            this_inst->set_attr(var_name, value);
+                            const SymbolTable* found_table = nullptr;
+                            const shared_ptr<DataType>* ptr = this_inst->symbol_table->get_ptr(var_name, found_table);
+                            if (ptr)
+                            {
+                                var_use->cached_symbol_table_id = context->symbol_table->id;
+                                var_use->cached_value_ptr = ptr;
+                            }
+                        }
+                        else
+                        {
+                            context->symbol_table->set(var_name, value);
+                            const SymbolTable* found_table = nullptr;
+                            const shared_ptr<DataType>* ptr = context->symbol_table->get_ptr(var_name, found_table);
+                            if (ptr)
+                            {
+                                var_use->cached_symbol_table_id = context->symbol_table->id;
+                                var_use->cached_value_ptr = ptr;
+                            }
+                        }
                     }
                     last_result = value;
                 }
@@ -1085,6 +1180,11 @@ private:
     RunTimeResult visit_NumberNode(const shared_ptr<NumberNode> &node, const shared_ptr<Context> &context)
     {
         RunTimeResult res;
+        if (node->cached_value)
+        {
+            node->cached_value->set_context(context).set_pos(node->pos_start, node->pos_end);
+            return res.success(node->cached_value);
+        }
         shared_ptr<Number> number;
         bool is_float = (node->token.type == T_FLOAT);
 
@@ -1102,6 +1202,7 @@ private:
         }
 
         number->set_context(context).set_pos(node->pos_start, node->pos_end);
+        node->cached_value = number;
         return res.success(std::static_pointer_cast<DataType>(number));
     }
 
@@ -1135,10 +1236,7 @@ private:
         if (res.should_return())
             return res;
 
-        if ((dynamic_pointer_cast<Function>(left) ||
-             dynamic_pointer_cast<BuiltInFunction>(left) ||
-             dynamic_pointer_cast<Module>(left) ||
-             dynamic_pointer_cast<ModelType>(left)) &&
+        if (left->is_callable_type() &&
             node->operator_token.type != T_EE &&
             node->operator_token.type != T_NEQ)
         {
@@ -1583,7 +1681,7 @@ private:
         if (error)
             return res.failure(*error);
 
-        auto copied = indexed_val->copy();
+        auto copied = indexed_val->is_mutable() ? indexed_val->copy() : indexed_val;
         copied->set_pos(node->pos_start, node->pos_end);
         if (!dynamic_pointer_cast<Function>(copied) && !dynamic_pointer_cast<ModelType>(copied))
         {
@@ -1626,7 +1724,7 @@ private:
                 context));
         }
 
-        auto copied = value->copy();
+        auto copied = value->is_mutable() ? value->copy() : value;
         copied->set_pos(node->pos_start, node->pos_end);
         if (!dynamic_pointer_cast<Function>(copied) && !dynamic_pointer_cast<ModelType>(copied)) {
             copied->set_context(context);
@@ -1713,7 +1811,7 @@ private:
                 for (const auto& [key_str, val] : dict_val->elements)
                 {
                     auto key_dt = key_to_datatype(key_str, context);
-                    auto pair_list = make_shared<List>(vector<shared_ptr<DataType>>{key_dt, val->copy()});
+                    auto pair_list = make_shared<List>(vector<shared_ptr<DataType>>{key_dt, val->is_mutable() ? val->copy() : val});
                     pair_list->set_context(context).set_pos(node->pos_start, node->pos_end);
                     context->symbol_table->set(var_name, pair_list);
 
@@ -1740,7 +1838,7 @@ private:
                 {
                     auto key_dt = key_to_datatype(key_str, context);
                     context->symbol_table->set(key_var_name, key_dt);
-                    context->symbol_table->set(val_var_name, val->copy());
+                    context->symbol_table->set(val_var_name, val->is_mutable() ? val->copy() : val);
 
                     res.register_result(visit(node->body_node, context));
                     if (res.should_return() && !res.loop_continue && !res.loop_or_switch_break)
@@ -1774,7 +1872,7 @@ private:
                 string var_name = any_cast<string>(var_name_tokens[0].value);
                 for (const auto& element : list_val->elements)
                 {
-                    context->symbol_table->set(var_name, element->copy());
+                    context->symbol_table->set(var_name, element->is_mutable() ? element->copy() : element);
 
                     res.register_result(visit(node->body_node, context));
                     if (res.should_return() && !res.loop_continue && !res.loop_or_switch_break)
@@ -1819,7 +1917,7 @@ private:
                     for (size_t i = 0; i < num_vars; ++i)
                     {
                         string var_name = any_cast<string>(var_name_tokens[i].value);
-                        context->symbol_table->set(var_name, sub_list->elements[i]->copy());
+                        context->symbol_table->set(var_name, sub_list->elements[i]->is_mutable() ? sub_list->elements[i]->copy() : sub_list->elements[i]);
                     }
 
                     res.register_result(visit(node->body_node, context));

@@ -4,6 +4,7 @@
 #include "number_type.h"
 #include "string_type.h"
 #include "../language_core/error.h"
+#include "cow_containers.h"
 
 using namespace std;
 
@@ -21,10 +22,15 @@ public:
     }
 
 public:
-    unordered_map<string, shared_ptr<DataType>> elements;
-    vector<string> keys_order;
+    CowMap<string, shared_ptr<DataType>> elements;
+    CowVector<string> keys_order;
 
     [[nodiscard]] bool is_dict() const override { return true; }
+    [[nodiscard]] bool is_mutable() const override { return true; }
+    void detach() {
+        elements.detach();
+        keys_order.detach();
+    }
     [[nodiscard]] string get_type_name() const override { return "Dict"; }
 
     [[nodiscard]] OperationResult get_attr(const string& attr_name, const shared_ptr<Context>& calling_context) const override;
@@ -47,10 +53,8 @@ public:
         auto new_dict = make_shared<Dict>();
         new_dict->set_pos(pos_start, pos_end);
         new_dict->set_context(context);
+        new_dict->elements = this->elements;
         new_dict->keys_order = this->keys_order;
-        for (const auto& key : keys_order) {
-            new_dict->elements[key] = elements.at(key)->copy();
-        }
         return new_dict;
     }
 

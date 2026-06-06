@@ -276,6 +276,7 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             if (list_self->elements.size() >= 1000000) {
                 return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", context) };
             }
+            list_self->detach();
             list_self->elements.push_back(args[0]);
             return { list_self, nullptr };
         };
@@ -293,6 +294,7 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             if (list_self->elements.size() >= 1000000) {
                 return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", context) };
             }
+            list_self->detach();
             list_self->elements.insert(list_self->elements.begin(), args[0]);
             return { list_self, nullptr };
         };
@@ -322,6 +324,7 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
                 idx_val = static_cast<long long>(list_self->elements.size()) + idx_val;
             }
             idx_val = max(0LL, min(idx_val, static_cast<long long>(list_self->elements.size())));
+            list_self->detach();
             list_self->elements.insert(list_self->elements.begin() + idx_val, args[1]);
             return { list_self, nullptr };
         };
@@ -354,6 +357,7 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             if (actual_idx < 0 || actual_idx >= static_cast<long long>(list_self->elements.size())) {
                 return { nullptr, make_shared<IndexOutOfBoundsError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "Index out of bounds", context) };
             }
+            list_self->detach();
             auto popped = list_self->elements[actual_idx];
             list_self->elements.erase(list_self->elements.begin() + actual_idx);
             return { popped, nullptr };
@@ -381,6 +385,7 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             if (found_idx == -1) {
                 return { nullptr, make_shared<IllegalOperationError>(target->pos_start.value_or(Position()), target->pos_end.value_or(Position()), "Element not found in list", context) };
             }
+            list_self->detach();
             list_self->elements.erase(list_self->elements.begin() + found_idx);
             return { list_self, nullptr };
         };
@@ -395,6 +400,7 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             if (!args.empty() || !kw_args.empty()) {
                 return { nullptr, make_shared<ArgumentError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "clear() takes no arguments", context) };
             }
+            list_self->detach();
             list_self->elements.clear();
             return { list_self, nullptr };
         };
@@ -585,8 +591,9 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             if (list_self->elements.size() + other->elements.size() > 1000000) {
                 return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", context) };
             }
+            list_self->detach();
             for (const auto& el : other->elements) {
-                list_self->elements.push_back(el->copy());
+                list_self->elements.push_back(el);
             }
             return { list_self, nullptr };
         };
@@ -758,6 +765,7 @@ inline DataType::OperationResult Dict::get_attr(const string& attr_name, const s
                 }
                 return { nullptr, make_shared<DictKeyError>(key->pos_start.value_or(Position()), key->pos_end.value_or(Position()), "Key not found in dictionary", context) };
             }
+            dict_self->detach();
             auto popped = dict_self->elements.at(key_str);
             dict_self->elements.erase(key_str);
             dict_self->keys_order.erase(std::remove(dict_self->keys_order.begin(), dict_self->keys_order.end(), key_str), dict_self->keys_order.end());
@@ -780,6 +788,7 @@ inline DataType::OperationResult Dict::get_attr(const string& attr_name, const s
             string last_key = dict_self->keys_order.back();
             auto keys = get_ordered_keys(dict_self.get(), context);
             auto k_node = keys.back();
+            dict_self->detach();
             auto v_node = dict_self->elements.at(last_key);
             dict_self->elements.erase(last_key);
             dict_self->keys_order.pop_back();
@@ -812,11 +821,12 @@ inline DataType::OperationResult Dict::get_attr(const string& attr_name, const s
             if (combined_keys > 100000) {
                 return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "Dictionary size limit exceeded (max 100,000 elements)", context) };
             }
+            dict_self->detach();
             for (const auto& key : other->keys_order) {
                 if (dict_self->elements.find(key) == dict_self->elements.end()) {
                     dict_self->keys_order.push_back(key);
                 }
-                dict_self->elements[key] = other->elements.at(key)->copy();
+                dict_self->elements[key] = other->elements.at(key);
             }
             return { dict_self, nullptr };
         };
@@ -831,6 +841,7 @@ inline DataType::OperationResult Dict::get_attr(const string& attr_name, const s
             if (!args.empty() || !kw_args.empty()) {
                 return { nullptr, make_shared<ArgumentError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "clear() takes no arguments", context) };
             }
+            dict_self->detach();
             dict_self->elements.clear();
             dict_self->keys_order.clear();
             return { dict_self, nullptr };

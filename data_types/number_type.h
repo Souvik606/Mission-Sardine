@@ -68,6 +68,8 @@ public:
         return *this;
     }
 
+    [[nodiscard]] bool is_number() const override { return true; }
+
     [[nodiscard]] bool is_truthy() const override {
         return std::visit([](auto val) { return val != 0; }, this->value);
     }
@@ -84,7 +86,8 @@ public:
     }
 
     [[nodiscard]] OperationResult add(const shared_ptr<DataType>& operand) const override {
-        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+        if (operand->is_number()) {
+            const auto other = static_cast<const Number*>(operand.get());
             bool res_is_float = this->is_float || other->is_float;
             variant<long long, double> new_value;
             if (res_is_float) {
@@ -114,7 +117,8 @@ public:
     }
 
     [[nodiscard]] OperationResult subtract(const shared_ptr<DataType>& operand) const override {
-        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+        if (operand->is_number()) {
+            const auto other = static_cast<const Number*>(operand.get());
             bool res_is_float = this->is_float || other->is_float;
             variant<long long, double> new_value;
             if (res_is_float) {
@@ -144,7 +148,8 @@ public:
     }
 
     [[nodiscard]] OperationResult multiply(const shared_ptr<DataType>& operand) const override {
-        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+        if (operand->is_number()) {
+            const auto other = static_cast<const Number*>(operand.get());
             bool res_is_float = this->is_float || other->is_float;
             variant<long long, double> new_value;
             if (res_is_float) {
@@ -174,7 +179,8 @@ public:
     }
 
     [[nodiscard]] OperationResult divide(const shared_ptr<DataType>& operand) const override {
-        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+        if (operand->is_number()) {
+            const auto other = static_cast<const Number*>(operand.get());
             if (std::visit([](auto val) { return val == 0; }, other->value)) {
                 return std::make_pair(nullptr, make_shared<DivisionByZeroError>(
                     other->pos_start.value_or(Position()),
@@ -193,7 +199,8 @@ public:
     }
 
     [[nodiscard]] OperationResult modulus(const shared_ptr<DataType>& operand) const override {
-        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+        if (operand->is_number()) {
+            const auto other = static_cast<const Number*>(operand.get());
             if (std::visit([](auto val) { return val == 0; }, other->value)) {
                 return std::make_pair(nullptr, make_shared<DivisionByZeroError>(
                     other->pos_start.value_or(Position()),
@@ -231,7 +238,8 @@ public:
     }
 
     [[nodiscard]] OperationResult floor_divide(const shared_ptr<DataType>& operand) const override {
-        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+        if (operand->is_number()) {
+            const auto other = static_cast<const Number*>(operand.get());
             if (std::visit([](auto val) { return val == 0; }, other->value)) {
                 return std::make_pair(nullptr, make_shared<DivisionByZeroError>(
                     other->pos_start.value_or(Position()),
@@ -269,7 +277,8 @@ public:
     }
 
     [[nodiscard]] OperationResult exponent(const shared_ptr<DataType>& operand) const override {
-        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+        if (operand->is_number()) {
+            const auto other = static_cast<const Number*>(operand.get());
             double left_val = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
             double right_val = std::visit([](auto val) -> double { return static_cast<double>(val); }, other->value);
 
@@ -306,7 +315,8 @@ public:
     }
 
     [[nodiscard]] OperationResult get_comparison_eq(const shared_ptr<DataType>& operand) const override {
-        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+        if (operand->is_number()) {
+            const auto other = static_cast<const Number*>(operand.get());
             bool result;
             if (this->is_float || other->is_float) {
                 double left = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
@@ -321,7 +331,8 @@ public:
     }
 
     [[nodiscard]] OperationResult get_comparison_neq(const shared_ptr<DataType>& operand) const override {
-        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+        if (operand->is_number()) {
+            const auto other = static_cast<const Number*>(operand.get());
             bool result;
             if (this->is_float || other->is_float) {
                 double left = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
@@ -336,7 +347,8 @@ public:
     }
 
     [[nodiscard]] OperationResult get_comparison_lt(const shared_ptr<DataType>& operand) const override {
-        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+        if (operand->is_number()) {
+            const auto other = static_cast<const Number*>(operand.get());
             bool result;
             if (this->is_float || other->is_float) {
                 double left = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
@@ -351,7 +363,8 @@ public:
     }
 
     [[nodiscard]] OperationResult get_comparison_gt(const shared_ptr<DataType>& operand) const override {
-        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+        if (operand->is_number()) {
+            const auto other = static_cast<const Number*>(operand.get());
             bool result;
             if (this->is_float || other->is_float) {
                 double left = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
@@ -366,7 +379,8 @@ public:
     }
 
     [[nodiscard]] OperationResult get_comparison_lte(const shared_ptr<DataType>& operand) const override {
-        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+        if (operand->is_number()) {
+            const auto other = static_cast<const Number*>(operand.get());
             bool result;
             if (this->is_float || other->is_float) {
                 double left = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
@@ -381,7 +395,8 @@ public:
     }
 
     [[nodiscard]] OperationResult get_comparison_gte(const shared_ptr<DataType>& operand) const override {
-        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+        if (operand->is_number()) {
+            const auto other = static_cast<const Number*>(operand.get());
             bool result;
             if (this->is_float || other->is_float) {
                 double left = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
@@ -396,7 +411,8 @@ public:
     }
 
     [[nodiscard]] OperationResult and_by(const shared_ptr<DataType>& operand) const override {
-        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+        if (operand->is_number()) {
+            const auto other = static_cast<const Number*>(operand.get());
             const bool self_truthy  = std::visit([](auto val) { return val != 0; }, this->value);
             const bool other_truthy = std::visit([](auto val) { return val != 0; }, other->value);
             return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(self_truthy && other_truthy)), nullptr);
@@ -405,7 +421,8 @@ public:
     }
 
     [[nodiscard]] OperationResult or_by(const shared_ptr<DataType>& operand) const override {
-        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+        if (operand->is_number()) {
+            const auto other = static_cast<const Number*>(operand.get());
             const bool self_truthy  = std::visit([](auto val) { return val != 0; }, this->value);
             const bool other_truthy = std::visit([](auto val) { return val != 0; }, other->value);
             return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(self_truthy || other_truthy)), nullptr);
@@ -419,7 +436,8 @@ public:
     }
 
     [[nodiscard]] OperationResult bitwise_and(const shared_ptr<DataType>& operand) const override {
-        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+        if (operand->is_number()) {
+            const auto other = static_cast<const Number*>(operand.get());
             if (this->is_float || other->is_float) {
                 return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Bitwise operations require integer Numbers", this->context));
             }
@@ -433,7 +451,8 @@ public:
     }
 
     [[nodiscard]] OperationResult bitwise_xor(const shared_ptr<DataType>& operand) const override {
-        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+        if (operand->is_number()) {
+            const auto other = static_cast<const Number*>(operand.get());
             if (this->is_float || other->is_float) {
                 return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Bitwise operations require integer Numbers", this->context));
             }
@@ -447,7 +466,8 @@ public:
     }
 
     [[nodiscard]] OperationResult bitwise_or(const shared_ptr<DataType>& operand) const override {
-        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+        if (operand->is_number()) {
+            const auto other = static_cast<const Number*>(operand.get());
             if (this->is_float || other->is_float) {
                 return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Bitwise operations require integer Numbers", this->context));
             }
@@ -471,7 +491,8 @@ public:
     }
 
     [[nodiscard]] OperationResult lshift(const shared_ptr<DataType>& operand) const override {
-        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+        if (operand->is_number()) {
+            const auto other = static_cast<const Number*>(operand.get());
             if (this->is_float || other->is_float) {
                 return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Bitwise operations require integer Numbers", this->context));
             }
@@ -502,7 +523,8 @@ public:
     }
 
     [[nodiscard]] OperationResult rshift(const shared_ptr<DataType>& operand) const override {
-        if (const auto other = dynamic_cast<const Number*>(operand.get())) {
+        if (operand->is_number()) {
+            const auto other = static_cast<const Number*>(operand.get());
             if (this->is_float || other->is_float) {
                 return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Bitwise operations require integer Numbers", this->context));
             }

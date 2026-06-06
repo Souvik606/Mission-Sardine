@@ -7,15 +7,20 @@
 
 using namespace std;
 
+class SymbolTable;
+
 class VariableUseNode final : public Node {
 public:
     Token var_name_tok;
     vector<shared_ptr<Node>> index_node;
+    mutable uint64_t cached_symbol_table_id = 0;
+    mutable const shared_ptr<DataType>* cached_value_ptr = nullptr;
 
     explicit VariableUseNode(Token token, vector<shared_ptr<Node>> indices = {})
         : Node(token.pos_start, indices.empty() ? token.pos_end : indices.back()->pos_end),
           var_name_tok(std::move(token)),
-          index_node(std::move(indices)) {}
+          index_node(std::move(indices)),
+          cached_value_ptr(nullptr) {}
 
     [[nodiscard]] std::string to_string() const override {
         string var_name = "invalid_variable_name";

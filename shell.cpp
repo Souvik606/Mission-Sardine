@@ -1,3 +1,12 @@
+#ifdef _WIN32
+#define NOMINMAX
+#include <windows.h>
+#include <psapi.h>
+#else
+#include <sys/resource.h>
+#include <unistd.h>
+#endif
+
 #include <bits/stdc++.h>
 #include <fstream>
 #include <sstream>
@@ -776,6 +785,37 @@ RunTimeResult builtin_fopen(const Position& pos_start, const Position& pos_end, 
     file_obj->set_context(context);
     return RunTimeResult().success(file_obj);
 }
+#ifdef _WIN32
+typedef BOOL (WINAPI *GetProcessMemoryInfoProc)(HANDLE, PPROCESS_MEMORY_COUNTERS, DWORD);
+#endif
+
+size_t get_memory_usage() {
+#ifdef _WIN32
+    PROCESS_MEMORY_COUNTERS pmc;
+    HMODULE hPsapi = LoadLibraryA("psapi.dll");
+    if (hPsapi) {
+        GetProcessMemoryInfoProc proc = (GetProcessMemoryInfoProc)GetProcAddress(hPsapi, "GetProcessMemoryInfo");
+        if (proc) {
+            if (proc(GetCurrentProcess(), &pmc, sizeof(pmc))) {
+                FreeLibrary(hPsapi);
+                return pmc.WorkingSetSize;
+            }
+        }
+        FreeLibrary(hPsapi);
+    }
+    return 0;
+#else
+    struct rusage usage;
+    if (getrusage(RUSAGE_SELF, &usage) == 0) {
+#ifdef __APPLE__
+        return usage.ru_maxrss;
+#else
+        return usage.ru_maxrss * 1024;
+#endif
+    }
+    return 0;
+#endif
+}
 
 struct ProfileGuard {
     chrono::high_resolution_clock::time_point lex_start;
@@ -785,6 +825,13 @@ struct ProfileGuard {
     chrono::high_resolution_clock::time_point interpret_start;
     chrono::high_resolution_clock::time_point interpret_end;
 
+    size_t lex_mem_start = 0;
+    size_t lex_mem_end = 0;
+    size_t parse_mem_start = 0;
+    size_t parse_mem_end = 0;
+    size_t interpret_mem_start = 0;
+    size_t interpret_mem_end = 0;
+
     bool has_lex_end = false;
     bool has_parse_start = false;
     bool has_parse_end = false;
@@ -792,52 +839,76 @@ struct ProfileGuard {
     bool has_interpret_end = false;
 
     ProfileGuard() {
-        if (PROFILE_MODE) {
+        if (TIME_PROFILE_MODE) {
             lex_start = chrono::high_resolution_clock::now();
+        }
+        if (MEMORY_PROFILE_MODE) {
+            lex_mem_start = get_memory_usage();
         }
     }
 
     void mark_lex_end() {
-        if (PROFILE_MODE) {
+        if (TIME_PROFILE_MODE) {
             lex_end = chrono::high_resolution_clock::now();
-            has_lex_end = true;
         }
+        if (MEMORY_PROFILE_MODE) {
+            lex_mem_end = get_memory_usage();
+        }
+        has_lex_end = true;
     }
 
     void mark_parse_start() {
-        if (PROFILE_MODE) {
+        if (TIME_PROFILE_MODE) {
             parse_start = chrono::high_resolution_clock::now();
-            has_parse_start = true;
         }
+        if (MEMORY_PROFILE_MODE) {
+            parse_mem_start = get_memory_usage();
+        }
+        has_parse_start = true;
     }
 
     void mark_parse_end() {
-        if (PROFILE_MODE) {
+        if (TIME_PROFILE_MODE) {
             parse_end = chrono::high_resolution_clock::now();
-            has_parse_end = true;
         }
+        if (MEMORY_PROFILE_MODE) {
+            parse_mem_end = get_memory_usage();
+        }
+        has_parse_end = true;
     }
 
     void mark_interpret_start() {
-        if (PROFILE_MODE) {
+        if (TIME_PROFILE_MODE) {
             interpret_start = chrono::high_resolution_clock::now();
-            has_interpret_start = true;
         }
+        if (MEMORY_PROFILE_MODE) {
+            interpret_mem_start = get_memory_usage();
+        }
+        has_interpret_start = true;
     }
 
     void mark_interpret_end() {
-        if (PROFILE_MODE) {
+        if (TIME_PROFILE_MODE) {
             interpret_end = chrono::high_resolution_clock::now();
-            has_interpret_end = true;
         }
+        if (MEMORY_PROFILE_MODE) {
+            interpret_mem_end = get_memory_usage();
+        }
+        has_interpret_end = true;
     }
 
     ~ProfileGuard() {
-        if (PROFILE_MODE) {
+        if (TIME_PROFILE_MODE) {
             double lex_dur = has_lex_end ? chrono::duration<double, milli>(lex_end - lex_start).count() : 0.0;
             double parse_dur = has_parse_end ? chrono::duration<double, milli>(parse_end - parse_start).count() : 0.0;
             double interpret_dur = has_interpret_end ? chrono::duration<double, milli>(interpret_end - interpret_start).count() : 0.0;
             cerr << "{\"profile\": {\"lex_ms\": " << lex_dur << ", \"parse_ms\": " << parse_dur << ", \"interpret_ms\": " << interpret_dur << "}}" << endl;
+        }
+        if (MEMORY_PROFILE_MODE) {
+            double lex_mem = has_lex_end ? (double)(lex_mem_end - lex_mem_start) / 1024.0 : 0.0;
+            double parse_mem = has_parse_end ? (double)(parse_mem_end - parse_mem_start) / 1024.0 : 0.0;
+            double interpret_mem = has_interpret_end ? (double)(interpret_mem_end - interpret_mem_start) / 1024.0 : 0.0;
+            cerr << "{\"profile\": {\"lex_kb\": " << lex_mem << ", \"parse_kb\": " << parse_mem << ", \"interpret_kb\": " << interpret_mem << "}}" << endl;
         }
     }
 };
@@ -1101,7 +1172,18 @@ int main(int argc, char* argv[]) {
     auto it_profile = find(args.begin(), args.end(), "--profile");
     if (it_profile != args.end()) {
         PROFILE_MODE = true;
+        TIME_PROFILE_MODE = true;
         args.erase(it_profile);
+    }
+    auto it_timeprofile = find(args.begin(), args.end(), "--timeprofile");
+    if (it_timeprofile != args.end()) {
+        TIME_PROFILE_MODE = true;
+        args.erase(it_timeprofile);
+    }
+    auto it_memoryprofile = find(args.begin(), args.end(), "--memoryprofile");
+    if (it_memoryprofile != args.end()) {
+        MEMORY_PROFILE_MODE = true;
+        args.erase(it_memoryprofile);
     }
 
     if (args.size() > 1) {

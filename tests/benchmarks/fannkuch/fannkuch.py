@@ -56,4 +56,4 @@ def fannkuch(n):
                 p[i] = t
                 i += 1
 
-print("fannkuch sum(7) =", fannkuch(7))
+print("fannkuch sum(9) =", fannkuch(9))

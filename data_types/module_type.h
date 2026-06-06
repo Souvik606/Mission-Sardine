@@ -18,6 +18,8 @@ public:
     Module(string name, shared_ptr<SymbolTable> symbol_table)
         : name(std::move(name)), symbol_table(std::move(symbol_table)) {}
 
+    [[nodiscard]] bool is_callable_type() const override { return true; }
+
     [[nodiscard]] bool is_truthy() const override {
         return true;
     }

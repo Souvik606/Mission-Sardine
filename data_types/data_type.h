@@ -81,7 +81,12 @@ public:
     [[nodiscard]] virtual string to_string() const = 0;
 
     [[nodiscard]] virtual bool is_truthy() const = 0;
+    [[nodiscard]] virtual bool is_mutable() const { return false; }
     [[nodiscard]] virtual bool is_dict() const { return false; }
+    [[nodiscard]] virtual bool is_callable_type() const { return false; }
+    [[nodiscard]] virtual bool is_number() const { return false; }
+    [[nodiscard]] virtual bool is_string() const { return false; }
+    [[nodiscard]] virtual bool is_list() const { return false; }
 
     [[nodiscard]] virtual OperationResult is_true() const = 0;
     [[nodiscard]] virtual OperationResult add(const shared_ptr<DataType>& other) const = 0;

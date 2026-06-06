@@ -7,22 +7,12 @@ method fannkuch(n) {
     sum_flips = 0
     
     during 1 {
-        cycle i = 0:(n - 1) {
-            q[i] = p[i]
-        }
+        q = p.copy()
         
         flips = 0
         f = q[0]
         during f != 0 {
-            i = 0
-            j = f
-            during i < j {
-                temp = q[i]
-                q[i] = q[j]
-                q[j] = temp
-                i = i + 1
-                j = j - 1
-            }
+            q = q.slice(0, f + 1).reverse() + q.slice(f + 1, n)
             flips = flips + 1
             f = q[0]
         }
@@ -56,16 +46,12 @@ method fannkuch(n) {
                 }
                 s[i] = i
                 t = p[0]
-                j = 0
-                during j < i {
-                    p[j] = p[j + 1]
-                    j = j + 1
-                }
-                p[i] = t
+                p = p.slice(1, n)
+                p = p.slice(0, i) + [t] + p.slice(i, n)
                 i = i + 1
             }
         }
     }
 }
 
-show("fannkuch sum(7) =", fannkuch(7))
+show("fannkuch sum(9) =", fannkuch(9))
