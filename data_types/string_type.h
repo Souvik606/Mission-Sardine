@@ -30,10 +30,7 @@ public:
     [[nodiscard]] OperationResult get_attr(const string& attr_name, const shared_ptr<Context>& calling_context) const override;
 
     [[nodiscard]] shared_ptr<DataType> copy() const override {
-        auto new_str = make_shared<String>(this->value);
-        new_str->set_pos(this->pos_start, this->pos_end);
-        new_str->set_context(this->context);
-        return std::static_pointer_cast<DataType>(new_str);
+        return const_cast<String*>(this)->shared_from_this();
     }
 
     [[nodiscard]] string to_string() const override {

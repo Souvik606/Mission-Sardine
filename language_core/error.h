@@ -53,33 +53,46 @@ public:
 protected:
     static string get_relative_path(const string& file_path) {
         if (file_path.empty()) return "";
+        string f_path = file_path;
+        for (char& c : f_path) {
+            if (c == '\\') c = '/';
+        }
+        if (f_path.length() >= 2 && f_path[1] == ':') {
+            f_path[0] = toupper(f_path[0]);
+        }
         try {
             namespace fs = std::filesystem;
-            fs::path p(file_path);
-            string r_str;
-            if (p.is_absolute()) {
-                auto rel = fs::relative(p, fs::current_path());
-                r_str = rel.generic_string();
-            } else {
-                r_str = file_path;
-                for (char& c : r_str) {
-                    if (c == '\\') c = '/';
-                }
-            }
-            if (r_str.rfind("stdlib/", 0) == 0) {
-                r_str = "sards/" + r_str;
-            }
-            return r_str;
-        } catch (...) {
-            string r_str = file_path;
-            for (char& c : r_str) {
+            string cur_path = fs::current_path().generic_string();
+            for (char& c : cur_path) {
                 if (c == '\\') c = '/';
             }
-            if (r_str.rfind("stdlib/", 0) == 0) {
-                r_str = "sards/" + r_str;
+            if (cur_path.length() >= 2 && cur_path[1] == ':') {
+                cur_path[0] = toupper(cur_path[0]);
             }
-            return r_str;
+            if (!cur_path.empty() && cur_path.back() != '/') {
+                cur_path += '/';
+            }
+            if (f_path.length() >= cur_path.length()) {
+                bool is_prefix = true;
+                for (size_t i = 0; i < cur_path.length(); ++i) {
+                    if (toupper(f_path[i]) != toupper(cur_path[i])) {
+                        is_prefix = false;
+                        break;
+                    }
+                }
+                if (is_prefix) {
+                    string r_str = f_path.substr(cur_path.length());
+                    if (r_str.rfind("stdlib/", 0) == 0) {
+                        r_str = "sards/" + r_str;
+                    }
+                    return r_str;
+                }
+            }
+        } catch (...) {}
+        if (f_path.rfind("stdlib/", 0) == 0) {
+            f_path = "sards/" + f_path;
         }
+        return f_path;
     }
 
     static string string_with_arrows(const string& text, const Position& pos_start, const Position& pos_end) {

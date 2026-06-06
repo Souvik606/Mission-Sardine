@@ -999,26 +999,40 @@ RunResult run(const string& filename, const string& text) {
 
 inline string get_relative_path(const string& file_path) {
     if (file_path.empty()) return "";
+    string f_path = file_path;
+    for (char& c : f_path) {
+        if (c == '\\') c = '/';
+    }
+    if (f_path.length() >= 2 && f_path[1] == ':') {
+        f_path[0] = toupper(f_path[0]);
+    }
     try {
         namespace fs = std::filesystem;
-        fs::path p(file_path);
-        if (p.is_absolute()) {
-            auto rel = fs::relative(p, fs::current_path());
-            string r_str = rel.generic_string();
-            return r_str;
-        }
-        string r_str = file_path;
-        for (char& c : r_str) {
+        string cur_path = fs::current_path().generic_string();
+        for (char& c : cur_path) {
             if (c == '\\') c = '/';
         }
-        return r_str;
-    } catch (...) {
-        string r_str = file_path;
-        for (char& c : r_str) {
-            if (c == '\\') c = '/';
+        if (cur_path.length() >= 2 && cur_path[1] == ':') {
+            cur_path[0] = toupper(cur_path[0]);
         }
-        return r_str;
-    }
+        if (!cur_path.empty() && cur_path.back() != '/') {
+            cur_path += '/';
+        }
+        if (f_path.length() >= cur_path.length()) {
+            bool is_prefix = true;
+            for (size_t i = 0; i < cur_path.length(); ++i) {
+                if (toupper(f_path[i]) != toupper(cur_path[i])) {
+                    is_prefix = false;
+                    break;
+                }
+            }
+            if (is_prefix) {
+                string r_str = f_path.substr(cur_path.length());
+                return r_str;
+            }
+        }
+    } catch (...) {}
+    return f_path;
 }
 
 void run_file(const string& filepath) {

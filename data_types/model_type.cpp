@@ -16,8 +16,8 @@ RunTimeResult ModelType::execute(const vector<shared_ptr<DataType>> &pos_args, c
 
     auto instance = make_shared<ModelInstance>(
         static_pointer_cast<ModelType>(shared_from_this()));
-    instance->set_context(context).set_pos(pos_start, pos_end);
-    instance->symbol_table->parent = context->symbol_table;
+    instance->set_context(this->closure_context).set_pos(pos_start, pos_end);
+    instance->symbol_table->parent = this->closure_context ? this->closure_context->symbol_table : nullptr;
 
     auto all_attrs = all_attr_nodes();
 
@@ -31,7 +31,7 @@ RunTimeResult ModelType::execute(const vector<shared_ptr<DataType>> &pos_args, c
             const string &attr_name = any_cast<string>(name_tok.value);
             if (default_node)
             {
-                auto default_val = res.register_result(interp.visit(default_node, context));
+                auto default_val = res.register_result(interp.visit(default_node, this->closure_context));
                 if (res.should_return())
                     return res;
                 instance->symbol_table->set(attr_name, default_val);
@@ -60,7 +60,7 @@ RunTimeResult ModelType::execute(const vector<shared_ptr<DataType>> &pos_args, c
                 init_params,
                 false,
                 instance);
-            init_func->set_context(context).set_pos(
+            init_func->set_context(this->closure_context).set_pos(
                 in->pos_start.has_value() ? in->pos_start.value() : Position(),
                 in->pos_end.has_value() ? in->pos_end.value() : Position());
 

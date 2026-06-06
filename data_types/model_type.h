@@ -38,6 +38,7 @@ public:
 
     unordered_map<string, MethodInfo> own_method_nodes;
     vector<shared_ptr<ModelType>> parents;
+    shared_ptr<Context> closure_context;
 
     ModelType(string n,
               vector<AttrInfo> own_attrs,
@@ -133,10 +134,18 @@ public:
         return {r, nullptr};
     }
 
+    DataType& set_context(const shared_ptr<Context>& ctx) override {
+        if (!this->closure_context) {
+            this->closure_context = ctx;
+            this->context = ctx;
+        }
+        return *this;
+    }
+
     [[nodiscard]] shared_ptr<DataType> copy() const override
     {
         auto c = make_shared<ModelType>(name, own_attributes, attr_node_list, init_node, own_method_nodes, parents);
-        c->set_context(context).set_pos(pos_start, pos_end);
+        c->set_context(this->closure_context).set_pos(pos_start, pos_end);
         return c;
     }
 

@@ -1986,19 +1986,40 @@ private:
         }
 
         if (resolved_path.empty()) {
-            auto get_relative_path = [](const string& file_path) {
-                if (file_path.empty()) return string("");
+            auto get_relative_path = [](const string& file_path) -> string {
+                if (file_path.empty()) return "";
+                string f_path = file_path;
+                for (char& c : f_path) {
+                    if (c == '\\') c = '/';
+                }
+                if (f_path.length() >= 2 && f_path[1] == ':') {
+                    f_path[0] = toupper(f_path[0]);
+                }
                 try {
-                    fs::path p(file_path);
-                    fs::path rel = fs::relative(p, fs::current_path());
-                    return rel.generic_string();
-                } catch (...) {
-                    string r_str = file_path;
-                    for (char& c : r_str) {
+                    string cur_path = fs::current_path().generic_string();
+                    for (char& c : cur_path) {
                         if (c == '\\') c = '/';
                     }
-                    return r_str;
-                }
+                    if (cur_path.length() >= 2 && cur_path[1] == ':') {
+                        cur_path[0] = toupper(cur_path[0]);
+                    }
+                    if (!cur_path.empty() && cur_path.back() != '/') {
+                        cur_path += '/';
+                    }
+                    if (f_path.length() >= cur_path.length()) {
+                        bool is_prefix = true;
+                        for (size_t i = 0; i < cur_path.length(); ++i) {
+                            if (toupper(f_path[i]) != toupper(cur_path[i])) {
+                                is_prefix = false;
+                                break;
+                            }
+                        }
+                        if (is_prefix) {
+                            return f_path.substr(cur_path.length());
+                        }
+                    }
+                } catch (...) {}
+                return f_path;
             };
             vector<string> display_candidates;
             display_candidates.push_back(get_relative_path((fs::path(source_dir) / (module_name + ".sad")).string()));

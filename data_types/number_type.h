@@ -7,7 +7,7 @@
 
 using namespace std;
 
-class Number final : public DataType {
+class Number final : public DataType, public enable_shared_from_this<Number> {
 public:
     variant<long long, double> value;
     bool is_float = false;
@@ -33,8 +33,17 @@ public:
     static constexpr long long CACHE_MIN = -1;
     static constexpr long long CACHE_MAX = 256;
 
+    static shared_ptr<Number> make_bool(bool b) {
+        static auto true_val = shared_ptr<Number>(new Number(1LL, false, true));
+        static auto false_val = shared_ptr<Number>(new Number(0LL, false, true));
+        return b ? true_val : false_val;
+    }
+
     static shared_ptr<Number> make(long long v, bool is_flt = false, bool is_bool = false) {
-        if (!is_flt && !is_bool && v >= CACHE_MIN && v <= CACHE_MAX) {
+        if (is_bool) {
+            return make_bool(v != 0);
+        }
+        if (!is_flt && v >= CACHE_MIN && v <= CACHE_MAX) {
             static shared_ptr<Number> cache[CACHE_MAX - CACHE_MIN + 1];
             static bool init = false;
             if (!init) {
@@ -46,8 +55,6 @@ public:
         }
         return shared_ptr<Number>(new Number(v, is_flt, is_bool));
     }
-
-    static shared_ptr<Number> make_bool(bool b) { return make(b ? 1LL : 0LL, false, true); }
 
 
     DataType& set_pos(const optional<Position>& start, const optional<Position>& end) override {
@@ -66,16 +73,7 @@ public:
     }
 
     [[nodiscard]] shared_ptr<DataType> copy() const override {
-        if (holds_alternative<long long>(this->value)) {
-            auto n = Number::make(get<long long>(this->value), this->is_float, this->is_boolean);
-            n->set_pos(this->pos_start, this->pos_end);
-            n->set_context(this->context);
-            return static_pointer_cast<DataType>(n);
-        }
-        auto new_num = make_shared<Number>(get<double>(this->value), this->is_float);
-        new_num->set_pos(this->pos_start, this->pos_end);
-        new_num->set_context(this->context);
-        return static_pointer_cast<DataType>(new_num);
+        return const_cast<Number*>(this)->shared_from_this();
     }
 
     [[nodiscard]] OperationResult is_true() const override {

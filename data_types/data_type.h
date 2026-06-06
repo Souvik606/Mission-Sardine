@@ -8,12 +8,51 @@ using namespace std;
 
 class DataType;
 class Number;
+class Context;
+
+class ContextRef {
+private:
+    std::weak_ptr<Context> ptr;
+public:
+    ContextRef() = default;
+    ContextRef(const std::shared_ptr<Context>& s) : ptr(s) {}
+    ContextRef(std::shared_ptr<Context>&& s) : ptr(std::move(s)) {}
+    ContextRef(const ContextRef&) = default;
+    ContextRef(ContextRef&&) = default;
+
+    ContextRef& operator=(const std::shared_ptr<Context>& s) {
+        ptr = s;
+        return *this;
+    }
+    ContextRef& operator=(std::shared_ptr<Context>&& s) {
+        ptr = std::move(s);
+        return *this;
+    }
+    ContextRef& operator=(const ContextRef&) = default;
+    ContextRef& operator=(ContextRef&&) = default;
+
+    operator std::shared_ptr<Context>() const {
+        return ptr.lock();
+    }
+
+    operator bool() const {
+        return !ptr.expired();
+    }
+
+    std::shared_ptr<Context> operator->() const {
+        return ptr.lock();
+    }
+
+    std::shared_ptr<Context> lock() const {
+        return ptr.lock();
+    }
+};
 
 class DataType {
 public:
     optional<Position> pos_start;
     optional<Position> pos_end;
-    shared_ptr<Context> context;
+    ContextRef context;
 
     virtual ~DataType() = default;
 

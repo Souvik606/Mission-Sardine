@@ -11,10 +11,8 @@ public:
     }
 
     [[nodiscard]] shared_ptr<DataType> copy() const override {
-        auto n = make_shared<Null>();
-        n->set_pos(this->pos_start, this->pos_end);
-        n->set_context(this->context);
-        return n;
+        static auto instance = make_shared<Null>();
+        return instance;
     }
 
     [[nodiscard]] string to_string() const override {

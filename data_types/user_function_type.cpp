@@ -26,7 +26,7 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>> &pos_args, co
     RunTimeResult res;
 
     shared_ptr<Context> exec_context;
-    shared_ptr<Context> traceback_parent = call_context ? call_context : this->context;
+    shared_ptr<Context> traceback_parent = call_context ? call_context : this->closure_context;
 
     if (instance)
     {
@@ -36,7 +36,7 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>> &pos_args, co
         auto inst_sym = interpreter.get_instance_symbol_table(instance);
         if (!inst_sym)
         {
-            exec_context->symbol_table = make_shared<SymbolTable>(this->context ? this->context->symbol_table : nullptr);
+            exec_context->symbol_table = make_shared<SymbolTable>(this->closure_context ? this->closure_context->symbol_table : nullptr);
         }
         else
         {
@@ -50,7 +50,7 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>> &pos_args, co
     {
         exec_context = make_shared<Context>(this->name, traceback_parent, this->pos_start);
         const auto new_symbol_table = make_shared<SymbolTable>();
-        new_symbol_table->parent = this->context ? this->context->symbol_table : nullptr;
+        new_symbol_table->parent = this->closure_context ? this->closure_context->symbol_table : nullptr;
         exec_context->symbol_table = new_symbol_table;
     }
 
@@ -70,7 +70,7 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>> &pos_args, co
         return res.failure(ArgumentError(
             this->pos_start.value_or(Position()), this->pos_end.value_or(Position()),
             std::to_string(pos_args.size() - this->arg_nodes.size()) + " too many arguments passed into '" + this->name + "'",
-            this->context));
+            this->closure_context));
     }
 
     for (size_t i = 0; i < pos_args.size(); ++i)
@@ -94,14 +94,14 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>> &pos_args, co
             return res.failure(ArgumentError(
                 this->pos_start.value_or(Position()), this->pos_end.value_or(Position()),
                 "Unexpected keyword argument '" + kw_name + "' passed to '" + this->name + "'",
-                this->context));
+                this->closure_context));
         }
         if (final_args.count(kw_name))
         {
             return res.failure(ArgumentError(
                 this->pos_start.value_or(Position()), this->pos_end.value_or(Position()),
                 "Multiple values for argument '" + kw_name + "' passed to '" + this->name + "'",
-                this->context));
+                this->closure_context));
         }
         final_args[kw_name] = kw_value;
     }
@@ -121,7 +121,7 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>> &pos_args, co
                 return res.failure(ArgumentError(
                     this->pos_start.value_or(Position()), this->pos_end.value_or(Position()),
                     "Missing required argument '" + p_name + "' for function '" + this->name + "'",
-                    this->context));
+                    this->closure_context));
             }
         }
     }
@@ -153,7 +153,7 @@ shared_ptr<DataType> Function::copy() const
 {
     auto new_func = make_shared<Function>(this->name, this->body_node, this->arg_nodes, this->return_null, this->instance);
     new_func->set_pos(this->pos_start, this->pos_end);
-    new_func->set_context(this->context);
+    new_func->set_context(this->closure_context);
     new_func->access_modifier_owner = this->access_modifier_owner;
     return std::static_pointer_cast<DataType>(new_func);
 }
