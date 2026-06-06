@@ -97,6 +97,9 @@ def main():
         {"name": "Prime Sieve", "file": "sieve"},
         {"name": "Mandelbrot Fractal", "file": "mandelbrot"},
         {"name": "Fannkuch Permutations", "file": "fannkuch"},
+        {"name": "Matrix Multiplication", "file": "matmul"},
+        {"name": "Binary Search Tree", "file": "bst"},
+        {"name": "Run-Length Encoding", "file": "rle"},
     ]
     
     runs = 3

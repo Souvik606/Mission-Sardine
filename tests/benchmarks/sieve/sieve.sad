@@ -25,4 +25,4 @@ method sieve(n) {
     yield count
 }
 
-show("primes up to 1000 =", sieve(1000))
+show("primes up to 1000000 =", sieve(1000000))

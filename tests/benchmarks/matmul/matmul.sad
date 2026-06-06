@@ -1,0 +1,18 @@
+method matmul(n) {
+    A = [[Float(i + j) cycle j = 0:(n - 1)] cycle i = 0:(n - 1)]
+    B = [[Float(i * j) cycle j = 0:(n - 1)] cycle i = 0:(n - 1)]
+    C = [[0.0 cycle j = 0:(n - 1)] cycle i = 0:(n - 1)]
+    
+    cycle i = 0:(n - 1) {
+        cycle j = 0:(n - 1) {
+            s = 0.0
+            cycle k = 0:(n - 1) {
+                s = s + A[i][k] * B[k][j]
+            }
+            C[i][j] = s
+        }
+    }
+    yield C[n - 1][n - 1]
+}
+
+show("matmul val =", matmul(60))
