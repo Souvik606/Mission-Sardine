@@ -492,7 +492,7 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             }
             vector<shared_ptr<DataType>> sliced;
             for (long long i = start_val; i < end_val; ++i) {
-                sliced.push_back(list_self->elements[i]->copy());
+                sliced.push_back(list_self->elements[i]);
             }
             auto out = make_shared<List>(sliced);
             out->set_context(self->context);
@@ -670,7 +670,7 @@ inline DataType::OperationResult Dict::get_attr(const string& attr_name, const s
             }
             vector<shared_ptr<DataType>> list_vals;
             for (const auto& key : dict_self->keys_order) {
-                list_vals.push_back(dict_self->elements.at(key)->copy());
+                list_vals.push_back(dict_self->elements.at(key));
             }
             auto out = make_shared<List>(list_vals);
             out->set_context(context);
@@ -691,7 +691,7 @@ inline DataType::OperationResult Dict::get_attr(const string& attr_name, const s
             vector<shared_ptr<DataType>> pairs;
             for (size_t i = 0; i < keys.size(); ++i) {
                 auto k_node = keys[i];
-                auto v_node = dict_self->elements.at(dict_self->keys_order[i])->copy();
+                auto v_node = dict_self->elements.at(dict_self->keys_order[i]);
                 auto pair_list = make_shared<List>(vector<shared_ptr<DataType>>{ k_node, v_node });
                 pair_list->set_context(context);
                 pairs.push_back(pair_list);
@@ -722,7 +722,7 @@ inline DataType::OperationResult Dict::get_attr(const string& attr_name, const s
                 }
                 return { Number::make(0LL), nullptr };
             }
-            return { dict_self->elements.at(key_str)->copy(), nullptr };
+            return { dict_self->elements.at(key_str), nullptr };
         };
         shared_ptr<DataType> bound = make_shared<BoundMethod>("get", self_ptr, impl);
         bound->set_context(calling_context).set_pos(pos_start, pos_end);

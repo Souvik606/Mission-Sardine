@@ -204,9 +204,9 @@ private:
 public:
     shared_ptr<SymbolTable> get_instance_symbol_table(const shared_ptr<DataType> &val) const
     {
-        if (auto inst = dynamic_pointer_cast<ModelInstance>(val))
+        if (val && val->is_model_instance())
         {
-            return inst->symbol_table;
+            return static_pointer_cast<ModelInstance>(val)->symbol_table;
         }
         return nullptr;
     }
@@ -321,22 +321,26 @@ private:
         const auto &kw_args = *kw_args_ptr;
 
         shared_ptr<DataType> return_value;
-        if (auto func_to_call = dynamic_pointer_cast<Function>(call_value))
+        if (call_value->is_function())
         {
+            auto func_to_call = static_pointer_cast<Function>(call_value);
             return_value = res.register_result(func_to_call->execute(pos_args, kw_args, *this, context));
         }
-        else if (auto builtin_to_call = dynamic_pointer_cast<BuiltInFunction>(call_value))
+        else if (call_value->is_builtin_function())
         {
+            auto builtin_to_call = static_pointer_cast<BuiltInFunction>(call_value);
             return_value = res.register_result(builtin_to_call->execute(pos_args, kw_args, context));
         }
-        else if (auto bound_to_call = dynamic_pointer_cast<BoundMethod>(call_value))
+        else if (call_value->is_bound_method())
         {
+            auto bound_to_call = static_pointer_cast<BoundMethod>(call_value);
             auto [v, err] = bound_to_call->execute(pos_args, kw_args, context);
             if (err) return res.failure(*err);
             return_value = v;
         }
-        else if (auto model_to_call = dynamic_pointer_cast<ModelType>(call_value))
+        else if (call_value->is_model_type())
         {
+            auto model_to_call = static_pointer_cast<ModelType>(call_value);
             return_value = res.register_result(model_to_call->execute(pos_args, kw_args, *this));
         }
         else
@@ -468,7 +472,7 @@ private:
             step_value = std::static_pointer_cast<DataType>(Number::make(1LL));
         }
 
-        auto start_num = dynamic_pointer_cast<Number>(start_value);
+        auto start_num = start_value->is_number() ? static_pointer_cast<Number>(start_value) : nullptr;
         if (!start_num)
         {
             return res.failure(TypeError(
@@ -478,7 +482,7 @@ private:
             ));
         }
 
-        auto end_num = dynamic_pointer_cast<Number>(end_value);
+        auto end_num = end_value->is_number() ? static_pointer_cast<Number>(end_value) : nullptr;
         if (!end_num)
         {
             return res.failure(TypeError(
@@ -488,7 +492,7 @@ private:
             ));
         }
 
-        auto step_num = dynamic_pointer_cast<Number>(step_value);
+        auto step_num = step_value->is_number() ? static_pointer_cast<Number>(step_value) : nullptr;
         if (!step_num)
         {
             return res.failure(TypeError(
@@ -639,8 +643,8 @@ private:
         if (res.should_return())
             return res;
 
-        auto num_sel = dynamic_pointer_cast<Number>(selection_val);
-        auto str_sel = dynamic_pointer_cast<String>(selection_val);
+        auto num_sel = selection_val->is_number() ? static_pointer_cast<Number>(selection_val) : nullptr;
+        auto str_sel = selection_val->is_string() ? static_pointer_cast<String>(selection_val) : nullptr;
         if (!num_sel && !str_sel)
         {
             return res.failure(IllegalOperationError(
@@ -669,8 +673,8 @@ private:
             if (res.should_return())
                 return res;
 
-            auto num_choice = dynamic_pointer_cast<Number>(choice_val);
-            auto str_choice = dynamic_pointer_cast<String>(choice_val);
+            auto num_choice = choice_val->is_number() ? static_pointer_cast<Number>(choice_val) : nullptr;
+            auto str_choice = choice_val->is_string() ? static_pointer_cast<String>(choice_val) : nullptr;
             if (!num_choice && !str_choice)
             {
                 return res.failure(IllegalOperationError(
@@ -806,8 +810,9 @@ private:
                 auto this_val = context->symbol_table->get("this");
                 if (this_val)
                 {
-                    if (auto inst = dynamic_pointer_cast<ModelInstance>(this_val))
+                    if (this_val->is_model_instance())
                     {
+                        auto inst = static_pointer_cast<ModelInstance>(this_val);
                         value = inst->symbol_table->get(var_name);
                         if (!value)
                         {
@@ -833,8 +838,9 @@ private:
                     auto this_val = context->symbol_table->get("this");
                     if (this_val)
                     {
-                        if (auto inst = dynamic_pointer_cast<ModelInstance>(this_val))
+                        if (this_val->is_model_instance())
                         {
+                            auto inst = static_pointer_cast<ModelInstance>(this_val);
                             const shared_ptr<DataType>* inst_ptr = inst->symbol_table->get_ptr(var_name, found_table);
                             if (inst_ptr && *inst_ptr == value)
                             {
@@ -923,12 +929,13 @@ private:
                 return res;
 
             vector<shared_ptr<DataType>> elements;
-            if (auto lst = dynamic_pointer_cast<List>(collection))
+            if (collection->is_list())
             {
-                elements = lst->elements;
+                elements = static_pointer_cast<List>(collection)->elements;
             }
-            else if (auto str = dynamic_pointer_cast<String>(collection))
+            else if (collection->is_string())
             {
+                auto str = static_pointer_cast<String>(collection);
                 for (const auto& char_val : str->value) {
                     auto char_str = make_shared<String>(string(1, char_val));
                     char_str->set_context(context).set_pos(collection->pos_start, collection->pos_end);
@@ -963,7 +970,11 @@ private:
                 {
                     string var_name = any_cast<string>(var_use->var_name_tok.value);
                     auto this_val = context->symbol_table->get("this");
-                    auto this_inst = dynamic_pointer_cast<ModelInstance>(this_val);
+                    shared_ptr<ModelInstance> this_inst = nullptr;
+                    if (this_val && this_val->is_model_instance())
+                    {
+                        this_inst = static_pointer_cast<ModelInstance>(this_val);
+                    }
                     bool is_attr = false;
                     if (this_inst && this_inst->model->find_attribute(var_name) != nullptr)
                     {
@@ -986,12 +997,14 @@ private:
                     if (res.should_return()) return res;
                     const string &attr_name = any_cast<string>(attr_access->attr_name_tok.value);
 
-                    if (auto inst = dynamic_pointer_cast<ModelInstance>(obj_val))
+                    if (obj_val->is_model_instance())
                     {
+                        auto inst = static_pointer_cast<ModelInstance>(obj_val);
                         inst->set_attr(attr_name, value);
                     }
-                    else if (auto proxy = dynamic_pointer_cast<SuperProxy>(obj_val))
+                    else if (obj_val->is_super_proxy())
                     {
+                        auto proxy = static_pointer_cast<SuperProxy>(obj_val);
                         auto [v, err] = proxy->set_attr(attr_name, value);
                         if (err)
                             return res.failure(*err);
@@ -1069,7 +1082,11 @@ private:
                     else
                     {
                         auto this_val = context->symbol_table->get("this");
-                        auto this_inst = dynamic_pointer_cast<ModelInstance>(this_val);
+                        shared_ptr<ModelInstance> this_inst = nullptr;
+                        if (this_val && this_val->is_model_instance())
+                        {
+                            this_inst = static_pointer_cast<ModelInstance>(this_val);
+                        }
                         bool is_attr = false;
                         if (this_inst && this_inst->model->find_attribute(var_name) != nullptr)
                         {
@@ -1108,12 +1125,14 @@ private:
                 if (res.should_return()) return res;
                 const string &attr_name = any_cast<string>(attr_access->attr_name_tok.value);
 
-                if (auto inst = dynamic_pointer_cast<ModelInstance>(obj_val))
+                if (obj_val->is_model_instance())
                 {
+                    auto inst = static_pointer_cast<ModelInstance>(obj_val);
                     inst->set_attr(attr_name, value);
                 }
-                else if (auto proxy = dynamic_pointer_cast<SuperProxy>(obj_val))
+                else if (obj_val->is_super_proxy())
                 {
+                    auto proxy = static_pointer_cast<SuperProxy>(obj_val);
                     auto [v, err] = proxy->set_attr(attr_name, value);
                     if (err)
                         return res.failure(*err);
@@ -1215,7 +1234,7 @@ private:
             }
 
             string type_name = left->get_type_name();
-            if (dynamic_pointer_cast<ModelType>(left)) {
+            if (left->is_model_type()) {
                 type_name = "Model";
             }
 
@@ -1338,10 +1357,10 @@ private:
         if (res.should_return())
             return res;
 
-        if (dynamic_pointer_cast<Function>(number) ||
-            dynamic_pointer_cast<BuiltInFunction>(number) ||
-            dynamic_pointer_cast<Module>(number) ||
-            dynamic_pointer_cast<ModelType>(number))
+        if (number->is_function() ||
+            number->is_builtin_function() ||
+            number->is_module() ||
+            number->is_model_type())
         {
             string op_symbol = node->operator_token.type;
             if (op_symbol == T_KEYWORD && node->operator_token.value.type() == typeid(string)) {
@@ -1350,7 +1369,7 @@ private:
             }
 
             string type_name = number->get_type_name();
-            if (dynamic_pointer_cast<ModelType>(number)) {
+            if (number->is_model_type()) {
                 type_name = "Model";
             }
 
@@ -1457,15 +1476,16 @@ private:
                 else
                 {
                     auto model_val = context->symbol_table->get(caught_err);
-                    auto model_class = dynamic_pointer_cast<ModelType>(model_val);
+                    auto model_class = (model_val && model_val->is_model_type()) ? static_pointer_cast<ModelType>(model_val) : nullptr;
                     if (!model_class)
                     {
                         return res.failure(InvalidErrorTypeError(trap_node->pos_start.value_or(Position{}), trap_node->pos_end.value_or(Position{}), "'" + caught_err + "' is not a valid error type", context));
                     }
                     if (auto user_err = dynamic_cast<const UserDefinedError*>(error.get()))
                     {
-                        if (auto model_inst = dynamic_pointer_cast<ModelInstance>(user_err->instance))
+                        if (user_err->instance && user_err->instance->is_model_instance())
                         {
+                            auto model_inst = static_pointer_cast<ModelInstance>(user_err->instance);
                             if (model_inst->model->is_descendant_of(model_class))
                             {
                                 matches = true;
@@ -1558,7 +1578,7 @@ private:
                     parent_tok.pos_start.value_or(Position()), parent_tok.pos_end.value_or(Position()),
                     "Parent class '" + pname + "' is not defined", context));
             }
-            auto parent_model = dynamic_pointer_cast<ModelType>(parent_val);
+            auto parent_model = parent_val->is_model_type() ? static_pointer_cast<ModelType>(parent_val) : nullptr;
             if (!parent_model)
             {
                 return res.failure(TypeError(
@@ -1651,7 +1671,7 @@ private:
 
         auto copied = indexed_val->is_mutable() ? indexed_val->copy() : indexed_val;
         copied->set_pos(node->pos_start, node->pos_end);
-        if (!dynamic_pointer_cast<Function>(copied) && !dynamic_pointer_cast<ModelType>(copied))
+        if (!copied->is_function() && !copied->is_model_type())
         {
             copied->set_context(context);
         }
@@ -1669,8 +1689,9 @@ private:
         const string &attr_name = any_cast<string>(node->attr_name_tok.value);
 
         shared_ptr<DataType> value;
-        if (auto inst = dynamic_pointer_cast<ModelInstance>(object_val))
+        if (object_val->is_model_instance())
         {
+            auto inst = static_pointer_cast<ModelInstance>(object_val);
             auto [v, err] = inst->get_attr(attr_name, *this, context);
             if (err)
                 return res.failure(*err);
@@ -1694,7 +1715,7 @@ private:
 
         auto copied = value->is_mutable() ? value->copy() : value;
         copied->set_pos(node->pos_start, node->pos_end);
-        if (!dynamic_pointer_cast<Function>(copied) && !dynamic_pointer_cast<ModelType>(copied)) {
+        if (!copied->is_function() && !copied->is_model_type()) {
             copied->set_context(context);
         }
         return res.success(copied);
@@ -1714,13 +1735,15 @@ private:
 
         const string &attr_name = any_cast<string>(node->attr_name_tok.value);
 
-        if (auto inst = dynamic_pointer_cast<ModelInstance>(object_val))
+        if (object_val->is_model_instance())
         {
+            auto inst = static_pointer_cast<ModelInstance>(object_val);
             inst->set_attr(attr_name, value);
             return res.success(value);
         }
-        else if (auto proxy = dynamic_pointer_cast<SuperProxy>(object_val))
+        else if (object_val->is_super_proxy())
         {
+            auto proxy = static_pointer_cast<SuperProxy>(object_val);
             auto [v, err] = proxy->set_attr(attr_name, value);
             if (err)
                 return res.failure(*err);
@@ -1749,8 +1772,8 @@ private:
                 auto val = res.register_result(visit(expr_node, context));
                 if (res.should_return())
                     return res;
-                if (auto str_val = dynamic_pointer_cast<String>(val)) {
-                    ss << str_val->value;
+                if (val->is_string()) {
+                    ss << static_pointer_cast<String>(val)->value;
                 } else {
                     ss << val->to_string();
                 }
@@ -1771,8 +1794,9 @@ private:
         if (res.should_return())
             return res;
 
-        if (auto dict_val = dynamic_pointer_cast<Dict>(collection))
+        if (collection->is_dict())
         {
+            auto dict_val = static_pointer_cast<Dict>(collection);
             if (num_vars == 1)
             {
                 string var_name = any_cast<string>(var_name_tokens[0].value);
@@ -1833,8 +1857,9 @@ private:
                 ));
             }
         }
-        else if (auto list_val = dynamic_pointer_cast<List>(collection))
+        else if (collection->is_list())
         {
+            auto list_val = static_pointer_cast<List>(collection);
             if (num_vars == 1)
             {
                 string var_name = any_cast<string>(var_name_tokens[0].value);
@@ -1861,7 +1886,7 @@ private:
             {
                 for (const auto& element : list_val->elements)
                 {
-                    auto sub_list = dynamic_pointer_cast<List>(element);
+                    auto sub_list = element->is_list() ? static_pointer_cast<List>(element) : nullptr;
                     if (!sub_list)
                     {
                         return res.failure(RunTimeError(
@@ -1904,8 +1929,9 @@ private:
                 }
             }
         }
-        else if (auto str_val = dynamic_pointer_cast<String>(collection))
+        else if (collection->is_string())
         {
+            auto str_val = static_pointer_cast<String>(collection);
             if (num_vars == 1)
             {
                 string var_name = any_cast<string>(var_name_tokens[0].value);
@@ -1940,8 +1966,9 @@ private:
                 ));
             }
         }
-        else if (auto file_val = dynamic_pointer_cast<File>(collection))
+        else if (collection->is_file())
         {
+            auto file_val = static_pointer_cast<File>(collection);
             if (num_vars == 1)
             {
                 string var_name = any_cast<string>(var_name_tokens[0].value);
@@ -2247,9 +2274,9 @@ private:
                 step_val = std::static_pointer_cast<DataType>(Number::make(1LL));
             }
 
-            auto start_num = dynamic_pointer_cast<Number>(start_val);
-            auto end_num = dynamic_pointer_cast<Number>(end_val);
-            auto step_num = dynamic_pointer_cast<Number>(step_val);
+            auto start_num = start_val->is_number() ? static_pointer_cast<Number>(start_val) : nullptr;
+            auto end_num = end_val->is_number() ? static_pointer_cast<Number>(end_val) : nullptr;
+            auto step_num = step_val->is_number() ? static_pointer_cast<Number>(step_val) : nullptr;
 
             if (!start_num || !end_num || !step_num)
             {
@@ -2382,12 +2409,13 @@ private:
             int num_vars = node->var_name_tokens.size();
             vector<shared_ptr<DataType>> items;
 
-            if (auto list_coll = dynamic_pointer_cast<List>(collection))
+            if (collection->is_list())
             {
-                items = list_coll->elements;
+                items = static_pointer_cast<List>(collection)->elements;
             }
-            else if (auto str_coll = dynamic_pointer_cast<String>(collection))
+            else if (collection->is_string())
             {
+                auto str_coll = static_pointer_cast<String>(collection);
                 for (char ch : str_coll->value)
                 {
                     auto str_ch = make_shared<String>(string(1, ch));
@@ -2396,8 +2424,9 @@ private:
                     items.push_back(str_ch);
                 }
             }
-            else if (auto file_coll = dynamic_pointer_cast<File>(collection))
+            else if (collection->is_file())
             {
+                auto file_coll = static_pointer_cast<File>(collection);
                 if (!file_coll->descriptor || file_coll->descriptor->is_closed()) {
                     return res.failure(FileIOError(
                         file_coll->pos_start.value_or(node->pos_start.value_or(Position())),
@@ -2458,7 +2487,7 @@ private:
                 }
                 else
                 {
-                    auto item_list = dynamic_pointer_cast<List>(item);
+                    auto item_list = item->is_list() ? static_pointer_cast<List>(item) : nullptr;
                     if (!item_list || item_list->elements.size() != static_cast<size_t>(num_vars))
                     {
                         return res.failure(IllegalOperationError(
@@ -2520,9 +2549,9 @@ private:
                 step_val = std::static_pointer_cast<DataType>(Number::make(1LL));
             }
 
-            auto start_num = dynamic_pointer_cast<Number>(start_val);
-            auto end_num = dynamic_pointer_cast<Number>(end_val);
-            auto step_num = dynamic_pointer_cast<Number>(step_val);
+            auto start_num = start_val->is_number() ? static_pointer_cast<Number>(start_val) : nullptr;
+            auto end_num = end_val->is_number() ? static_pointer_cast<Number>(end_val) : nullptr;
+            auto step_num = step_val->is_number() ? static_pointer_cast<Number>(step_val) : nullptr;
 
             if (!start_num || !end_num || !step_num)
             {
@@ -2659,12 +2688,13 @@ private:
             int num_vars = node->var_name_tokens.size();
             vector<shared_ptr<DataType>> items;
 
-            if (auto list_coll = dynamic_pointer_cast<List>(collection))
+            if (collection->is_list())
             {
-                items = list_coll->elements;
+                items = static_pointer_cast<List>(collection)->elements;
             }
-            else if (auto str_coll = dynamic_pointer_cast<String>(collection))
+            else if (collection->is_string())
             {
+                auto str_coll = static_pointer_cast<String>(collection);
                 for (char ch : str_coll->value)
                 {
                     auto str_ch = make_shared<String>(string(1, ch));
@@ -2708,7 +2738,7 @@ private:
                 }
                 else
                 {
-                    auto item_list = dynamic_pointer_cast<List>(item);
+                    auto item_list = item->is_list() ? static_pointer_cast<List>(item) : nullptr;
                     if (!item_list || item_list->elements.size() != static_cast<size_t>(num_vars))
                     {
                         return res.failure(IllegalOperationError(

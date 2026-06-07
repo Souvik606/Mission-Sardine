@@ -10,6 +10,8 @@ public:
         return "Null";
     }
 
+    [[nodiscard]] bool is_null() const override { return true; }
+
     [[nodiscard]] shared_ptr<DataType> copy() const override {
         static auto instance = make_shared<Null>();
         return instance;

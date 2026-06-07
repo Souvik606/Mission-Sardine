@@ -50,6 +50,29 @@ public:
     }
 
     [[nodiscard]] OperationResult getByIndex(const vector<shared_ptr<DataType>>& indexes, const Position& pos_start = Position(), const Position& pos_end = Position()) const override {
+        if (indexes.size() == 1) {
+            const auto& idx = indexes[0];
+            if (idx->is_number()) {
+                const auto num_idx = static_cast<const Number*>(idx.get());
+                if (num_idx->is_float) {
+                    return std::make_pair(nullptr, make_shared<IllegalOperationError>(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Invalid Index Type", this->context));
+                }
+                if (holds_alternative<double>(num_idx->value)) {
+                    return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
+                }
+                long long i = std::get<long long>(num_idx->value);
+                if (i < 0 || i >= static_cast<long long>(this->value.length())) {
+                    return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
+                }
+                auto result = make_shared<String>(string(1, this->value[i]));
+                result->set_context(this->context);
+                return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
+            }
+            else {
+                return std::make_pair(nullptr, make_shared<IllegalOperationError>(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Invalid Index Type", this->context));
+            }
+        }
+
         string temp = this->value;
         for (const auto& idx : indexes) {
             if (idx->is_number()) {
@@ -60,7 +83,7 @@ public:
                 if (holds_alternative<double>(num_idx->value)) {
                     return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
                 }
-                long long i = get<long long>(num_idx->value);
+                long long i = std::get<long long>(num_idx->value);
                 if (i < 0 || i >= temp.length()) {
                     auto bad_idx = indexes.back();
                     return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(bad_idx->pos_start.value_or(Position()), bad_idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
@@ -97,7 +120,7 @@ public:
             return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(last_idx->pos_start.value_or(Position()), last_idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
         }
 
-        long long i = get<long long>(num_idx->value);
+        long long i = std::get<long long>(num_idx->value);
         if (i < 0 || i >= this->value.length()) {
             return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(last_idx->pos_start.value_or(Position()), last_idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
         }

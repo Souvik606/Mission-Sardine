@@ -76,6 +76,8 @@ public:
 
     [[nodiscard]] string get_type_name() const override { return "File"; }
 
+    [[nodiscard]] bool is_file() const override { return true; }
+
     // Truthiness: open file is truthy, closed is falsy (matches Python: not Null -> True)
     [[nodiscard]] bool is_truthy() const override {
         return descriptor && !descriptor->is_closed();

@@ -87,6 +87,15 @@ public:
     [[nodiscard]] virtual bool is_number() const { return false; }
     [[nodiscard]] virtual bool is_string() const { return false; }
     [[nodiscard]] virtual bool is_list() const { return false; }
+    [[nodiscard]] virtual bool is_model_instance() const { return false; }
+    [[nodiscard]] virtual bool is_function() const { return false; }
+    [[nodiscard]] virtual bool is_builtin_function() const { return false; }
+    [[nodiscard]] virtual bool is_bound_method() const { return false; }
+    [[nodiscard]] virtual bool is_model_type() const { return false; }
+    [[nodiscard]] virtual bool is_super_proxy() const { return false; }
+    [[nodiscard]] virtual bool is_file() const { return false; }
+    [[nodiscard]] virtual bool is_module() const { return false; }
+    [[nodiscard]] virtual bool is_null() const { return false; }
 
     [[nodiscard]] virtual OperationResult is_true() const = 0;
     [[nodiscard]] virtual OperationResult add(const shared_ptr<DataType>& other) const = 0;
@@ -153,6 +162,8 @@ public:
     [[nodiscard]] string get_type_name() const override {
         return "BoundMethod";
     }
+
+    [[nodiscard]] bool is_bound_method() const override { return true; }
 
     [[nodiscard]] bool is_truthy() const override { return true; }
     [[nodiscard]] OperationResult is_true() const override;

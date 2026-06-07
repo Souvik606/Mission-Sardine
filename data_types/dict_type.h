@@ -205,30 +205,49 @@ public:
     }
 
     OperationResult getByIndex(const vector<shared_ptr<DataType>>& indexes, const Position& pos_start = Position(), const Position& pos_end = Position()) const override {
-        auto temp = copy();
+        // Fast path: single key index into a Dict (by far the most common case)
+        if (indexes.size() == 1) {
+            const auto& idx = indexes[0];
+            if (dynamic_cast<const Number*>(idx.get()) || dynamic_cast<const String*>(idx.get())) {
+                string key = get_dict_key(idx);
+                auto it = elements.find(key);
+                if (it != elements.end()) {
+                    return { it->second, nullptr };
+                } else {
+                    return { nullptr, make_shared<DictKeyError>(idx->pos_start.value_or(pos_start), idx->pos_end.value_or(pos_end), "Key does not exist", context) };
+                }
+            } else {
+                return { nullptr, make_shared<DictKeyError>(idx->pos_start.value_or(pos_start), idx->pos_end.value_or(pos_end), "Dictionary keys must be numbers or strings", context) };
+            }
+        }
+
+        // General path: multi-level indexing (no upfront copy)
+        const DataType* cur = this;
+        shared_ptr<DataType> cur_owned;
+
         try {
             for (const auto& idx : indexes) {
-                if (const auto dict_temp = dynamic_cast<Dict*>(temp.get())) {
+                if (const auto dict_temp = dynamic_cast<const Dict*>(cur)) {
                     if (dynamic_cast<const Number*>(idx.get()) || dynamic_cast<const String*>(idx.get())) {
                         string key = get_dict_key(idx);
-                        if (dict_temp->elements.find(key) != dict_temp->elements.end()) {
-                            temp = dict_temp->elements[key];
-                        }
-                        else {
+                        auto it = dict_temp->elements.find(key);
+                        if (it != dict_temp->elements.end()) {
+                            cur_owned = it->second;
+                            cur = cur_owned.get();
+                        } else {
                             return { nullptr, make_shared<DictKeyError>(idx->pos_start.value_or(pos_start), idx->pos_end.value_or(pos_end), "Key does not exist", context) };
                         }
-                    }
-                    else {
+                    } else {
                         return { nullptr, make_shared<DictKeyError>(idx->pos_start.value_or(pos_start), idx->pos_end.value_or(pos_end), "Dictionary keys must be numbers or strings", context) };
                     }
-                }
-                else {
-                    auto [next_temp, error] = temp->getByIndex({ idx }, pos_start, pos_end);
+                } else {
+                    auto [next_temp, error] = cur->getByIndex({ idx }, pos_start, pos_end);
                     if (error) return { nullptr, error };
-                    temp = next_temp;
+                    cur_owned = next_temp;
+                    cur = cur_owned.get();
                 }
             }
-            return { temp, nullptr };
+            return { cur_owned, nullptr };
         }
         catch (const out_of_range&) {
             auto bad_idx = indexes.back();

@@ -27,6 +27,10 @@ public:
         return true;
     }
 
+    [[nodiscard]] bool is_super_proxy() const override {
+        return true;
+    }
+
     [[nodiscard]] OperationResult is_true() const override {
         auto result = make_shared<Number>(1LL);
         result->set_context(this->context);

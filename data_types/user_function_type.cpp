@@ -93,7 +93,7 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>> &pos_args, co
         }
         else
         {
-            exec_context->symbol_table = make_shared<SymbolTable>(inst_sym);
+            exec_context->symbol_table->reset(inst_sym);
             exec_context->symbol_table->set("this", instance);
         }
         

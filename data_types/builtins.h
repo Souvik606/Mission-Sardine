@@ -27,6 +27,7 @@ public:
 
     [[nodiscard]] string get_type_name() const override { return "BuiltInFunction"; }
     [[nodiscard]] bool is_callable_type() const override { return true; }
+    [[nodiscard]] bool is_builtin_function() const override { return true; }
 
     [[nodiscard]] RunTimeResult execute(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args, const shared_ptr<Context>& context) const {
         auto exec_context = make_shared<Context>(this->name, context, this->pos_start);

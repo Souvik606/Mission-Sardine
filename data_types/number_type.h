@@ -70,8 +70,12 @@ public:
 
     [[nodiscard]] bool is_number() const override { return true; }
 
+    [[nodiscard]] double get_double() const {
+        return holds_alternative<double>(this->value) ? std::get<double>(this->value) : static_cast<double>(std::get<long long>(this->value));
+    }
+
     [[nodiscard]] bool is_truthy() const override {
-        return std::visit([](auto val) { return val != 0; }, this->value);
+        return holds_alternative<double>(this->value) ? (std::get<double>(this->value) != 0.0) : (std::get<long long>(this->value) != 0);
     }
 
     [[nodiscard]] shared_ptr<DataType> copy() const override {
@@ -88,27 +92,17 @@ public:
     [[nodiscard]] OperationResult add(const shared_ptr<DataType>& operand) const override {
         if (operand->is_number()) {
             const auto other = static_cast<const Number*>(operand.get());
+            bool holds_dbl = holds_alternative<double>(this->value) || holds_alternative<double>(other->value);
             bool res_is_float = this->is_float || other->is_float;
-            variant<long long, double> new_value;
-            if (res_is_float) {
-                double left = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
-                double right = std::visit([](auto val) -> double { return static_cast<double>(val); }, other->value);
-                new_value = left + right;
-            } else {
-                new_value = std::visit([](auto left, auto right) -> variant<long long, double> {
-                    if constexpr (is_integral_v<decltype(left)> && is_integral_v<decltype(right)>) {
-                        return left + right;
-                    }
-                    return static_cast<double>(left) + static_cast<double>(right);
-                    }, this->value, other->value);
-            }
-
             shared_ptr<Number> result;
-            if (holds_alternative<long long>(new_value) && !res_is_float)
-                result = Number::make(get<long long>(new_value), false);
-            else {
-                double d_val = holds_alternative<double>(new_value) ? get<double>(new_value) : static_cast<double>(get<long long>(new_value));
-                result = make_shared<Number>(d_val, res_is_float);
+            if (holds_dbl) {
+                double left = this->get_double();
+                double right = other->get_double();
+                result = make_shared<Number>(left + right, res_is_float);
+            } else {
+                long long left = std::get<long long>(this->value);
+                long long right = std::get<long long>(other->value);
+                result = Number::make(left + right, false);
             }
             result->set_context(this->context);
             return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
@@ -119,27 +113,17 @@ public:
     [[nodiscard]] OperationResult subtract(const shared_ptr<DataType>& operand) const override {
         if (operand->is_number()) {
             const auto other = static_cast<const Number*>(operand.get());
+            bool holds_dbl = holds_alternative<double>(this->value) || holds_alternative<double>(other->value);
             bool res_is_float = this->is_float || other->is_float;
-            variant<long long, double> new_value;
-            if (res_is_float) {
-                double left = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
-                double right = std::visit([](auto val) -> double { return static_cast<double>(val); }, other->value);
-                new_value = left - right;
-            } else {
-                new_value = std::visit([](auto left, auto right) -> variant<long long, double> {
-                    if constexpr (is_integral_v<decltype(left)> && is_integral_v<decltype(right)>) {
-                        return left - right;
-                    }
-                    return static_cast<double>(left) - static_cast<double>(right);
-                    }, this->value, other->value);
-            }
-
             shared_ptr<Number> result;
-            if (holds_alternative<long long>(new_value) && !res_is_float)
-                result = Number::make(get<long long>(new_value), false);
-            else {
-                double d_val = holds_alternative<double>(new_value) ? get<double>(new_value) : static_cast<double>(get<long long>(new_value));
-                result = make_shared<Number>(d_val, res_is_float);
+            if (holds_dbl) {
+                double left = this->get_double();
+                double right = other->get_double();
+                result = make_shared<Number>(left - right, res_is_float);
+            } else {
+                long long left = std::get<long long>(this->value);
+                long long right = std::get<long long>(other->value);
+                result = Number::make(left - right, false);
             }
             result->set_context(this->context);
             return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
@@ -150,27 +134,17 @@ public:
     [[nodiscard]] OperationResult multiply(const shared_ptr<DataType>& operand) const override {
         if (operand->is_number()) {
             const auto other = static_cast<const Number*>(operand.get());
+            bool holds_dbl = holds_alternative<double>(this->value) || holds_alternative<double>(other->value);
             bool res_is_float = this->is_float || other->is_float;
-            variant<long long, double> new_value;
-            if (res_is_float) {
-                double left = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
-                double right = std::visit([](auto val) -> double { return static_cast<double>(val); }, other->value);
-                new_value = left * right;
-            } else {
-                new_value = std::visit([](auto left, auto right) -> variant<long long, double> {
-                    if constexpr (is_integral_v<decltype(left)> && is_integral_v<decltype(right)>) {
-                        return left * right;
-                    }
-                    return static_cast<double>(left) * static_cast<double>(right);
-                    }, this->value, other->value);
-            }
-
             shared_ptr<Number> result;
-            if (holds_alternative<long long>(new_value) && !res_is_float)
-                result = Number::make(get<long long>(new_value), false);
-            else {
-                double d_val = holds_alternative<double>(new_value) ? get<double>(new_value) : static_cast<double>(get<long long>(new_value));
-                result = make_shared<Number>(d_val, res_is_float);
+            if (holds_dbl) {
+                double left = this->get_double();
+                double right = other->get_double();
+                result = make_shared<Number>(left * right, res_is_float);
+            } else {
+                long long left = std::get<long long>(this->value);
+                long long right = std::get<long long>(other->value);
+                result = Number::make(left * right, false);
             }
             result->set_context(this->context);
             return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
@@ -181,16 +155,17 @@ public:
     [[nodiscard]] OperationResult divide(const shared_ptr<DataType>& operand) const override {
         if (operand->is_number()) {
             const auto other = static_cast<const Number*>(operand.get());
-            if (std::visit([](auto val) { return val == 0; }, other->value)) {
+            bool right_is_zero = holds_alternative<double>(other->value) ? (std::get<double>(other->value) == 0.0) : (std::get<long long>(other->value) == 0);
+            if (right_is_zero) {
                 return std::make_pair(nullptr, make_shared<DivisionByZeroError>(
-                    other->pos_start.value_or(Position()),
-                    other->pos_end.value_or(Position()),
+                    operand->pos_start.value_or(Position()),
+                    operand->pos_end.value_or(Position()),
                     "Division by zero",
                     this->context
                 ));
             }
-            double left = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
-            double right = std::visit([](auto val) -> double { return static_cast<double>(val); }, other->value);
+            double left = this->get_double();
+            double right = other->get_double();
             auto result = make_shared<Number>(left / right, true);
             result->set_context(this->context);
             return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
@@ -201,35 +176,26 @@ public:
     [[nodiscard]] OperationResult modulus(const shared_ptr<DataType>& operand) const override {
         if (operand->is_number()) {
             const auto other = static_cast<const Number*>(operand.get());
-            if (std::visit([](auto val) { return val == 0; }, other->value)) {
+            bool right_is_zero = holds_alternative<double>(other->value) ? (std::get<double>(other->value) == 0.0) : (std::get<long long>(other->value) == 0);
+            if (right_is_zero) {
                 return std::make_pair(nullptr, make_shared<DivisionByZeroError>(
-                    other->pos_start.value_or(Position()),
-                    other->pos_end.value_or(Position()),
+                    operand->pos_start.value_or(Position()),
+                    operand->pos_end.value_or(Position()),
                     "Division by zero",
                     this->context
                 ));
             }
+            bool holds_dbl = holds_alternative<double>(this->value) || holds_alternative<double>(other->value);
             bool res_is_float = this->is_float || other->is_float;
-            variant<long long, double> new_value;
-            if (res_is_float) {
-                double left = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
-                double right = std::visit([](auto val) -> double { return static_cast<double>(val); }, other->value);
-                new_value = fmod(left, right);
-            } else {
-                new_value = std::visit([](auto left, auto right) -> variant<long long, double> {
-                    if constexpr (is_integral_v<decltype(left)> && is_integral_v<decltype(right)>) {
-                        return left % right;
-                    }
-                    return fmod(static_cast<double>(left), static_cast<double>(right));
-                    }, this->value, other->value);
-            }
-
             shared_ptr<Number> result;
-            if (holds_alternative<long long>(new_value) && !res_is_float)
-                result = Number::make(get<long long>(new_value), false);
-            else {
-                double d_val = holds_alternative<double>(new_value) ? get<double>(new_value) : static_cast<double>(get<long long>(new_value));
-                result = make_shared<Number>(d_val, res_is_float);
+            if (holds_dbl) {
+                double left = this->get_double();
+                double right = other->get_double();
+                result = make_shared<Number>(fmod(left, right), res_is_float);
+            } else {
+                long long left = std::get<long long>(this->value);
+                long long right = std::get<long long>(other->value);
+                result = Number::make(left % right, false);
             }
             result->set_context(this->context);
             return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
@@ -240,35 +206,26 @@ public:
     [[nodiscard]] OperationResult floor_divide(const shared_ptr<DataType>& operand) const override {
         if (operand->is_number()) {
             const auto other = static_cast<const Number*>(operand.get());
-            if (std::visit([](auto val) { return val == 0; }, other->value)) {
+            bool right_is_zero = holds_alternative<double>(other->value) ? (std::get<double>(other->value) == 0.0) : (std::get<long long>(other->value) == 0);
+            if (right_is_zero) {
                 return std::make_pair(nullptr, make_shared<DivisionByZeroError>(
-                    other->pos_start.value_or(Position()),
-                    other->pos_end.value_or(Position()),
+                    operand->pos_start.value_or(Position()),
+                    operand->pos_end.value_or(Position()),
                     "Division by zero",
                     this->context
                 ));
             }
+            bool holds_dbl = holds_alternative<double>(this->value) || holds_alternative<double>(other->value);
             bool res_is_float = this->is_float || other->is_float;
-            variant<long long, double> new_value;
-            if (res_is_float) {
-                double left = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
-                double right = std::visit([](auto val) -> double { return static_cast<double>(val); }, other->value);
-                new_value = floor(left / right);
-            } else {
-                new_value = std::visit([](auto left, auto right) -> variant<long long, double> {
-                    if constexpr (is_integral_v<decltype(left)> && is_integral_v<decltype(right)>) {
-                        return left / right;
-                    }
-                    return floor(static_cast<double>(left) / static_cast<double>(right));
-                    }, this->value, other->value);
-            }
-
             shared_ptr<Number> result;
-            if (holds_alternative<long long>(new_value) && !res_is_float)
-                result = Number::make(get<long long>(new_value), false);
-            else {
-                double d_val = holds_alternative<double>(new_value) ? get<double>(new_value) : static_cast<double>(get<long long>(new_value));
-                result = make_shared<Number>(d_val, res_is_float);
+            if (holds_dbl) {
+                double left = this->get_double();
+                double right = other->get_double();
+                result = make_shared<Number>(floor(left / right), res_is_float);
+            } else {
+                long long left = std::get<long long>(this->value);
+                long long right = std::get<long long>(other->value);
+                result = Number::make(left / right, false);
             }
             result->set_context(this->context);
             return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
@@ -279,13 +236,13 @@ public:
     [[nodiscard]] OperationResult exponent(const shared_ptr<DataType>& operand) const override {
         if (operand->is_number()) {
             const auto other = static_cast<const Number*>(operand.get());
-            double left_val = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
-            double right_val = std::visit([](auto val) -> double { return static_cast<double>(val); }, other->value);
+            double left_val = this->get_double();
+            double right_val = other->get_double();
 
             if (left_val == 0.0 && right_val < 0.0) {
                 return std::make_pair(nullptr, make_shared<DivisionByZeroError>(
-                    other->pos_start.value_or(Position()),
-                    other->pos_end.value_or(Position()),
+                    operand->pos_start.value_or(Position()),
+                    operand->pos_end.value_or(Position()),
                     "Division by zero",
                     this->context
                 ));
@@ -318,12 +275,13 @@ public:
         if (operand->is_number()) {
             const auto other = static_cast<const Number*>(operand.get());
             bool result;
-            if (this->is_float || other->is_float) {
-                double left = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
-                double right = std::visit([](auto val) -> double { return static_cast<double>(val); }, other->value);
+            bool holds_dbl = holds_alternative<double>(this->value) || holds_alternative<double>(other->value);
+            if (holds_dbl) {
+                double left = this->get_double();
+                double right = other->get_double();
                 result = (round_to_13_dec(left) == round_to_13_dec(right));
             } else {
-                result = std::visit([](auto left, auto right) { return left == right; }, this->value, other->value);
+                result = std::get<long long>(this->value) == std::get<long long>(other->value);
             }
             return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(result)), nullptr);
         }
@@ -334,12 +292,13 @@ public:
         if (operand->is_number()) {
             const auto other = static_cast<const Number*>(operand.get());
             bool result;
-            if (this->is_float || other->is_float) {
-                double left = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
-                double right = std::visit([](auto val) -> double { return static_cast<double>(val); }, other->value);
+            bool holds_dbl = holds_alternative<double>(this->value) || holds_alternative<double>(other->value);
+            if (holds_dbl) {
+                double left = this->get_double();
+                double right = other->get_double();
                 result = (round_to_13_dec(left) != round_to_13_dec(right));
             } else {
-                result = std::visit([](auto left, auto right) { return left != right; }, this->value, other->value);
+                result = std::get<long long>(this->value) != std::get<long long>(other->value);
             }
             return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(result)), nullptr);
         }
@@ -350,12 +309,13 @@ public:
         if (operand->is_number()) {
             const auto other = static_cast<const Number*>(operand.get());
             bool result;
-            if (this->is_float || other->is_float) {
-                double left = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
-                double right = std::visit([](auto val) -> double { return static_cast<double>(val); }, other->value);
+            bool holds_dbl = holds_alternative<double>(this->value) || holds_alternative<double>(other->value);
+            if (holds_dbl) {
+                double left = this->get_double();
+                double right = other->get_double();
                 result = (round_to_13_dec(left) < round_to_13_dec(right));
             } else {
-                result = std::visit([](auto left, auto right) { return left < right; }, this->value, other->value);
+                result = std::get<long long>(this->value) < std::get<long long>(other->value);
             }
             return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(result)), nullptr);
         }
@@ -366,12 +326,13 @@ public:
         if (operand->is_number()) {
             const auto other = static_cast<const Number*>(operand.get());
             bool result;
-            if (this->is_float || other->is_float) {
-                double left = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
-                double right = std::visit([](auto val) -> double { return static_cast<double>(val); }, other->value);
+            bool holds_dbl = holds_alternative<double>(this->value) || holds_alternative<double>(other->value);
+            if (holds_dbl) {
+                double left = this->get_double();
+                double right = other->get_double();
                 result = (round_to_13_dec(left) > round_to_13_dec(right));
             } else {
-                result = std::visit([](auto left, auto right) { return left > right; }, this->value, other->value);
+                result = std::get<long long>(this->value) > std::get<long long>(other->value);
             }
             return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(result)), nullptr);
         }
@@ -382,12 +343,13 @@ public:
         if (operand->is_number()) {
             const auto other = static_cast<const Number*>(operand.get());
             bool result;
-            if (this->is_float || other->is_float) {
-                double left = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
-                double right = std::visit([](auto val) -> double { return static_cast<double>(val); }, other->value);
+            bool holds_dbl = holds_alternative<double>(this->value) || holds_alternative<double>(other->value);
+            if (holds_dbl) {
+                double left = this->get_double();
+                double right = other->get_double();
                 result = (round_to_13_dec(left) <= round_to_13_dec(right));
             } else {
-                result = std::visit([](auto left, auto right) { return left <= right; }, this->value, other->value);
+                result = std::get<long long>(this->value) <= std::get<long long>(other->value);
             }
             return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(result)), nullptr);
         }
@@ -398,12 +360,13 @@ public:
         if (operand->is_number()) {
             const auto other = static_cast<const Number*>(operand.get());
             bool result;
-            if (this->is_float || other->is_float) {
-                double left = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
-                double right = std::visit([](auto val) -> double { return static_cast<double>(val); }, other->value);
+            bool holds_dbl = holds_alternative<double>(this->value) || holds_alternative<double>(other->value);
+            if (holds_dbl) {
+                double left = this->get_double();
+                double right = other->get_double();
                 result = (round_to_13_dec(left) >= round_to_13_dec(right));
             } else {
-                result = std::visit([](auto left, auto right) { return left >= right; }, this->value, other->value);
+                result = std::get<long long>(this->value) >= std::get<long long>(other->value);
             }
             return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(result)), nullptr);
         }
@@ -413,8 +376,8 @@ public:
     [[nodiscard]] OperationResult and_by(const shared_ptr<DataType>& operand) const override {
         if (operand->is_number()) {
             const auto other = static_cast<const Number*>(operand.get());
-            const bool self_truthy  = std::visit([](auto val) { return val != 0; }, this->value);
-            const bool other_truthy = std::visit([](auto val) { return val != 0; }, other->value);
+            const bool self_truthy  = this->is_truthy();
+            const bool other_truthy = other->is_truthy();
             return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(self_truthy && other_truthy)), nullptr);
         }
         return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
@@ -423,16 +386,15 @@ public:
     [[nodiscard]] OperationResult or_by(const shared_ptr<DataType>& operand) const override {
         if (operand->is_number()) {
             const auto other = static_cast<const Number*>(operand.get());
-            const bool self_truthy  = std::visit([](auto val) { return val != 0; }, this->value);
-            const bool other_truthy = std::visit([](auto val) { return val != 0; }, other->value);
+            const bool self_truthy  = this->is_truthy();
+            const bool other_truthy = other->is_truthy();
             return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(self_truthy || other_truthy)), nullptr);
         }
         return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Expected a Number type", this->context));
     }
 
     [[nodiscard]] OperationResult not_by() const override {
-        const bool is_truthy = std::visit([](auto val) { return val != 0; }, this->value);
-        return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(!is_truthy)), nullptr);
+        return std::make_pair(std::static_pointer_cast<DataType>(Number::make_bool(!is_truthy())), nullptr);
     }
 
     [[nodiscard]] OperationResult bitwise_and(const shared_ptr<DataType>& operand) const override {
@@ -441,8 +403,8 @@ public:
             if (this->is_float || other->is_float) {
                 return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Bitwise operations require integer Numbers", this->context));
             }
-            long long left = holds_alternative<double>(this->value) ? static_cast<long long>(get<double>(this->value)) : get<long long>(this->value);
-            long long right = holds_alternative<double>(other->value) ? static_cast<long long>(get<double>(other->value)) : get<long long>(other->value);
+            long long left = holds_alternative<double>(this->value) ? static_cast<long long>(std::get<double>(this->value)) : std::get<long long>(this->value);
+            long long right = holds_alternative<double>(other->value) ? static_cast<long long>(std::get<double>(other->value)) : std::get<long long>(other->value);
             auto result = Number::make(left & right, false);
             result->set_context(this->context);
             return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
@@ -456,8 +418,8 @@ public:
             if (this->is_float || other->is_float) {
                 return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Bitwise operations require integer Numbers", this->context));
             }
-            long long left = holds_alternative<double>(this->value) ? static_cast<long long>(get<double>(this->value)) : get<long long>(this->value);
-            long long right = holds_alternative<double>(other->value) ? static_cast<long long>(get<double>(other->value)) : get<long long>(other->value);
+            long long left = holds_alternative<double>(this->value) ? static_cast<long long>(std::get<double>(this->value)) : std::get<long long>(this->value);
+            long long right = holds_alternative<double>(other->value) ? static_cast<long long>(std::get<double>(other->value)) : std::get<long long>(other->value);
             auto result = Number::make(left ^ right, false);
             result->set_context(this->context);
             return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
@@ -471,8 +433,8 @@ public:
             if (this->is_float || other->is_float) {
                 return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Bitwise operations require integer Numbers", this->context));
             }
-            long long left = holds_alternative<double>(this->value) ? static_cast<long long>(get<double>(this->value)) : get<long long>(this->value);
-            long long right = holds_alternative<double>(other->value) ? static_cast<long long>(get<double>(other->value)) : get<long long>(other->value);
+            long long left = holds_alternative<double>(this->value) ? static_cast<long long>(std::get<double>(this->value)) : std::get<long long>(this->value);
+            long long right = holds_alternative<double>(other->value) ? static_cast<long long>(std::get<double>(other->value)) : std::get<long long>(other->value);
             auto result = Number::make(left | right, false);
             result->set_context(this->context);
             return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
@@ -484,7 +446,7 @@ public:
         if (this->is_float) {
             return std::make_pair(nullptr, make_shared<IllegalOperationError>(this->pos_start.value_or(Position()), this->pos_end.value_or(Position()), "Bitwise operations require integer Numbers", this->context));
         }
-        long long val = holds_alternative<double>(this->value) ? static_cast<long long>(get<double>(this->value)) : get<long long>(this->value);
+        long long val = holds_alternative<double>(this->value) ? static_cast<long long>(std::get<double>(this->value)) : std::get<long long>(this->value);
         auto result = Number::make(~val, false);
         result->set_context(this->context);
         return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
@@ -496,8 +458,8 @@ public:
             if (this->is_float || other->is_float) {
                 return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Bitwise operations require integer Numbers", this->context));
             }
-            double left_d = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
-            double right_d = std::visit([](auto val) -> double { return static_cast<double>(val); }, other->value);
+            double left_d = this->get_double();
+            double right_d = other->get_double();
 
             if (right_d < 0.0) {
                 return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Negative shift count", this->context));
@@ -512,7 +474,7 @@ public:
                 result->set_context(this->context);
                 return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
             } else {
-                long long left_i = get<long long>(this->value);
+                long long left_i = std::get<long long>(this->value);
                 long long right_i = static_cast<long long>(right_d);
                 auto result = Number::make(left_i << right_i, false);
                 result->set_context(this->context);
@@ -528,8 +490,8 @@ public:
             if (this->is_float || other->is_float) {
                 return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Bitwise operations require integer Numbers", this->context));
             }
-            double left_d = std::visit([](auto val) -> double { return static_cast<double>(val); }, this->value);
-            double right_d = std::visit([](auto val) -> double { return static_cast<double>(val); }, other->value);
+            double left_d = this->get_double();
+            double right_d = other->get_double();
 
             if (right_d < 0.0) {
                 return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "Negative shift count", this->context));
@@ -544,7 +506,7 @@ public:
                 result->set_context(this->context);
                 return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
             } else {
-                long long left_i = get<long long>(this->value);
+                long long left_i = std::get<long long>(this->value);
                 long long right_i = static_cast<long long>(right_d);
                 auto result = Number::make(left_i >> right_i, false);
                 result->set_context(this->context);
@@ -556,10 +518,10 @@ public:
 
     [[nodiscard]] string to_string() const override {
         if (is_boolean) {
-            return get<long long>(this->value) != 0 ? "True" : "False";
+            return std::get<long long>(this->value) != 0 ? "True" : "False";
         }
         if (holds_alternative<double>(this->value)) {
-            double d = get<double>(this->value);
+            double d = std::get<double>(this->value);
             if (std::isinf(d)) {
                 return d > 0 ? "INF" : "-INF";
             }
@@ -581,6 +543,6 @@ public:
             }
             return s;
         }
-        return std::to_string(get<long long>(this->value));
+        return std::to_string(std::get<long long>(this->value));
     }
 };

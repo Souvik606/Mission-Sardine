@@ -13,6 +13,7 @@ using namespace std;
 class Interpreter;
 class ModelInstance;
 class FunctionDefinitionNode;
+class Function;
 
 struct AttrInfo {
     string name;
@@ -35,6 +36,7 @@ public:
     vector<shared_ptr<Node>> attr_node_list;
 
     shared_ptr<Node> init_node;
+    mutable shared_ptr<Function> init_func_proto = nullptr;
 
     unordered_map<string, MethodInfo> own_method_nodes;
     vector<shared_ptr<ModelType>> parents;
@@ -126,6 +128,7 @@ public:
     }
 
     [[nodiscard]] bool is_callable_type() const override { return true; }
+    [[nodiscard]] bool is_model_type() const override { return true; }
 
     [[nodiscard]] bool is_truthy() const override { return true; }
 
@@ -224,6 +227,7 @@ public:
     }
 
     [[nodiscard]] bool is_truthy() const override { return true; }
+    [[nodiscard]] bool is_model_instance() const override { return true; }
 
     [[nodiscard]] OperationResult is_true() const override
     {
@@ -275,4 +279,5 @@ public:
 
 private:
     [[nodiscard]] OperationResult err(const string &op) const;
+    mutable std::unordered_map<string, shared_ptr<Function>> method_cache;
 };

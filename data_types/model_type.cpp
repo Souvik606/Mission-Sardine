@@ -48,21 +48,26 @@ RunTimeResult ModelType::execute(const vector<shared_ptr<DataType>> &pos_args, c
         auto *in = dynamic_cast<InitNode *>(init_node.get());
         if (in)
         {
-            vector<pair<string, shared_ptr<Node>>> init_params;
-            for (const auto &p : in->param_nodes)
+            if (!init_func_proto)
             {
-                init_params.push_back({any_cast<string>(p.first.value), p.second});
+                vector<pair<string, shared_ptr<Node>>> init_params;
+                for (const auto &p : in->param_nodes)
+                {
+                    init_params.push_back({any_cast<string>(p.first.value), p.second});
+                }
+                init_func_proto = make_shared<Function>(
+                    "init",
+                    in->body_node,
+                    init_params,
+                    false,
+                    nullptr);
+                init_func_proto->set_context(this->closure_context).set_pos(
+                    in->pos_start.has_value() ? in->pos_start.value() : Position(),
+                    in->pos_end.has_value() ? in->pos_end.value() : Position());
             }
 
-            auto init_func = make_shared<Function>(
-                "init",
-                in->body_node,
-                init_params,
-                false,
-                instance);
-            init_func->set_context(this->closure_context).set_pos(
-                in->pos_start.has_value() ? in->pos_start.value() : Position(),
-                in->pos_end.has_value() ? in->pos_end.value() : Position());
+            auto init_func = static_pointer_cast<Function>(init_func_proto->copy());
+            init_func->instance = instance;
 
             res.register_result(init_func->execute(pos_args, kw_args, interp));
             if (res.should_return())
@@ -155,6 +160,12 @@ DataType::OperationResult ModelInstance::get_attr(const string &attr_name,
         auto *func_def = dynamic_cast<FunctionDefinitionNode *>(mi->node.get());
         if (func_def)
         {
+            auto it = method_cache.find(attr_name);
+            if (it != method_cache.end())
+            {
+                return {it->second, nullptr};
+            }
+
             vector<pair<string, shared_ptr<Node>>> method_args;
             for (const auto &p : func_def->arg_nodes)
             {
@@ -173,6 +184,7 @@ DataType::OperationResult ModelInstance::get_attr(const string &attr_name,
                 self_ptr);
             method->set_context(context).set_pos(func_def->pos_start, func_def->pos_end);
             method->access_modifier_owner = method_owner;
+            method_cache[attr_name] = method;
             return {method, nullptr};
         }
     }
