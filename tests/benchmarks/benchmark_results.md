@@ -2,17 +2,17 @@
 
 | Benchmark | Language | Time (s) | Memory (MB) | Lex (ms) | Parse (ms) | Interpret (ms) | Sardine/Python Ratio |
 |---|---|---|---|---|---|---|---|
-| Recursive Fibonacci | Sardine | 1.4875s | 5.82 MB | 0.05 ms | 0.14 ms | 1479.44 ms | 26.04x slower |
-|  | Python | 0.0571s | 10.61 MB | - | - | - | - |
-| Prime Sieve | Sardine | 0.0081s | 5.76 MB | 0.11 ms | 0.22 ms | 0.11 ms | 0.08x slower |
-|  | Python | 0.1012s | 18.28 MB | - | - | - | - |
-| Mandelbrot Fractal | Sardine | 0.0544s | 12.59 MB | 0.12 ms | 0.24 ms | 45.16 ms | 2.33x slower |
-|  | Python | 0.0234s | 10.64 MB | - | - | - | - |
-| Fannkuch Permutations | Sardine | 13.3305s | 433.03 MB | 0.19 ms | 0.34 ms | 13297.30 ms | 36.62x slower |
-|  | Python | 0.3640s | 10.78 MB | - | - | - | - |
-| Matrix Multiplication | Sardine | 0.4606s | 126.66 MB | 0.11 ms | 0.23 ms | 430.64 ms | 14.39x slower |
-|  | Python | 0.0320s | 11.21 MB | - | - | - | - |
-| Binary Search Tree | Sardine | 0.2522s | 8.50 MB | 0.23 ms | 0.41 ms | 244.22 ms | 9.53x slower |
-|  | Python | 0.0265s | 10.87 MB | - | - | - | - |
-| Run-Length Encoding | Sardine | 0.0778s | 25.47 MB | 0.11 ms | 0.25 ms | 69.67 ms | 3.00x slower |
-|  | Python | 0.0259s | 10.69 MB | - | - | - | - |
+| Recursive Fibonacci | Sardine | 1.4425s | 5.61 MB | 0.05 ms | 0.13 ms | 1434.75 ms | 25.13x slower |
+|  | Python | 0.0574s | 10.37 MB | - | - | - | - |
+| Prime Sieve | Sardine | 0.0071s | 5.58 MB | 0.10 ms | 0.23 ms | 0.12 ms | 0.06x slower |
+|  | Python | 0.1103s | 18.06 MB | - | - | - | - |
+| Mandelbrot Fractal | Sardine | 0.0473s | 5.54 MB | 0.12 ms | 0.22 ms | 40.56 ms | 1.99x slower |
+|  | Python | 0.0238s | 10.41 MB | - | - | - | - |
+| Fannkuch Permutations | Sardine | 12.7958s | 5.61 MB | 0.19 ms | 0.34 ms | 12786.77 ms | 34.25x slower |
+|  | Python | 0.3736s | 10.53 MB | - | - | - | - |
+| Matrix Multiplication | Sardine | 0.3763s | 8.31 MB | 0.11 ms | 0.23 ms | 367.94 ms | 11.58x slower |
+|  | Python | 0.0325s | 10.96 MB | - | - | - | - |
+| Binary Search Tree | Sardine | 0.2404s | 7.34 MB | 0.23 ms | 0.37 ms | 231.82 ms | 9.24x slower |
+|  | Python | 0.0260s | 10.63 MB | - | - | - | - |
+| Run-Length Encoding | Sardine | 0.0653s | 5.55 MB | 0.11 ms | 0.22 ms | 57.72 ms | 2.76x slower |
+|  | Python | 0.0237s | 10.46 MB | - | - | - | - |

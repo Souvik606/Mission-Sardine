@@ -5,7 +5,6 @@
 #include "string_type.h"
 #include "list_type.h"
 #include "dict_type.h"
-#include "null_type.h"
 #include "../language_core/error.h"
 
 using namespace std;
@@ -423,25 +422,45 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
                 }
                 descending = (desc_val != 0);
             }
-            vector<shared_ptr<DataType>> sorted_elements = list_self->elements;
-            bool sort_error = false;
-            shared_ptr<RunTimeError> err_obj;
-            sort(sorted_elements.begin(), sorted_elements.end(), [&](const shared_ptr<DataType>& a, const shared_ptr<DataType>& b) {
-                if (sort_error) return false;
-                auto [lt_res, err] = descending ? b->get_comparison_lt(a) : a->get_comparison_lt(b);
-                if (err) {
-                    sort_error = true;
-                    err_obj = err;
-                    return false;
+            if (self.use_count() <= 1) {
+                list_self->detach();
+                bool sort_error = false;
+                shared_ptr<RunTimeError> err_obj;
+                sort(list_self->elements.begin(), list_self->elements.end(), [&](const shared_ptr<DataType>& a, const shared_ptr<DataType>& b) {
+                    if (sort_error) return false;
+                    auto [lt_res, err] = descending ? b->get_comparison_lt(a) : a->get_comparison_lt(b);
+                    if (err) {
+                        sort_error = true;
+                        err_obj = err;
+                        return false;
+                    }
+                    return lt_res && lt_res->is_truthy();
+                });
+                if (sort_error) {
+                    return { nullptr, make_shared<IllegalOperationError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "List elements are not comparable for sorting", context) };
                 }
-                return lt_res && lt_res->is_truthy();
-            });
-            if (sort_error) {
-                return { nullptr, make_shared<IllegalOperationError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "List elements are not comparable for sorting", context) };
+                return { list_self, nullptr };
+            } else {
+                vector<shared_ptr<DataType>> sorted_elements = list_self->elements;
+                bool sort_error = false;
+                shared_ptr<RunTimeError> err_obj;
+                sort(sorted_elements.begin(), sorted_elements.end(), [&](const shared_ptr<DataType>& a, const shared_ptr<DataType>& b) {
+                    if (sort_error) return false;
+                    auto [lt_res, err] = descending ? b->get_comparison_lt(a) : a->get_comparison_lt(b);
+                    if (err) {
+                        sort_error = true;
+                        err_obj = err;
+                        return false;
+                    }
+                    return lt_res && lt_res->is_truthy();
+                });
+                if (sort_error) {
+                    return { nullptr, make_shared<IllegalOperationError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "List elements are not comparable for sorting", context) };
+                }
+                auto out = make_shared<List>(sorted_elements);
+                out->set_context(self->context);
+                return { out, nullptr };
             }
-            auto out = make_shared<List>(sorted_elements);
-            out->set_context(self->context);
-            return { out, nullptr };
         };
         shared_ptr<DataType> bound = make_shared<BoundMethod>("sort", self_ptr, impl);
         bound->set_context(calling_context).set_pos(pos_start, pos_end);
@@ -454,11 +473,17 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             if (!args.empty() || !kw_args.empty()) {
                 return { nullptr, make_shared<ArgumentError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "reverse() takes no arguments", context) };
             }
-            vector<shared_ptr<DataType>> rev_elements = list_self->elements;
-            std::reverse(rev_elements.begin(), rev_elements.end());
-            auto out = make_shared<List>(rev_elements);
-            out->set_context(self->context);
-            return { out, nullptr };
+            if (self.use_count() <= 1) {
+                list_self->detach();
+                std::reverse(list_self->elements.begin(), list_self->elements.end());
+                return { list_self, nullptr };
+            } else {
+                vector<shared_ptr<DataType>> rev_elements = list_self->elements;
+                std::reverse(rev_elements.begin(), rev_elements.end());
+                auto out = make_shared<List>(rev_elements);
+                out->set_context(self->context);
+                return { out, nullptr };
+            }
         };
         shared_ptr<DataType> bound = make_shared<BoundMethod>("reverse", self_ptr, impl);
         bound->set_context(calling_context).set_pos(pos_start, pos_end);

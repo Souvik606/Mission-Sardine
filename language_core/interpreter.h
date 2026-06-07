@@ -379,11 +379,11 @@ private:
             if (!UNBOUNDED_MODE)
             {
                 iterations++;
-                if (iterations >= 200000)
+                if (iterations > 100000)
                 {
                     return res.failure(ValueError(
                         node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
-                        "Loop execution limit exceeded (max 100,000 iterations)",
+                        "Loop execution result accumulation limit exceeded (max 100,000 items)",
                         context));
                 }
             }
@@ -529,10 +529,10 @@ private:
             {
                 if (!UNBOUNDED_MODE) {
                     iterations++;
-                    if (iterations >= 200000) {
+                    if (iterations > 100000) {
                         return res.failure(ValueError(
                             node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
-                            "Loop execution limit exceeded (max 100,000 iterations)", context));
+                            "Loop execution result accumulation limit exceeded (max 100,000 items)", context));
                     }
                 }
                 context->symbol_table->set(var_name, Number::make(i));
@@ -586,10 +586,10 @@ private:
             {
                 if (!UNBOUNDED_MODE) {
                     iterations++;
-                    if (iterations >= 200000) {
+                    if (iterations > 100000) {
                         return res.failure(ValueError(
                             node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
-                            "Loop execution limit exceeded (max 100,000 iterations)", context));
+                            "Loop execution result accumulation limit exceeded (max 100,000 items)", context));
                     }
                 }
                 context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(Number::make_double(i_val)));

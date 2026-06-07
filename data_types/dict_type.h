@@ -258,7 +258,13 @@ public:
     OperationResult assignIndex(const vector<shared_ptr<DataType>>& indexes, const shared_ptr<DataType>& val, const Position& pos_start = Position(), const Position& pos_end = Position()) const override {
         if (indexes.empty()) return { nullptr, make_shared<IndexOutOfBoundsError>(pos_start, pos_end, "Index out of bounds", context) };
 
-        auto new_dict = dynamic_pointer_cast<Dict>(copy());
+        shared_ptr<Dict> new_dict;
+        auto self_shared = const_pointer_cast<Dict>(dynamic_pointer_cast<const Dict>(this->shared_from_this()));
+        if (self_shared.use_count() <= 3) {
+            new_dict = std::move(self_shared);
+        } else {
+            new_dict = dynamic_pointer_cast<Dict>(copy());
+        }
         shared_ptr<DataType> current = new_dict;
 
         try {
@@ -296,7 +302,12 @@ public:
             auto last_idx = indexes.back();
 
             if (const auto dict_temp = dynamic_cast<Dict*>(current.get())) {
-                updated_current = dict_temp->copy();
+                auto dict_shared = dynamic_pointer_cast<Dict>(current);
+                if (dict_shared.use_count() <= 3) {
+                    updated_current = dict_shared;
+                } else {
+                    updated_current = dict_temp->copy();
+                }
                 auto updated_dict_ptr = dynamic_pointer_cast<Dict>(updated_current);
                 if (dynamic_cast<const Number*>(last_idx.get()) || dynamic_cast<const String*>(last_idx.get())) {
                     string key = get_dict_key(last_idx);

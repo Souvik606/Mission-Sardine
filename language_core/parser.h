@@ -1486,7 +1486,7 @@ private:
         res.register_advancement();
         advance();
 
-        return res.success(make_shared<WhileNode>(condition, body_node, false));
+        return res.success(make_shared<WhileNode>(condition, body_node, true));
     }
 
     ParseResult for_expression()
@@ -1622,7 +1622,7 @@ private:
         res.register_advancement();
         advance();
 
-        return res.success(make_shared<ForNode>(var_name, start_value, end_value, step_value, body_node, false));
+        return res.success(make_shared<ForNode>(var_name, start_value, end_value, step_value, body_node, true));
     }
 
     ParseResult if_expression()

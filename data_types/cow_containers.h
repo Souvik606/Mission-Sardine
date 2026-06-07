@@ -2,7 +2,6 @@
 #include <memory>
 #include <vector>
 #include <unordered_map>
-#include <stdexcept>
 #include <algorithm>
 
 template <typename T>

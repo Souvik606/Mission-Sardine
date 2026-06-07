@@ -157,9 +157,15 @@ public:
     [[nodiscard]] OperationResult assignIndex(const vector<shared_ptr<DataType>>& indexes, const shared_ptr<DataType>& val, const Position& pos_start = Position(), const Position& pos_end = Position()) const override {
         if (indexes.empty()) return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(this->pos_start.value_or(Position()), this->pos_end.value_or(Position()), "Index out of bounds", this->context));
 
-        auto new_list = make_shared<List>(this->elements);
-        new_list->set_pos(this->pos_start, this->pos_end);
-        new_list->set_context(this->context);
+        shared_ptr<List> new_list;
+        auto self_shared = const_pointer_cast<List>(this->shared_from_this());
+        if (self_shared.use_count() <= 3) {
+            new_list = std::move(self_shared);
+        } else {
+            new_list = make_shared<List>(this->elements);
+            new_list->set_pos(this->pos_start, this->pos_end);
+            new_list->set_context(this->context);
+        }
 
         try {
             vector<shared_ptr<DataType>> parent_chain;
@@ -212,7 +218,11 @@ public:
             }
             else if (dynamic_cast<List*>(current.get())) {
                 auto list_current = dynamic_pointer_cast<List>(current);
-                updated_current = dynamic_pointer_cast<DataType>(list_current->copy());
+                if (list_current.use_count() <= 3) {
+                    updated_current = list_current;
+                } else {
+                    updated_current = dynamic_pointer_cast<DataType>(list_current->copy());
+                }
 
                 auto last_idx = indexes.back();
                 auto num_last_idx = dynamic_cast<const Number*>(last_idx.get());
@@ -256,7 +266,13 @@ public:
     }
 
     [[nodiscard]] OperationResult add(const shared_ptr<DataType>& operand) const override {
-        auto new_list = make_shared<List>(this->elements);
+        shared_ptr<List> new_list;
+        auto self_shared = const_pointer_cast<List>(this->shared_from_this());
+        if (self_shared.use_count() <= 2) {
+            new_list = std::move(self_shared);
+        } else {
+            new_list = make_shared<List>(this->elements);
+        }
         if (dynamic_cast<const Number*>(operand.get()) || dynamic_cast<const String*>(operand.get()) || operand->is_dict()) {
             if (new_list->elements.size() >= 1000000) {
                 return std::make_pair(nullptr, make_shared<ValueError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", this->context));
@@ -283,7 +299,13 @@ public:
     [[nodiscard]] OperationResult subtract(const shared_ptr<DataType>& operand) const override {
         if (const auto num = dynamic_cast<const Number*>(operand.get())) {
             if (const auto int_val = std::get_if<long long>(&num->value)) {
-                auto new_list = make_shared<List>(this->elements);
+                shared_ptr<List> new_list;
+                auto self_shared = const_pointer_cast<List>(this->shared_from_this());
+                if (self_shared.use_count() <= 2) {
+                    new_list = std::move(self_shared);
+                } else {
+                    new_list = make_shared<List>(this->elements);
+                }
                 try {
                     if (*int_val < 0 || *int_val >= new_list->elements.size()) {
                         throw std::out_of_range("Index out of bounds");
@@ -309,12 +331,19 @@ public:
                 if (*int_val > 0 && this->elements.size() > 1000000 / *int_val) {
                     return std::make_pair(nullptr, make_shared<ValueError>(num->pos_start.value_or(Position()), num->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", this->context));
                 }
+                shared_ptr<List> new_list;
+                auto self_shared = const_pointer_cast<List>(this->shared_from_this());
+                if (*int_val == 1 && self_shared.use_count() <= 2) {
+                    new_list = std::move(self_shared);
+                    new_list->set_context(this->context);
+                    return std::make_pair(std::static_pointer_cast<DataType>(new_list), nullptr);
+                }
                 vector<shared_ptr<DataType>> new_elements;
                 new_elements.reserve(this->elements.size() * (*int_val));
                 for (long long i = 0; i < *int_val; ++i) {
                     new_elements.insert(new_elements.end(), this->elements.begin(), this->elements.end());
                 }
-                auto new_list = make_shared<List>(new_elements);
+                new_list = make_shared<List>(new_elements);
                 new_list->set_context(this->context);
                 return std::make_pair(std::static_pointer_cast<DataType>(new_list), nullptr);
             }

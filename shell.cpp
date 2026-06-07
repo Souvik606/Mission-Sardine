@@ -90,7 +90,6 @@ RunTimeResult builtin_show(const Position& pos_start, const Position& pos_end, c
     }
     ss << end_char;
     cout << ss.str();
-    cout.flush();
     return RunTimeResult().success(make_shared<Null>());
 }
 
