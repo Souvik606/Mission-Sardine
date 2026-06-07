@@ -40,7 +40,7 @@ public:
     }
 
     [[nodiscard]] OperationResult is_true() const override {
-        auto result = make_shared<Number>(1LL);
+        auto result = Number::make(1LL);
         result->set_context(this->context);
         result->set_pos(this->pos_start, this->pos_end);
         return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);

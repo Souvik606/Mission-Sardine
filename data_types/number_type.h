@@ -39,22 +39,8 @@ public:
         return b ? true_val : false_val;
     }
 
-    static shared_ptr<Number> make(long long v, bool is_flt = false, bool is_bool = false) {
-        if (is_bool) {
-            return make_bool(v != 0);
-        }
-        if (!is_flt && v >= CACHE_MIN && v <= CACHE_MAX) {
-            static shared_ptr<Number> cache[CACHE_MAX - CACHE_MIN + 1];
-            static bool init = false;
-            if (!init) {
-                for (long long i = CACHE_MIN; i <= CACHE_MAX; ++i)
-                    cache[i - CACHE_MIN] = shared_ptr<Number>(new Number(i, false, false));
-                init = true;
-            }
-            return cache[v - CACHE_MIN];
-        }
-        return shared_ptr<Number>(new Number(v, is_flt, is_bool));
-    }
+    static shared_ptr<Number> make(long long v, bool is_flt = false, bool is_bool = false);
+    static shared_ptr<Number> make_double(double v, bool is_flt = true);
 
 
     DataType& set_pos(const optional<Position>& start, const optional<Position>& end) override {
@@ -98,7 +84,7 @@ public:
             if (holds_dbl) {
                 double left = this->get_double();
                 double right = other->get_double();
-                result = make_shared<Number>(left + right, res_is_float);
+                result = Number::make_double(left + right);
             } else {
                 long long left = std::get<long long>(this->value);
                 long long right = std::get<long long>(other->value);
@@ -119,7 +105,7 @@ public:
             if (holds_dbl) {
                 double left = this->get_double();
                 double right = other->get_double();
-                result = make_shared<Number>(left - right, res_is_float);
+                result = Number::make_double(left - right);
             } else {
                 long long left = std::get<long long>(this->value);
                 long long right = std::get<long long>(other->value);
@@ -140,7 +126,7 @@ public:
             if (holds_dbl) {
                 double left = this->get_double();
                 double right = other->get_double();
-                result = make_shared<Number>(left * right, res_is_float);
+                result = Number::make_double(left * right);
             } else {
                 long long left = std::get<long long>(this->value);
                 long long right = std::get<long long>(other->value);
@@ -166,7 +152,7 @@ public:
             }
             double left = this->get_double();
             double right = other->get_double();
-            auto result = make_shared<Number>(left / right, true);
+            auto result = Number::make_double(left / right);
             result->set_context(this->context);
             return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
         }
@@ -191,7 +177,7 @@ public:
             if (holds_dbl) {
                 double left = this->get_double();
                 double right = other->get_double();
-                result = make_shared<Number>(fmod(left, right), res_is_float);
+                result = Number::make_double(fmod(left, right));
             } else {
                 long long left = std::get<long long>(this->value);
                 long long right = std::get<long long>(other->value);
@@ -221,7 +207,7 @@ public:
             if (holds_dbl) {
                 double left = this->get_double();
                 double right = other->get_double();
-                result = make_shared<Number>(floor(left / right), res_is_float);
+                result = Number::make_double(floor(left / right));
             } else {
                 long long left = std::get<long long>(this->value);
                 long long right = std::get<long long>(other->value);
@@ -263,7 +249,7 @@ public:
             if (!res_is_float && res_d >= static_cast<double>(LLONG_MIN) && res_d <= static_cast<double>(LLONG_MAX)) {
                 result = Number::make(static_cast<long long>(std::round(res_d)), false);
             } else {
-                result = make_shared<Number>(res_d, res_is_float);
+                result = Number::make_double(res_d);
             }
             result->set_context(this->context);
             return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
@@ -470,7 +456,7 @@ public:
 
             if (right_d >= 62.0 || holds_alternative<double>(this->value)) {
                 double double_val = left_d * pow(2.0, right_d);
-                auto result = make_shared<Number>(double_val, false);
+                auto result = Number::make_double(double_val, false);
                 result->set_context(this->context);
                 return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
             } else {
@@ -502,7 +488,7 @@ public:
 
             if (right_d >= 62.0 || holds_alternative<double>(this->value)) {
                 double double_val = floor(left_d / pow(2.0, right_d));
-                auto result = make_shared<Number>(double_val, false);
+                auto result = Number::make_double(double_val, false);
                 result->set_context(this->context);
                 return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);
             } else {
@@ -546,3 +532,82 @@ public:
         return std::to_string(std::get<long long>(this->value));
     }
 };
+
+struct NumberDeleter {
+    void operator()(Number* ptr);
+};
+
+class NumberPool {
+private:
+    std::vector<Number*> free_pool;
+public:
+    ~NumberPool() {
+        for (auto* ptr : free_pool) {
+            delete ptr;
+        }
+    }
+    static NumberPool& get() {
+        thread_local NumberPool instance;
+        return instance;
+    }
+    void release(Number* ptr) {
+        if (!ptr) return;
+        ptr->context = ContextRef();
+        ptr->pos_start = std::nullopt;
+        ptr->pos_end = std::nullopt;
+        free_pool.push_back(ptr);
+    }
+    std::shared_ptr<Number> acquire(long long val, bool is_flt = false, bool is_bool = false) {
+        if (free_pool.empty()) {
+            return std::shared_ptr<Number>(new Number(val, is_flt, is_bool), NumberDeleter());
+        }
+        auto* p = free_pool.back();
+        free_pool.pop_back();
+        p->value = val;
+        p->is_float = is_flt;
+        p->is_boolean = is_bool;
+        p->context = ContextRef();
+        p->pos_start = std::nullopt;
+        p->pos_end = std::nullopt;
+        return std::shared_ptr<Number>(p, NumberDeleter());
+    }
+    std::shared_ptr<Number> acquire(double val, bool is_flt = true) {
+        if (free_pool.empty()) {
+            return std::shared_ptr<Number>(new Number(val, is_flt), NumberDeleter());
+        }
+        auto* p = free_pool.back();
+        free_pool.pop_back();
+        p->value = val;
+        p->is_float = is_flt;
+        p->is_boolean = false;
+        p->context = ContextRef();
+        p->pos_start = std::nullopt;
+        p->pos_end = std::nullopt;
+        return std::shared_ptr<Number>(p, NumberDeleter());
+    }
+};
+
+inline void NumberDeleter::operator()(Number* ptr) {
+    NumberPool::get().release(ptr);
+}
+
+inline shared_ptr<Number> Number::make(long long v, bool is_flt, bool is_bool) {
+    if (is_bool) {
+        return make_bool(v != 0);
+    }
+    if (!is_flt && v >= CACHE_MIN && v <= CACHE_MAX) {
+        static shared_ptr<Number> cache[CACHE_MAX - CACHE_MIN + 1];
+        static bool init = false;
+        if (!init) {
+            for (long long i = CACHE_MIN; i <= CACHE_MAX; ++i)
+                cache[i - CACHE_MIN] = shared_ptr<Number>(new Number(i, false, false));
+            init = true;
+        }
+        return cache[v - CACHE_MIN];
+    }
+    return NumberPool::get().acquire(v, is_flt, is_bool);
+}
+
+inline shared_ptr<Number> Number::make_double(double v, bool is_flt) {
+    return NumberPool::get().acquire(v, is_flt);
+}

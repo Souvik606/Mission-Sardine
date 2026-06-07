@@ -134,7 +134,7 @@ public:
 
     [[nodiscard]] OperationResult is_true() const override
     {
-        auto r = make_shared<Number>(1LL);
+        auto r = Number::make(1LL);
         r->set_context(context).set_pos(pos_start, pos_end);
         return {r, nullptr};
     }
@@ -231,7 +231,7 @@ public:
 
     [[nodiscard]] OperationResult is_true() const override
     {
-        auto r = make_shared<Number>(1LL);
+        auto r = Number::make(1LL);
         r->set_context(context).set_pos(pos_start, pos_end);
         return {r, nullptr};
     }

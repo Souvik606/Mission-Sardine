@@ -202,7 +202,7 @@ inline DataType::OperationResult String::get_attr(const string& attr_name, const
             }
             size_t pos = str_self->value.find(sub->value);
             long long index = (pos == string::npos) ? -1 : static_cast<long long>(pos);
-            return { make_shared<Number>(index), nullptr };
+            return { Number::make(index), nullptr };
         };
         shared_ptr<DataType> bound = make_shared<BoundMethod>("find", self_ptr, impl);
         bound->set_context(calling_context).set_pos(pos_start, pos_end);
@@ -549,7 +549,7 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
                     break;
                 }
             }
-            return { make_shared<Number>(index), nullptr };
+            return { Number::make(index), nullptr };
         };
         shared_ptr<DataType> bound = make_shared<BoundMethod>("index_of", self_ptr, impl);
         bound->set_context(calling_context).set_pos(pos_start, pos_end);
@@ -634,9 +634,9 @@ inline DataType::OperationResult Dict::get_attr(const string& attr_name, const s
         for (const auto& key : d->keys_order) {
             shared_ptr<DataType> node;
             if (key.substr(0, 2) == "I:") {
-                node = make_shared<Number>(stoll(key.substr(2)));
+                node = Number::make(stoll(key.substr(2)));
             } else if (key.substr(0, 2) == "D:") {
-                node = make_shared<Number>(stod(key.substr(2)));
+                node = Number::make_double(stod(key.substr(2)));
             } else {
                 node = make_shared<String>(key.substr(2));
             }

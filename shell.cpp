@@ -181,13 +181,13 @@ RunTimeResult builtin_integer(const Position& pos_start, const Position& pos_end
             }
         }
         long long int_val = std::visit([](auto v) { return static_cast<long long>(v); }, num->value);
-        return RunTimeResult().success(make_shared<Number>(int_val, false, false));
+        return RunTimeResult().success(Number::make(int_val, false, false));
     }
 
     if (const auto str = dynamic_pointer_cast<String>(value)) {
         try {
             long long int_val = stoll(str->value);
-            return RunTimeResult().success(make_shared<Number>(int_val, false, false));
+            return RunTimeResult().success(Number::make(int_val, false, false));
         }
         catch (...) {
             return RunTimeResult().failure(ArgumentError(
@@ -218,13 +218,13 @@ RunTimeResult builtin_float(const Position& pos_start, const Position& pos_end, 
 
     if (const auto num = dynamic_pointer_cast<Number>(value)) {
         double d_val = std::visit([](auto v) { return static_cast<double>(v); }, num->value);
-        return RunTimeResult().success(make_shared<Number>(d_val, true));
+        return RunTimeResult().success(Number::make_double(d_val));
     }
 
     if (const auto str = dynamic_pointer_cast<String>(value)) {
         try {
             double d_val = stod(str->value);
-            return RunTimeResult().success(make_shared<Number>(d_val, true));
+            return RunTimeResult().success(Number::make_double(d_val));
         }
         catch (...) {
             return RunTimeResult().failure(ArgumentError(
@@ -352,11 +352,11 @@ RunTimeResult builtin_is_a(const Position& pos_start, const Position& pos_end, c
     auto model_inst = dynamic_pointer_cast<ModelInstance>(obj);
     if (!model_inst) {
         // Primitive types are never instances of any user-defined model
-        return RunTimeResult().success(make_shared<Number>(0LL));
+        return RunTimeResult().success(Number::make(0LL));
     }
 
     bool result = model_inst->model->is_descendant_of(model_class);
-    return RunTimeResult().success(make_shared<Number>(result ? 1LL : 0LL));
+    return RunTimeResult().success(Number::make(result ? 1LL : 0LL));
 }
 
 bool is_integer(const shared_ptr<DataType>& arg, long long& out_val) {
@@ -445,13 +445,13 @@ RunTimeResult builtin_len(const Position& pos_start, const Position& pos_end, co
 
     auto arg = args[0];
     if (auto list_val = dynamic_pointer_cast<List>(arg)) {
-        return RunTimeResult().success(make_shared<Number>(static_cast<long long>(list_val->elements.size())));
+        return RunTimeResult().success(Number::make(static_cast<long long>(list_val->elements.size())));
     }
     if (auto str_val = dynamic_pointer_cast<String>(arg)) {
-        return RunTimeResult().success(make_shared<Number>(static_cast<long long>(str_val->value.length())));
+        return RunTimeResult().success(Number::make(static_cast<long long>(str_val->value.length())));
     }
     if (auto dict_val = dynamic_pointer_cast<Dict>(arg)) {
-        return RunTimeResult().success(make_shared<Number>(static_cast<long long>(dict_val->elements.size())));
+        return RunTimeResult().success(Number::make(static_cast<long long>(dict_val->elements.size())));
     }
     if (auto inst_val = dynamic_pointer_cast<ModelInstance>(arg)) {
         auto [len_result, len_error] = inst_val->_call_op_method("__len__", {});
@@ -644,14 +644,14 @@ RunTimeResult builtin_range(const Position& pos_start, const Position& pos_end, 
     long long current = start_ll;
     if (step_ll > 0) {
         while (current < end_ll) {
-            auto num_obj = make_shared<Number>(current);
+            auto num_obj = Number::make(current);
             num_obj->set_context(context);
             elements.push_back(num_obj);
             current += step_ll;
         }
     } else {
         while (current > end_ll) {
-            auto num_obj = make_shared<Number>(current);
+            auto num_obj = Number::make(current);
             num_obj->set_context(context);
             elements.push_back(num_obj);
             current += step_ll;
@@ -1192,12 +1192,16 @@ int main(int argc, char* argv[]) {
         } catch (const CleanExitException&) {
             // Clean exit
         }
+        global_symbol_table->reset();
         return 0;
     }
 
     string choice;
     cout << "Enter 0 for REPL mode and 1 for file input: ";
-    if (!getline(cin, choice)) return 0; // Handle EOF early
+    if (!getline(cin, choice)) {
+        global_symbol_table->reset();
+        return 0; // Handle EOF early
+    }
 
     if (choice == "0") {
         while (true) {
@@ -1239,5 +1243,6 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    global_symbol_table->reset();
     return 0;
 }

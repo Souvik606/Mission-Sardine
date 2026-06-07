@@ -43,7 +43,7 @@ public:
     }
 
     [[nodiscard]] OperationResult is_true() const override {
-        auto result = make_shared<Number>(static_cast<long long>(this->value.length()));
+        auto result = Number::make(static_cast<long long>(this->value.length()));
         result->set_context(this->context);
         result->set_pos(this->pos_start, this->pos_end);
         return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);

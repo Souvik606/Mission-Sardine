@@ -80,7 +80,7 @@ public:
     }
 
     [[nodiscard]] OperationResult is_true() const override {
-        return { make_shared<Number>(static_cast<long long>(elements.size())), nullptr };
+        return { Number::make(static_cast<long long>(elements.size())), nullptr };
     }
 
     OperationResult add(const shared_ptr<DataType>& operand) const override {

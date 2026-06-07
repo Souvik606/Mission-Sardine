@@ -592,7 +592,7 @@ private:
                             "Loop execution limit exceeded (max 100,000 iterations)", context));
                     }
                 }
-                context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(make_shared<Number>(i_val)));
+                context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(Number::make_double(i_val)));
                 i_val += step_val;
 
                 auto val = res.register_result(visit(node->body_node, context));
@@ -1177,11 +1177,11 @@ private:
 
         if (node->token.value.type() == typeid(long long))
         {
-            number = make_shared<Number>(any_cast<long long>(node->token.value), is_float);
+            number = Number::make(any_cast<long long>(node->token.value), is_float);
         }
         else if (node->token.value.type() == typeid(double))
         {
-            number = make_shared<Number>(any_cast<double>(node->token.value), is_float);
+            number = Number::make_double(any_cast<double>(node->token.value), is_float);
         }
         else
         {
@@ -1385,7 +1385,7 @@ private:
 
         if (node->operator_token.type == T_MINUS)
         {
-            tie(result, error) = number->multiply(std::static_pointer_cast<DataType>(make_shared<Number>(-1LL)));
+            tie(result, error) = number->multiply(std::static_pointer_cast<DataType>(Number::make(-1LL)));
         }
         else if (node->operator_token.type == T_KEYWORD && any_cast<string>(node->operator_token.value) == "not")
         {
@@ -1636,11 +1636,11 @@ private:
 
     static shared_ptr<DataType> key_to_datatype(const string& key, const shared_ptr<Context>& context) {
         if (key.substr(0, 2) == "I:") {
-            auto num = make_shared<Number>(stoll(key.substr(2)));
+            auto num = Number::make(stoll(key.substr(2)));
             num->set_context(context);
             return num;
         } else if (key.substr(0, 2) == "D:") {
-            auto num = make_shared<Number>(stod(key.substr(2)));
+            auto num = Number::make_double(stod(key.substr(2)));
             num->set_context(context);
             return num;
         } else if (key.substr(0, 2) == "S:") {
@@ -2383,7 +2383,7 @@ private:
                         }
                     }
 
-                    comp_context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(make_shared<Number>(i_val)));
+                    comp_context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(Number::make_double(i_val)));
                     i_val += step_val;
 
                     if (node->condition_node)
@@ -2660,7 +2660,7 @@ private:
                         }
                     }
 
-                    comp_context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(make_shared<Number>(i_val)));
+                    comp_context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(Number::make_double(i_val)));
                     i_val += step_val;
 
                     if (node->condition_node)
