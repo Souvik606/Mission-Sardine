@@ -43,131 +43,71 @@ namespace fs = std::filesystem;
 
 using namespace std;
 
+enum NodeType {
+    NODE_NUMBER = 0,
+    NODE_STRING,
+    NODE_LIST,
+    NODE_BINARY_OPERATION,
+    NODE_TERNARY_OPERATION,
+    NODE_UNARY_OPERATION,
+    NODE_VARIABLE_USE,
+    NODE_VARIABLE_ASSIGN,
+    NODE_IF,
+    NODE_SWITCH,
+    NODE_FOR,
+    NODE_WHILE,
+    NODE_FUNCTION_DEFINITION,
+    NODE_FUNCTION_CALL,
+    NODE_RETURN,
+    NODE_CONTINUE,
+    NODE_BREAK,
+    NODE_DICT,
+    NODE_TRY,
+    NODE_MODEL,
+    NODE_ATTR_ACCESS,
+    NODE_ATTR_ASSIGN,
+    NODE_FSTRING,
+    NODE_FOREACH_LOOP,
+    NODE_SUMMON,
+    NODE_LIST_COMPREHENSION,
+    NODE_DICT_COMPREHENSION,
+    NODE_INDEX_ACCESS,
+    NODE_UNKNOWN = -1
+};
+
 class Interpreter
 {
 public:
     Interpreter()
     {
-        visit_methods[typeid(NumberNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_NumberNode(static_pointer_cast<NumberNode>(node), context);
-        };
-        visit_methods[typeid(StringNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_StringNode(static_pointer_cast<StringNode>(node), context);
-        };
-        visit_methods[typeid(ListNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_ListNode(static_pointer_cast<ListNode>(node), context);
-        };
-        visit_methods[typeid(BinaryOperationNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_BinaryOperationNode(static_pointer_cast<BinaryOperationNode>(node), context);
-        };
-        visit_methods[typeid(TernaryOperationNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_TernaryOperationNode(static_pointer_cast<TernaryOperationNode>(node), context);
-        };
-        visit_methods[typeid(UnaryOperationNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_UnaryOperationNode(static_pointer_cast<UnaryOperationNode>(node), context);
-        };
-        visit_methods[typeid(VariableUseNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_VariableUseNode(static_pointer_cast<VariableUseNode>(node), context);
-        };
-        visit_methods[typeid(VariableAssignNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_VariableAssignNode(static_pointer_cast<VariableAssignNode>(node), context);
-        };
-        visit_methods[typeid(IfNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_IfNode(static_pointer_cast<IfNode>(node), context);
-        };
-        visit_methods[typeid(SwitchNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_SwitchNode(static_pointer_cast<SwitchNode>(node), context);
-        };
-        visit_methods[typeid(ForNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_ForNode(static_pointer_cast<ForNode>(node), context);
-        };
-        visit_methods[typeid(WhileNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_WhileNode(static_pointer_cast<WhileNode>(node), context);
-        };
-        visit_methods[typeid(FunctionDefinitionNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_FunctionDefinitionNode(static_pointer_cast<FunctionDefinitionNode>(node), context);
-        };
-        visit_methods[typeid(FunctionCallNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_FunctionCallNode(static_pointer_cast<FunctionCallNode>(node), context);
-        };
-        visit_methods[typeid(ReturnNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_ReturnNode(static_pointer_cast<ReturnNode>(node), context);
-        };
-        visit_methods[typeid(ContinueNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_ContinueNode(static_pointer_cast<ContinueNode>(node), context);
-        };
-        visit_methods[typeid(BreakNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_BreakNode(static_pointer_cast<BreakNode>(node), context);
-        };
-        visit_methods[typeid(DictNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_DictNode(static_pointer_cast<DictNode>(node), context);
-        };
-        visit_methods[typeid(TryNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_TryNode(static_pointer_cast<TryNode>(node), context);
-        };
-        visit_methods[typeid(ModelNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_ModelNode(static_pointer_cast<ModelNode>(node), context);
-        };
-        visit_methods[typeid(AttrAccessNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_AttrAccessNode(static_pointer_cast<AttrAccessNode>(node), context);
-        };
-        visit_methods[typeid(AttrAssignNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_AttrAssignNode(static_pointer_cast<AttrAssignNode>(node), context);
-        };
-        visit_methods[typeid(FStringNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_FStringNode(static_pointer_cast<FStringNode>(node), context);
-        };
-        visit_methods[typeid(ForEachLoopNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_ForEachLoopNode(static_pointer_cast<ForEachLoopNode>(node), context);
-        };
-        visit_methods[typeid(SummonNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_SummonNode(static_pointer_cast<SummonNode>(node), context);
-        };
-        visit_methods[typeid(ListComprehensionNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_ListComprehensionNode(static_pointer_cast<ListComprehensionNode>(node), context);
-        };
-        visit_methods[typeid(DictComprehensionNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_DictComprehensionNode(static_pointer_cast<DictComprehensionNode>(node), context);
-        };
-        visit_methods[typeid(IndexAccessNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_IndexAccessNode(static_pointer_cast<IndexAccessNode>(node), context);
-        };
-
-        // Populate optimized mapping structures
-        int id_counter = 0;
-        for (const auto &pair : visit_methods)
-        {
-            type_index_to_id[pair.first] = id_counter++;
-            visit_methods_vector.push_back(pair.second);
-        }
+        type_index_to_id[typeid(NumberNode)] = NODE_NUMBER;
+        type_index_to_id[typeid(StringNode)] = NODE_STRING;
+        type_index_to_id[typeid(ListNode)] = NODE_LIST;
+        type_index_to_id[typeid(BinaryOperationNode)] = NODE_BINARY_OPERATION;
+        type_index_to_id[typeid(TernaryOperationNode)] = NODE_TERNARY_OPERATION;
+        type_index_to_id[typeid(UnaryOperationNode)] = NODE_UNARY_OPERATION;
+        type_index_to_id[typeid(VariableUseNode)] = NODE_VARIABLE_USE;
+        type_index_to_id[typeid(VariableAssignNode)] = NODE_VARIABLE_ASSIGN;
+        type_index_to_id[typeid(IfNode)] = NODE_IF;
+        type_index_to_id[typeid(SwitchNode)] = NODE_SWITCH;
+        type_index_to_id[typeid(ForNode)] = NODE_FOR;
+        type_index_to_id[typeid(WhileNode)] = NODE_WHILE;
+        type_index_to_id[typeid(FunctionDefinitionNode)] = NODE_FUNCTION_DEFINITION;
+        type_index_to_id[typeid(FunctionCallNode)] = NODE_FUNCTION_CALL;
+        type_index_to_id[typeid(ReturnNode)] = NODE_RETURN;
+        type_index_to_id[typeid(ContinueNode)] = NODE_CONTINUE;
+        type_index_to_id[typeid(BreakNode)] = NODE_BREAK;
+        type_index_to_id[typeid(DictNode)] = NODE_DICT;
+        type_index_to_id[typeid(TryNode)] = NODE_TRY;
+        type_index_to_id[typeid(ModelNode)] = NODE_MODEL;
+        type_index_to_id[typeid(AttrAccessNode)] = NODE_ATTR_ACCESS;
+        type_index_to_id[typeid(AttrAssignNode)] = NODE_ATTR_ASSIGN;
+        type_index_to_id[typeid(FStringNode)] = NODE_FSTRING;
+        type_index_to_id[typeid(ForEachLoopNode)] = NODE_FOREACH_LOOP;
+        type_index_to_id[typeid(SummonNode)] = NODE_SUMMON;
+        type_index_to_id[typeid(ListComprehensionNode)] = NODE_LIST_COMPREHENSION;
+        type_index_to_id[typeid(DictComprehensionNode)] = NODE_DICT_COMPREHENSION;
+        type_index_to_id[typeid(IndexAccessNode)] = NODE_INDEX_ACCESS;
     }
 
     RunTimeResult visit(const shared_ptr<Node> &node, const shared_ptr<Context> &context)
@@ -191,7 +131,38 @@ public:
                     return no_visit_method(node);
                 }
             }
-            return visit_methods_vector[node->node_type_id](node, context);
+            switch (node->node_type_id)
+            {
+                case NODE_NUMBER: return visit_NumberNode(static_pointer_cast<NumberNode>(node), context);
+                case NODE_STRING: return visit_StringNode(static_pointer_cast<StringNode>(node), context);
+                case NODE_LIST: return visit_ListNode(static_pointer_cast<ListNode>(node), context);
+                case NODE_BINARY_OPERATION: return visit_BinaryOperationNode(static_pointer_cast<BinaryOperationNode>(node), context);
+                case NODE_TERNARY_OPERATION: return visit_TernaryOperationNode(static_pointer_cast<TernaryOperationNode>(node), context);
+                case NODE_UNARY_OPERATION: return visit_UnaryOperationNode(static_pointer_cast<UnaryOperationNode>(node), context);
+                case NODE_VARIABLE_USE: return visit_VariableUseNode(static_pointer_cast<VariableUseNode>(node), context);
+                case NODE_VARIABLE_ASSIGN: return visit_VariableAssignNode(static_pointer_cast<VariableAssignNode>(node), context);
+                case NODE_IF: return visit_IfNode(static_pointer_cast<IfNode>(node), context);
+                case NODE_SWITCH: return visit_SwitchNode(static_pointer_cast<SwitchNode>(node), context);
+                case NODE_FOR: return visit_ForNode(static_pointer_cast<ForNode>(node), context);
+                case NODE_WHILE: return visit_WhileNode(static_pointer_cast<WhileNode>(node), context);
+                case NODE_FUNCTION_DEFINITION: return visit_FunctionDefinitionNode(static_pointer_cast<FunctionDefinitionNode>(node), context);
+                case NODE_FUNCTION_CALL: return visit_FunctionCallNode(static_pointer_cast<FunctionCallNode>(node), context);
+                case NODE_RETURN: return visit_ReturnNode(static_pointer_cast<ReturnNode>(node), context);
+                case NODE_CONTINUE: return visit_ContinueNode(static_pointer_cast<ContinueNode>(node), context);
+                case NODE_BREAK: return visit_BreakNode(static_pointer_cast<BreakNode>(node), context);
+                case NODE_DICT: return visit_DictNode(static_pointer_cast<DictNode>(node), context);
+                case NODE_TRY: return visit_TryNode(static_pointer_cast<TryNode>(node), context);
+                case NODE_MODEL: return visit_ModelNode(static_pointer_cast<ModelNode>(node), context);
+                case NODE_ATTR_ACCESS: return visit_AttrAccessNode(static_pointer_cast<AttrAccessNode>(node), context);
+                case NODE_ATTR_ASSIGN: return visit_AttrAssignNode(static_pointer_cast<AttrAssignNode>(node), context);
+                case NODE_FSTRING: return visit_FStringNode(static_pointer_cast<FStringNode>(node), context);
+                case NODE_FOREACH_LOOP: return visit_ForEachLoopNode(static_pointer_cast<ForEachLoopNode>(node), context);
+                case NODE_SUMMON: return visit_SummonNode(static_pointer_cast<SummonNode>(node), context);
+                case NODE_LIST_COMPREHENSION: return visit_ListComprehensionNode(static_pointer_cast<ListComprehensionNode>(node), context);
+                case NODE_DICT_COMPREHENSION: return visit_DictComprehensionNode(static_pointer_cast<DictComprehensionNode>(node), context);
+                case NODE_INDEX_ACCESS: return visit_IndexAccessNode(static_pointer_cast<IndexAccessNode>(node), context);
+                default: return no_visit_method(node);
+            }
         }
         catch (const CleanExitException &e)
         {
@@ -222,10 +193,7 @@ public:
     }
 
 private:
-    using VisitFunction = std::function<RunTimeResult(shared_ptr<Node>, shared_ptr<Context>)>;
-    std::unordered_map<std::type_index, VisitFunction> visit_methods;
     std::unordered_map<std::type_index, int> type_index_to_id;
-    vector<VisitFunction> visit_methods_vector;
 
     static RunTimeResult no_visit_method(const shared_ptr<Node> &node)
     {
@@ -389,7 +357,7 @@ private:
         {
             return_value = return_value->is_mutable() ? return_value->copy() : return_value;
             return_value->set_pos(node->pos_start, node->pos_end);
-            if (!dynamic_pointer_cast<Function>(return_value) && !dynamic_pointer_cast<ModelType>(return_value)) {
+            if (!return_value->is_callable_type()) {
                 return_value->set_context(context);
             }
         }
@@ -890,7 +858,7 @@ private:
         {
             auto copied = value->is_mutable() ? value->copy() : value;
             copied->set_pos(node->pos_start, node->pos_end);
-            if (!dynamic_pointer_cast<Function>(copied) && !dynamic_pointer_cast<ModelType>(copied))
+            if (!copied->is_callable_type())
             {
                 copied->set_context(context);
             }
@@ -913,7 +881,7 @@ private:
 
         auto copied = indexed_val->is_mutable() ? indexed_val->copy() : indexed_val;
         copied->set_pos(node->pos_start, node->pos_end);
-        if (!dynamic_pointer_cast<Function>(copied) && !dynamic_pointer_cast<ModelType>(copied))
+        if (!copied->is_callable_type())
         {
             copied->set_context(context);
         }

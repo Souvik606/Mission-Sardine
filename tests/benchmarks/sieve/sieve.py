@@ -19,4 +19,4 @@ def sieve(n):
             count += 1
     return count
 
-print("primes up to 1000 =", sieve(1000))
+print("primes up to 1000000 =", sieve(1000000))

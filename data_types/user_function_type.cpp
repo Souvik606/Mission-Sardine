@@ -47,6 +47,27 @@ public:
     }
     void release(shared_ptr<Context> ctx) {
         if (!ctx) return;
+        size_t closure_ref_count = 0;
+        bool has_escaped = false;
+        if (ctx->symbol_table) {
+            for (const auto& [name, value] : ctx->symbol_table->get_symbols()) {
+                if (value) {
+                    if (auto* func = dynamic_cast<const Function*>(value.get())) {
+                        if (func->closure_context == ctx) {
+                            closure_ref_count++;
+                            if (value.use_count() > 1) {
+                                has_escaped = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (!has_escaped && ctx.use_count() == closure_ref_count + 1) {
+            if (ctx->symbol_table) {
+                ctx->symbol_table->reset(nullptr);
+            }
+        }
         if (ctx.use_count() == 1 && (!ctx->symbol_table || ctx->symbol_table.use_count() == 1)) {
             pool.push_back(std::move(ctx));
         }
@@ -172,24 +193,26 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>> &pos_args, co
         }
     }
 
-    const shared_ptr<DataType> value = res.register_result(interpreter.visit(this->body_node, exec_context));
-    if (res.error)
-        return res;
-
     shared_ptr<DataType> ret_val;
-    if (res.func_return_value)
     {
-        ret_val = res.func_return_value;
-    }
-    else if (this->return_null)
-    {
-        auto val = make_shared<Null>();
-        val->set_context(exec_context).set_pos(this->pos_start, this->pos_end);
-        ret_val = val;
-    }
-    else
-    {
-        ret_val = value;
+        const shared_ptr<DataType> value = res.register_result(interpreter.visit(this->body_node, exec_context));
+        if (!res.error)
+        {
+            if (res.func_return_value)
+            {
+                ret_val = res.func_return_value;
+            }
+            else if (this->return_null)
+            {
+                auto val = make_shared<Null>();
+                val->set_context(exec_context).set_pos(this->pos_start, this->pos_end);
+                ret_val = val;
+            }
+            else
+            {
+                ret_val = value;
+            }
+        }
     }
 
     if (ret_val)
@@ -198,6 +221,9 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>> &pos_args, co
     }
 
     ContextPool::get().release(std::move(exec_context));
+
+    if (res.error)
+        return res;
 
     return res.success(ret_val);
 }
