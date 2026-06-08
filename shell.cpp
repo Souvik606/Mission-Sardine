@@ -1073,7 +1073,11 @@ int main(int argc, char* argv[]) {
 
 extern "C" {
     EMSCRIPTEN_KEEPALIVE
-    void run_interpreter(const char* raw_code, const char* filename) {
+    void run_interpreter(const char* raw_code, const char* filename, int unbounded, int json_output) {
+        UNBOUNDED_MODE = (unbounded != 0);
+        JSON_OUTPUT = (json_output != 0);
+        EDUCATIONAL_MODE = (json_output != 0);
+
         // Reset and rebuild the global symbol table for a fresh execution context
         global_symbol_table = make_shared<SymbolTable>();
         auto null_val = make_shared<Null>();

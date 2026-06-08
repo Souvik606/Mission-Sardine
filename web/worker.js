@@ -6,9 +6,33 @@ let inputBuffer = [];
 let inputBufferIndex = 0;
 let hasReturnedNewline = false;
 
+let isCollectingJson = false;
+let jsonBuffer = [];
+
 // Intercept Emscripten's stdout/stderr before loading the runtime module
 var Module = {
   print: function (text) {
+    const trimmed = typeof text === 'string' ? text.trim() : '';
+    if (trimmed === "--- EDUCATIONAL_MODE_OUTPUT_START ---") {
+      isCollectingJson = true;
+      jsonBuffer = [];
+      return;
+    }
+    if (trimmed === "--- EDUCATIONAL_MODE_OUTPUT_END ---") {
+      isCollectingJson = false;
+      try {
+        const jsonStr = jsonBuffer.join("\n");
+        const parsedJson = JSON.parse(jsonStr);
+        postMessage({ type: "educational_json", data: parsedJson });
+      } catch (e) {
+        console.error("Failed to parse educational json:", e);
+      }
+      return;
+    }
+    if (isCollectingJson) {
+      jsonBuffer.push(text);
+      return;
+    }
     postMessage({ type: "stdout", data: text });
   },
   printErr: function (text) {
@@ -83,7 +107,7 @@ var Module = {
 
 // Listen for messages from the Main UI Thread
 onmessage = function (e) {
-  const { type, code, sharedBuffer: sb } = e.data;
+  const { type, code, unbounded, educational, sharedBuffer: sb } = e.data;
 
   if (type === "init") {
     sharedBuffer = sb;
@@ -105,9 +129,16 @@ onmessage = function (e) {
         inputBuffer = [];
         inputBufferIndex = 0;
         hasReturnedNewline = false;
+        isCollectingJson = false;
+        jsonBuffer = [];
 
         // Execute the interpreter entrypoint
-        Module.ccall("run_interpreter", null, ["string", "string"], [code, "<stdin>"]);
+        Module.ccall(
+          "run_interpreter",
+          null,
+          ["string", "string", "number", "number"],
+          [code, "<stdin>", unbounded ? 1 : 0, educational ? 1 : 0]
+        );
 
         // Sync MEMFS files
         let sandboxFiles = {};

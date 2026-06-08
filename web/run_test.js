@@ -89,7 +89,7 @@ global.Module = {
             }
             
             const relativeTestPath = path.relative(path.join(__dirname, '..'), testFile).replace(/\\/g, '/');
-            global.Module.ccall("run_interpreter", null, ["string", "string"], [testCode, relativeTestPath]);
+            global.Module.ccall("run_interpreter", null, ["string", "string", "number", "number"], [testCode, relativeTestPath, 0, 0]);
         } catch (e) {
             console.error("Runtime error:", e);
             process.exit(1);
