@@ -107,7 +107,7 @@ onmessage = function (e) {
         hasReturnedNewline = false;
 
         // Execute the interpreter entrypoint
-        Module.ccall("run_interpreter", null, ["string"], [code]);
+        Module.ccall("run_interpreter", null, ["string", "string"], [code, "<stdin>"]);
 
         // Sync MEMFS files
         let sandboxFiles = {};

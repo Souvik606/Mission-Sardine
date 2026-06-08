@@ -2056,6 +2056,7 @@ private:
             stringstream buffer;
             buffer << file.rdbuf();
             string source = buffer.str();
+            source.erase(std::remove(source.begin(), source.end(), '\r'), source.end());
 
             Lexer lexer(resolved_path, source);
             auto [tokens, lex_error] = lexer.enumerate_tokens();

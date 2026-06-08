@@ -3,7 +3,7 @@ import subprocess
 import sys
 
 def run_tests():
-    tests_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'tests', 'features'))
+    tests_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'tests'))
     run_test_js = os.path.abspath(os.path.join(os.path.dirname(__file__), 'run_test.js'))
     
     passed_count = 0
@@ -31,9 +31,9 @@ def run_tests():
                         text=True,
                         check=True
                     )
-                    actual_output = result.stdout.strip().replace('\r\n', '\n')
+                    actual_output = result.stdout.rstrip().replace('\r\n', '\n')
                     with open(output_path, 'r') as f:
-                        expected_output = f.read().strip().replace('\r\n', '\n')
+                        expected_output = f.read().rstrip().replace('\r\n', '\n')
 
                     import re
                     def normalize_output(text):

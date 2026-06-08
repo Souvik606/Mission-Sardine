@@ -74,6 +74,11 @@
                             <i data-lucide="message-square" class="h-4 w-4 text-cyan-400"></i>
                             <span>Interactive Input</span>
                         </button>
+                        <button onclick="loadExample('file_io')"
+                            class="w-full text-left px-3 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 transition-all text-sm font-medium flex items-center space-x-2 border border-slate-700/50">
+                            <i data-lucide="file" class="h-4 w-4 text-purple-400"></i>
+                            <span>File Handling (MEMFS)</span>
+                        </button>
                     </div>
                 </div>
 
@@ -317,7 +322,38 @@ username = listen()
 show("How old are you?")
 age = listen()
 
-show("Welcome " + username + "! In 5 years, you will be " + String(Integer(age) + 5) + " years old.")`
+show("Welcome " + username + "! In 5 years, you will be " + String(Integer(age) + 5) + " years old.")` ,
+
+                file_io: `# File Handling using virtual filesystem (MEMFS)
+show("--- Testing Virtual File System (MEMFS) ---")
+
+# 1. Write content to a file
+f = fopen("test_file.txt", "w")
+show("Opened file for writing:", f)
+f.write("Line 1: Mission-Sardine supports virtual file systems!\\n")
+f.lwrite("Line 2: Any files created here populate the sidebar.")
+f.close()
+
+# 2. Read content back
+f2 = fopen("test_file.txt", "r")
+show("Opened file for reading:", f2)
+content = f2.read()
+show("File content:")
+show(content)
+f2.close()
+
+# 3. Append content
+f3 = fopen("test_file.txt", "a")
+f3.lwrite("Line 3: Appended content dynamically!")
+f3.close()
+
+# Let's read the file line-by-line using lread()
+f4 = fopen("test_file.txt", "r")
+show("Line-by-line reading:")
+show("  L1:", f4.lread().trim())
+show("  L2:", f4.lread().trim())
+show("  L3:", f4.lread().trim())
+f4.close()`
             };
 
             // Initialization

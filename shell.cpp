@@ -865,6 +865,7 @@ void run_file(const string& filepath) {
     stringstream buffer;
     buffer << file.rdbuf();
     string file_content = buffer.str();
+    file_content.erase(std::remove(file_content.begin(), file_content.end(), '\r'), file_content.end());
 
     RunResult r = run(filepath, file_content);
 
@@ -975,24 +976,34 @@ int main(int argc, char* argv[]) {
 
 extern "C" {
     EMSCRIPTEN_KEEPALIVE
-    void run_interpreter(const char* raw_code) {
+    void run_interpreter(const char* raw_code, const char* filename) {
         // Reset and rebuild the global symbol table for a fresh execution context
         global_symbol_table = make_shared<SymbolTable>();
-        global_symbol_table->set("None", make_shared<Number>(0LL));
-        global_symbol_table->set("null", make_shared<Number>(0LL));
-        global_symbol_table->set("True", make_shared<Number>(1LL));
-        global_symbol_table->set("False", make_shared<Number>(0LL));
+        auto null_val = make_shared<Null>();
+        global_symbol_table->set("Null", null_val);
+        global_symbol_table->set("None", null_val);
+        global_symbol_table->set("null", null_val);
+        global_symbol_table->set("True", Number::make_bool(true));
+        global_symbol_table->set("False", Number::make_bool(false));
 
         global_symbol_table->set("show", make_shared<BuiltInFunction>("show", builtin_show));
         global_symbol_table->set("listen", make_shared<BuiltInFunction>("listen", builtin_listen));
         global_symbol_table->set("type", make_shared<BuiltInFunction>("type", builtin_type));
         global_symbol_table->set("Integer", make_shared<BuiltInFunction>("Integer", builtin_integer));
+        global_symbol_table->set("Float", make_shared<BuiltInFunction>("Float", builtin_float));
+        global_symbol_table->set("Boolean", make_shared<BuiltInFunction>("Boolean", builtin_boolean));
         global_symbol_table->set("String", make_shared<BuiltInFunction>("String", builtin_string));
         global_symbol_table->set("super", make_shared<BuiltInFunction>("super", builtin_super));
         global_symbol_table->set("is_a", make_shared<BuiltInFunction>("is_a", builtin_is_a));
+        global_symbol_table->set("error", make_shared<BuiltInFunction>("error", builtin_error));
+        global_symbol_table->set("throw", make_shared<BuiltInFunction>("throw", builtin_throw));
+        global_symbol_table->set("len", make_shared<BuiltInFunction>("len", builtin_len));
+        global_symbol_table->set("range", make_shared<BuiltInFunction>("range", builtin_range));
+        global_symbol_table->set("exit", make_shared<BuiltInFunction>("exit", builtin_exit));
+        global_symbol_table->set("fopen", make_shared<BuiltInFunction>("fopen", builtin_fopen));
 
         string code(raw_code);
-        RunResult r = run("<stdin>", code);
+        RunResult r = run(filename ? filename : "<stdin>", code);
         if (r.error) {
             cout << r.error->to_string() << "\n";
         }
