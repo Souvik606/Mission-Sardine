@@ -43,37 +43,6 @@ namespace fs = std::filesystem;
 
 using namespace std;
 
-enum NodeType {
-    NODE_NUMBER = 0,
-    NODE_STRING,
-    NODE_LIST,
-    NODE_BINARY_OPERATION,
-    NODE_TERNARY_OPERATION,
-    NODE_UNARY_OPERATION,
-    NODE_VARIABLE_USE,
-    NODE_VARIABLE_ASSIGN,
-    NODE_IF,
-    NODE_SWITCH,
-    NODE_FOR,
-    NODE_WHILE,
-    NODE_FUNCTION_DEFINITION,
-    NODE_FUNCTION_CALL,
-    NODE_RETURN,
-    NODE_CONTINUE,
-    NODE_BREAK,
-    NODE_DICT,
-    NODE_TRY,
-    NODE_MODEL,
-    NODE_ATTR_ACCESS,
-    NODE_ATTR_ASSIGN,
-    NODE_FSTRING,
-    NODE_FOREACH_LOOP,
-    NODE_SUMMON,
-    NODE_LIST_COMPREHENSION,
-    NODE_DICT_COMPREHENSION,
-    NODE_INDEX_ACCESS,
-    NODE_UNKNOWN = -1
-};
 
 class Interpreter
 {
@@ -120,15 +89,23 @@ public:
         {
             if (node->node_type_id == -1)
             {
-                const Node &node_ref = *node;
-                const std::type_index type_idx = typeid(node_ref);
-                if (const auto it = type_index_to_id.find(type_idx); it != type_index_to_id.end())
+                int static_id = node->get_node_type();
+                if (static_id != NODE_UNKNOWN)
                 {
-                    node->node_type_id = it->second;
+                    node->node_type_id = static_id;
                 }
                 else
                 {
-                    return no_visit_method(node);
+                    const Node &node_ref = *node;
+                    const std::type_index type_idx = typeid(node_ref);
+                    if (const auto it = type_index_to_id.find(type_idx); it != type_index_to_id.end())
+                    {
+                        node->node_type_id = it->second;
+                    }
+                    else
+                    {
+                        return no_visit_method(node);
+                    }
                 }
             }
             switch (node->node_type_id)
@@ -523,6 +500,10 @@ private:
                     "Loop step cannot be 0", context));
             }
 
+            context->symbol_table->set(var_name, Number::make(i));
+            const SymbolTable* found_table = nullptr;
+            const shared_ptr<DataType>* loop_var_ptr = context->symbol_table->get_ptr(var_name, found_table);
+
             auto cond = [&]()
             { return step >= 0 ? (i <= end) : (i >= end); };
             while (cond())
@@ -535,7 +516,11 @@ private:
                             "Loop execution result accumulation limit exceeded (max 100,000 items)", context));
                     }
                 }
-                context->symbol_table->set(var_name, Number::make(i));
+                if (loop_var_ptr) {
+                    *const_cast<shared_ptr<DataType>*>(loop_var_ptr) = Number::make(i);
+                } else {
+                    context->symbol_table->set(var_name, Number::make(i));
+                }
                 i += step;
 
                 auto val = res.register_result(visit(node->body_node, context));
@@ -580,6 +565,10 @@ private:
                     "Loop step cannot be 0", context));
             }
 
+            context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(Number::make_double(i_val)));
+            const SymbolTable* found_table = nullptr;
+            const shared_ptr<DataType>* loop_var_ptr = context->symbol_table->get_ptr(var_name, found_table);
+
             auto cond_f = [&]()
             { return step_val >= 0 ? (i_val <= end_val) : (i_val >= end_val); };
             while (cond_f())
@@ -592,7 +581,11 @@ private:
                             "Loop execution result accumulation limit exceeded (max 100,000 items)", context));
                     }
                 }
-                context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(Number::make_double(i_val)));
+                if (loop_var_ptr) {
+                    *const_cast<shared_ptr<DataType>*>(loop_var_ptr) = std::static_pointer_cast<DataType>(Number::make_double(i_val));
+                } else {
+                    context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(Number::make_double(i_val)));
+                }
                 i_val += step_val;
 
                 auto val = res.register_result(visit(node->body_node, context));
@@ -804,16 +797,17 @@ private:
         }
         else
         {
-            value = context->symbol_table->get(var_name);
+            value = context->symbol_table->get(node->interned_name);
             if (!value)
             {
-                auto this_val = context->symbol_table->get("this");
+                static const string* this_interned = StringInterner::intern("this");
+                auto this_val = context->symbol_table->get(this_interned);
                 if (this_val)
                 {
                     if (this_val->is_model_instance())
                     {
                         auto inst = static_pointer_cast<ModelInstance>(this_val);
-                        value = inst->symbol_table->get(var_name);
+                        value = inst->symbol_table->get(node->interned_name);
                         if (!value)
                         {
                             auto [method_val, err] = inst->get_attr(var_name, *this, context);
@@ -827,7 +821,7 @@ private:
             if (value)
             {
                 const SymbolTable* found_table = nullptr;
-                const shared_ptr<DataType>* ptr = context->symbol_table->get_ptr(var_name, found_table);
+                const shared_ptr<DataType>* ptr = context->symbol_table->get_ptr(node->interned_name, found_table);
                 if (ptr && *ptr == value)
                 {
                     node->cached_symbol_table_id = context->symbol_table->id;
@@ -835,13 +829,14 @@ private:
                 }
                 else
                 {
-                    auto this_val = context->symbol_table->get("this");
+                    static const string* this_interned = StringInterner::intern("this");
+                    auto this_val = context->symbol_table->get(this_interned);
                     if (this_val)
                     {
                         if (this_val->is_model_instance())
                         {
                             auto inst = static_pointer_cast<ModelInstance>(this_val);
-                            const shared_ptr<DataType>* inst_ptr = inst->symbol_table->get_ptr(var_name, found_table);
+                            const shared_ptr<DataType>* inst_ptr = inst->symbol_table->get_ptr(node->interned_name, found_table);
                             if (inst_ptr && *inst_ptr == value)
                             {
                                 node->cached_symbol_table_id = context->symbol_table->id;
@@ -969,7 +964,8 @@ private:
                 if (auto var_use = dynamic_pointer_cast<VariableUseNode>(left_node))
                 {
                     string var_name = any_cast<string>(var_use->var_name_tok.value);
-                    auto this_val = context->symbol_table->get("this");
+                    static const string* this_interned = StringInterner::intern("this");
+                    auto this_val = context->symbol_table->get(this_interned);
                     shared_ptr<ModelInstance> this_inst = nullptr;
                     if (this_val && this_val->is_model_instance())
                     {
@@ -987,7 +983,7 @@ private:
                     }
                     else
                     {
-                        context->symbol_table->set(var_name, value);
+                        context->symbol_table->set(var_use->interned_name, value);
                     }
                     last_result = value;
                 }
@@ -1058,7 +1054,7 @@ private:
 
                 if (!indexes_vals.empty())
                 {
-                    auto list_value = context->symbol_table->get(var_name);
+                    auto list_value = context->symbol_table->get(var_use->interned_name);
                     if (!list_value)
                     {
                         return res.failure(NameError(
@@ -1070,7 +1066,7 @@ private:
                     auto [new_list, error] = list_value->assignIndex(indexes_vals, value, node->pos_start.value_or(Position()), node->pos_end.value_or(Position()));
                     if (error)
                         return res.failure(*error);
-                    context->symbol_table->set(var_name, new_list);
+                    context->symbol_table->set(var_use->interned_name, new_list);
                     last_result = new_list;
                 }
                 else
@@ -1081,7 +1077,8 @@ private:
                     }
                     else
                     {
-                        auto this_val = context->symbol_table->get("this");
+                        static const string* this_interned = StringInterner::intern("this");
+                        auto this_val = context->symbol_table->get(this_interned);
                         shared_ptr<ModelInstance> this_inst = nullptr;
                         if (this_val && this_val->is_model_instance())
                         {
@@ -1097,7 +1094,7 @@ private:
                         {
                             this_inst->set_attr(var_name, value);
                             const SymbolTable* found_table = nullptr;
-                            const shared_ptr<DataType>* ptr = this_inst->symbol_table->get_ptr(var_name, found_table);
+                            const shared_ptr<DataType>* ptr = this_inst->symbol_table->get_ptr(var_use->interned_name, found_table);
                             if (ptr)
                             {
                                 var_use->cached_symbol_table_id = context->symbol_table->id;
@@ -1106,9 +1103,9 @@ private:
                         }
                         else
                         {
-                            context->symbol_table->set(var_name, value);
+                            context->symbol_table->set(var_use->interned_name, value);
                             const SymbolTable* found_table = nullptr;
-                            const shared_ptr<DataType>* ptr = context->symbol_table->get_ptr(var_name, found_table);
+                            const shared_ptr<DataType>* ptr = context->symbol_table->get_ptr(var_use->interned_name, found_table);
                             if (ptr)
                             {
                                 var_use->cached_symbol_table_id = context->symbol_table->id;

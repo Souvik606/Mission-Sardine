@@ -329,6 +329,10 @@ public:
 
             if (leaf_error) return { nullptr, leaf_error };
 
+            if (updated_current == current) {
+                return { new_dict, nullptr };
+            }
+
             shared_ptr<DataType> rebuilt = updated_current;
             for (size_t i = parent_chain.size(); i-- > 0;) {
                 auto [updated_parent, error] = parent_chain[i]->assignIndex({ parent_indexes[i] }, rebuilt, pos_start, pos_end);

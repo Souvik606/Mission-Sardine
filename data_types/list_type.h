@@ -250,6 +250,10 @@ public:
 
             if (leaf_error) return std::make_pair(nullptr, leaf_error);
 
+            if (updated_current == current) {
+                return std::make_pair(new_list, nullptr);
+            }
+
             shared_ptr<DataType> rebuilt = updated_current;
             for (size_t i = parent_chain.size(); i-- > 0;) {
                 auto [updated_parent, error] = parent_chain[i]->assignIndex({ parent_indexes[i] }, rebuilt);

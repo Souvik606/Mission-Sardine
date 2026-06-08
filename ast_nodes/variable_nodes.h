@@ -5,6 +5,8 @@
 #include "../language_core/lexer.h"
 #include "node.h"
 
+#include "../language_core/string_interner.h"
+
 using namespace std;
 
 class SymbolTable;
@@ -15,12 +17,21 @@ public:
     vector<shared_ptr<Node>> index_node;
     mutable uint64_t cached_symbol_table_id = 0;
     mutable const shared_ptr<DataType>* cached_value_ptr = nullptr;
+    const string* interned_name = nullptr;
 
     explicit VariableUseNode(Token token, vector<shared_ptr<Node>> indices = {})
         : Node(token.pos_start, indices.empty() ? token.pos_end : indices.back()->pos_end),
           var_name_tok(std::move(token)),
           index_node(std::move(indices)),
-          cached_value_ptr(nullptr) {}
+          cached_value_ptr(nullptr) {
+        if (var_name_tok.value.type() == typeid(string)) {
+            interned_name = StringInterner::intern(any_cast<string>(var_name_tok.value));
+        }
+    }
+
+    [[nodiscard]] int get_node_type() const override {
+        return NODE_VARIABLE_USE;
+    }
 
     [[nodiscard]] std::string to_string() const override {
         string var_name = "invalid_variable_name";
@@ -54,6 +65,10 @@ public:
           left_nodes(std::move(lefts)),
           value_nodes(std::move(values)) {}
 
+    [[nodiscard]] int get_node_type() const override {
+        return NODE_VARIABLE_ASSIGN;
+    }
+
     [[nodiscard]] std::string to_string() const override {
         stringstream ss;
         for (size_t i = 0; i < left_nodes.size(); ++i) {
@@ -75,6 +90,10 @@ public:
         : Node(obj->pos_start, idx->pos_end),
           object_node(std::move(obj)),
           index_node(std::move(idx)) {}
+
+    [[nodiscard]] int get_node_type() const override {
+        return NODE_INDEX_ACCESS;
+    }
 
     [[nodiscard]] std::string to_string() const override {
         return "(" + object_node->to_string() + "[" + index_node->to_string() + "])";
