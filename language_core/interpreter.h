@@ -262,7 +262,6 @@ private:
         if (res.should_return())
             return res;
 
-        call_value = call_value->is_mutable() ? call_value->copy() : call_value;
         call_value->set_pos(node->pos_start, node->pos_end);
 
         const vector<shared_ptr<DataType>>* pos_args_ptr = &empty_pos_args;
@@ -336,7 +335,6 @@ private:
 
         if (return_value)
         {
-            return_value = return_value->is_mutable() ? return_value->copy() : return_value;
             return_value->set_pos(node->pos_start, node->pos_end);
             if (!return_value->is_callable_type()) {
                 return_value->set_context(context);
@@ -720,13 +718,16 @@ private:
             if (res.should_return() && !res.loop_or_switch_break)
                 return res;
 
-            if (c->return_null)
+            if (!node->return_null)
             {
-                elements.push_back(std::static_pointer_cast<DataType>(make_shared<Null>()));
-            }
-            else
-            {
-                elements.push_back(body_val);
+                if (c->return_null)
+                {
+                    elements.push_back(std::static_pointer_cast<DataType>(make_shared<Null>()));
+                }
+                else
+                {
+                    elements.push_back(body_val);
+                }
             }
 
             if (res.loop_or_switch_break)
@@ -857,7 +858,7 @@ private:
 
         if (node->index_node.empty())
         {
-            auto copied = value->is_mutable() ? value->copy() : value;
+            auto copied = value;
             copied->set_pos(node->pos_start, node->pos_end);
             if (!copied->is_callable_type())
             {
@@ -880,7 +881,7 @@ private:
         if (error)
             return res.failure(*error);
 
-        auto copied = indexed_val->is_mutable() ? indexed_val->copy() : indexed_val;
+        auto copied = indexed_val;
         copied->set_pos(node->pos_start, node->pos_end);
         if (!copied->is_callable_type())
         {
@@ -1666,7 +1667,7 @@ private:
         if (error)
             return res.failure(*error);
 
-        auto copied = indexed_val->is_mutable() ? indexed_val->copy() : indexed_val;
+        auto copied = indexed_val;
         copied->set_pos(node->pos_start, node->pos_end);
         if (!copied->is_function() && !copied->is_model_type())
         {
@@ -1710,7 +1711,7 @@ private:
                 context));
         }
 
-        auto copied = value->is_mutable() ? value->copy() : value;
+        auto copied = value;
         copied->set_pos(node->pos_start, node->pos_end);
         if (!copied->is_function() && !copied->is_model_type()) {
             copied->set_context(context);
@@ -1800,7 +1801,7 @@ private:
                 for (const auto& [key_str, val] : dict_val->elements)
                 {
                     auto key_dt = key_to_datatype(key_str, context);
-                    auto pair_list = make_shared<List>(vector<shared_ptr<DataType>>{key_dt, val->is_mutable() ? val->copy() : val});
+                    auto pair_list = make_shared<List>(vector<shared_ptr<DataType>>{key_dt, val});
                     pair_list->set_context(context).set_pos(node->pos_start, node->pos_end);
                     context->symbol_table->set(var_name, pair_list);
 
@@ -1827,7 +1828,7 @@ private:
                 {
                     auto key_dt = key_to_datatype(key_str, context);
                     context->symbol_table->set(key_var_name, key_dt);
-                    context->symbol_table->set(val_var_name, val->is_mutable() ? val->copy() : val);
+                    context->symbol_table->set(val_var_name, val);
 
                     res.register_result(visit(node->body_node, context));
                     if (res.should_return() && !res.loop_continue && !res.loop_or_switch_break)
@@ -1862,7 +1863,7 @@ private:
                 string var_name = any_cast<string>(var_name_tokens[0].value);
                 for (const auto& element : list_val->elements)
                 {
-                    context->symbol_table->set(var_name, element->is_mutable() ? element->copy() : element);
+                    context->symbol_table->set(var_name, element);
 
                     res.register_result(visit(node->body_node, context));
                     if (res.should_return() && !res.loop_continue && !res.loop_or_switch_break)
@@ -1907,7 +1908,7 @@ private:
                     for (size_t i = 0; i < num_vars; ++i)
                     {
                         string var_name = any_cast<string>(var_name_tokens[i].value);
-                        context->symbol_table->set(var_name, sub_list->elements[i]->is_mutable() ? sub_list->elements[i]->copy() : sub_list->elements[i]);
+                        context->symbol_table->set(var_name, sub_list->elements[i]);
                     }
 
                     res.register_result(visit(node->body_node, context));

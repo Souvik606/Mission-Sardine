@@ -386,17 +386,15 @@ public:
 
     [[nodiscard]] OperationResult get_comparison_eq(const shared_ptr<DataType>& other) const override {
         if (const auto o = dynamic_cast<const List*>(other.get())) {
-            auto new_list_copy = dynamic_pointer_cast<List>(this->copy());
-            if (new_list_copy->elements.size() != o->elements.size()) {
+            if (this->elements.size() != o->elements.size()) {
                 auto res = Number::make_bool(false);
                 res->set_context(this->context);
                 return std::make_pair(std::static_pointer_cast<DataType>(res), nullptr);
             }
 
             bool all_match = true;
-            for (size_t i = 0; i < new_list_copy->elements.size(); ++i) {
-                auto left_copied = new_list_copy->elements[i]->copy();
-                auto [is_eq, error] = left_copied->get_comparison_eq(o->elements[i]);
+            for (size_t i = 0; i < this->elements.size(); ++i) {
+                auto [is_eq, error] = this->elements[i]->get_comparison_eq(o->elements[i]);
                 if (error || !is_eq || !is_eq->is_truthy()) {
                     all_match = false;
                     break;
