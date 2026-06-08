@@ -1,0 +1,6 @@
+# range_overflow test
+risk {
+    range(0, 100000000000000000000000000000000000000, 1)
+} trap ValueError e {
+    show(e.message)
+}

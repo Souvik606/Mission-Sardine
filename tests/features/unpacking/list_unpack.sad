@@ -3,3 +3,27 @@ show("--- Test: Direct List Unpacking ---")
 a, b = [100, 200]
 show("a should be 100:", a)
 show("b should be 200:", b)
+
+show("--- Stress Test: Mismatched Unpacking (Too Many LHS Variables) ---")
+risk {
+    x, y, z = [1, 2]
+} trap RunTimeError e {
+    show("Caught expected unpack error for too many variables:")
+    show("  " + e.message)
+}
+
+show("--- Stress Test: Mismatched Unpacking (Too Few LHS Variables) ---")
+risk {
+    x, y = [1, 2, 3]
+} trap RunTimeError e {
+    show("Caught expected unpack error for too few variables:")
+    show("  " + e.message)
+}
+
+show("--- Stress Test: Unpacking a Non-iterable Primitive ---")
+risk {
+    x, y = 42
+} trap IllegalOperationError e {
+    show("Caught expected unpack error on integer:")
+    show("  " + e.message)
+}

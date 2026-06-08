@@ -1,0 +1,28 @@
+show("--- List Comprehensions: cycle ---")
+show([i * i cycle i = 1 : 5])
+show([i cycle i = 0 : 10 : 2])
+show([i cycle i = 1 : 10 when i % 2 == 1])
+show([i cycle i = 5 : 1 : -1])
+show([i * 2 cycle i = 1 : 6 when i > 3])
+
+show("--- List Comprehensions: trace ---")
+nums = [1, 2, 3, 4, 5]
+show([x * 2 trace x <- nums])
+show([x trace x <- nums when x > 2])
+
+word = "hello"
+show([c trace c <- word])
+
+pairs = [[1, 10], [2, 20], [3, 30]]
+show([k + v trace k, v <- pairs])
+show([v trace k, v <- pairs when k > 1])
+
+show("--- Scope Isolation ---")
+i = 99
+dummy1 = [i * 2 cycle j = 1 : 3]
+show(i)
+
+x = 42
+data = [1, 2, 3]
+dummy2 = [x trace y <- data]
+show(x)

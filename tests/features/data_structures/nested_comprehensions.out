@@ -1,0 +1,9 @@
+--- Test: Complex and Nested Comprehensions ---
+--- Nested Comprehension (Matrix/Grid) ---
+[[1, 2, 3], [2, 4, 6], [3, 6, 9]]
+--- Nested List Comprehension with Variable Closure ---
+[['x:1,y:1', 'x:1,y:2'], ['x:2,y:1', 'x:2,y:2']]
+--- Complex Conditions in Comprehensions ---
+[6, 8, 10]
+--- Dict Comprehension with Multi-variable Unpacking ---
+{'banana': 200, 'cherry': 300}

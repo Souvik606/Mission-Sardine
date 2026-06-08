@@ -2,3 +2,12 @@
 x is greater than 5
 y is zero
 z is not positive
+--- Stress Test: Complex Logic Gate Precedence ---
+Precedence test passed: truthy
+--- Stress Test: Truthiness of Primitives and Collections ---
+0 is falsy
+99 is truthy
+Empty string is falsy
+'hello' is truthy
+Empty dict is falsy
+Non-empty dict is truthy

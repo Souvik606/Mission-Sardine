@@ -28,6 +28,7 @@ public:
         : Node(op.pos_start, n->pos_end),
         operator_token(std::move(op)),
         node(std::move(n)) {
+        this->depth = 1 + node->depth;
     }
 
     [[nodiscard]] std::string to_string() const override {
@@ -46,6 +47,7 @@ public:
         left_node(std::move(left)),
         operator_token(std::move(op)),
         right_node(std::move(right)) {
+        this->depth = 1 + max(left_node->depth, right_node->depth);
     }
 
     [[nodiscard]] std::string to_string() const override {
@@ -64,6 +66,7 @@ public:
         comp_node(std::move(comp)),
         true_node(std::move(true_n)),
         false_node(std::move(false_n)) {
+        this->depth = 1 + max({comp_node->depth, true_node->depth, false_node->depth});
     }
 
     [[nodiscard]] std::string to_string() const override {

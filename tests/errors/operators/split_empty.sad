@@ -1,0 +1,6 @@
+# split_empty test
+risk {
+    "hello".split("")
+} trap ValueError e {
+    show(e.message)
+}

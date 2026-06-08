@@ -1,0 +1,5 @@
+Error in tests/errors/syntax/yield_in_loop_outside_method.sad:
+  [E2001] File tests/errors/syntax/yield_in_loop_outside_method.sad, line 2
+        yield 42
+        ^^^^^
+Invalid Syntax Error: 'yield' is only allowed inside methods/functions

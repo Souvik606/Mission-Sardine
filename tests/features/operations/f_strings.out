@@ -1,0 +1,11 @@
+--- Test: F-Strings ---
+--- Basic F-string ---
+Hello, World!
+--- Inline Expressions ---
+Math: 10 + 20 = 30
+--- Object Property Access ---
+Item: Apple, Price: $1.5
+--- Function Calls in Placeholders ---
+Greeting: Hello World
+--- Nested Quotes inside placeholder ---
+Quotes inside: value

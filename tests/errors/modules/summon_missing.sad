@@ -1,0 +1,6 @@
+# summon_missing test
+risk {
+    summon nonexistent_mod_abc
+} trap ModuleError e {
+    show("ModuleError caught successfully")
+}

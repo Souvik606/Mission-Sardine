@@ -1,0 +1,5 @@
+x = 1
+menu x {
+    choice 1 { show("A") }
+    choice 1 { show("B") }
+}

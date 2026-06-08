@@ -78,3 +78,61 @@ risk {
 } clean {
     show("C7 outer clean")
 }
+
+show("--- Stress Test: Trapping IllegalOperationError ---")
+risk {
+    # Adding a number and a string raises IllegalOperationError
+    val = 100 + "string"
+} trap IllegalOperationError e {
+    show("Caught IllegalOperationError:")
+    show("  " + e.message)
+}
+
+show("--- Stress Test: Trapping TypeError ---")
+risk {
+    # Subclassing a non-model raises TypeError
+    not_a_model = 123
+    model Subclass: not_a_model {}
+} trap TypeError e {
+    show("Caught TypeError:")
+    show("  " + e.message)
+}
+
+show("--- Stress Test: Trapping ValueError ---")
+risk {
+    # Mismatched trace loop variable count raises ValueError
+    trace x, y <- [[1]] {
+        show(x)
+    }
+} trap ValueError e {
+    show("Caught ValueError:")
+    show("  " + e.message)
+}
+
+show("--- Stress Test: Trapping IndexOutOfBoundsError ---")
+risk {
+    # Popping from empty list raises IndexOutOfBoundsError
+    arr = []
+    arr.pop()
+} trap IndexOutOfBoundsError e {
+    show("Caught IndexOutOfBoundsError:")
+    show("  " + e.message)
+}
+
+show("--- Stress Test: Trapping DictKeyError ---")
+risk {
+    # Accessing missing dictionary key raises DictKeyError
+    my_dict = {"a": 1}
+    show(my_dict["missing_key"])
+} trap DictKeyError e {
+    show("Caught DictKeyError:")
+    show("  " + e.message)
+}
+
+show("--- Stress Test: Manual exception trigger via error() ---")
+risk {
+    error("This is a manual failure trigger!")
+} trap IllegalOperationError e {
+    show("Caught manual error via error() as IllegalOperationError:")
+    show("  " + e.message)
+}

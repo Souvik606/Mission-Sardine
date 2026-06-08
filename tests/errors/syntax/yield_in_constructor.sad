@@ -1,0 +1,5 @@
+model Dog {
+    init() {
+        yield 42
+    }
+}

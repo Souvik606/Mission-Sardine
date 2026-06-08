@@ -1,3 +1,11 @@
 --- Test: Keyword Arguments ---
 10 - 5 = 5
 5 - 10 = -5
+--- Stress Test: Unexpected Keyword Argument ---
+Caught expected ArgumentError on unexpected keyword:
+  Unexpected keyword argument 'extra' passed to 'subtract'
+--- Stress Test: Parameter Mismatches and Duplicates ---
+Caught expected ArgumentError on duplicate argument value:
+  Multiple values for argument 'a' passed to 'subtract'
+Caught expected ArgumentError on too many positional arguments:
+  1 too many arguments passed into 'subtract'

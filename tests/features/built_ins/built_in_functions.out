@@ -5,8 +5,8 @@ Hello, John
 130
 The value is 45.6
 --- Testing type() ---
-<type Number>
-<type Number>
+<type Integer>
+<type Float>
 <type String>
 <type List>
 <type Dict>

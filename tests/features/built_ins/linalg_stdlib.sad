@@ -1,0 +1,183 @@
+show("--- linalg stdlib: vec and mat ---")
+
+summon linalg as la
+
+summon test_utils as tu
+
+method rf(x) {
+    yield tu.rf(x)
+}
+
+show("--- vec operations ---")
+v1 = la.vec([1, 2, 3])
+v2 = la.vec([4, 5, 6])
+show(rf((v1 + v2).data))
+show(rf((v2 - v1).data))
+show(rf(v1 * v2))
+show(rf((v1 * 2).data))
+show(rf((v1 ** 2).data))
+show(rf(v1.dot(v2)))
+show(rf(v1 == v2))
+show(rf(v1 != v2))
+show(rf((-v1).data))
+
+show("--- vec new methods ---")
+v3 = la.vec([3, -4, 0])
+show("v3 size      :", rf(v3.size()))
+show("v3 L2 norm   :", rf(v3.norm()))
+show("v3 L1 norm   :", rf(v3.norm_l1()))
+show("v3 normalized:", rf(v3.normalize().data))
+show("v3 sum       :", rf(v3.sum()))
+show("v3 mean      :", rf(v3.mean()))
+show("v3 min       :", rf(v3.min()))
+show("v3 max       :", rf(v3.max()))
+show("v3 scale(3.5):", rf(v3.scale(3.5).data))
+
+# 3D vector methods
+va = la.vec([1, 0, 0])
+vb = la.vec([0, 1, 0])
+show("va cross vb  :", rf(va.cross(vb).data))
+show("va angle vb  :", rf(va.angle(vb)))
+show("va project vb:", rf(va.project(vb).data))
+
+# Vector Factories (called on any instance)
+show("vec.zeros(4) :", rf(v1.zeros(4).data))
+show("vec.ones(3)  :", rf(v1.ones(3).data))
+
+show("--- vec invalid ops ---")
+risk {
+	bad = v1 + la.vec([1, 2])
+	show(rf(bad.data))
+} trap IllegalOperationError e {
+	show("Caught expected error:", e.traceback)
+}
+
+risk {
+    bad = v1 - la.vec([1, 2])
+} trap IllegalOperationError e {
+    show("Caught expected sub mismatch error")
+}
+
+risk {
+    bad = v1 * "string"
+} trap IllegalOperationError e {
+    show("Caught expected mul invalid type error")
+}
+
+risk {
+    bad = v1 ** "string"
+} trap IllegalOperationError e {
+    show("Caught expected pow invalid type error")
+}
+
+risk {
+    bad = v3.normalize().zeros(0).normalize()
+} trap IllegalOperationError e {
+    show("Caught expected normalize zero vector error")
+}
+
+risk {
+    bad = va.cross(la.vec([1, 2]))
+} trap IllegalOperationError e {
+    show("Caught expected cross product size error")
+}
+
+risk {
+    bad = va.angle(la.vec([1, 2]))
+} trap IllegalOperationError e {
+    show("Caught expected angle size error")
+}
+
+risk {
+    bad = va.project(la.vec([0, 0, 0]))
+} trap IllegalOperationError e {
+    show("Caught expected project onto zero vector error")
+}
+
+
+show("--- mat operations ---")
+m1 = la.mat([[1, 2, 3], [4, 5, 6]])
+m2 = la.mat([[7, 8], [9, 10], [11, 12]])
+show(rf((m1 * m2).rows))
+show(rf((m1 * 2).rows))
+
+v_mul = la.vec([1, 2, 3])
+show(rf((m1 * v_mul).data))
+
+show("--- mat methods ---")
+m3 = la.mat([[1, 2, 3], [0, 1, 4], [5, 6, 0]])
+show(rf(m1.transpose().rows))
+show(rf(m3.tr()))
+show(rf(m3.determinant()))
+show(rf(m3.identity(3).rows))
+
+inv = not m3
+show(rf(inv.rows))
+
+show("--- mat new methods ---")
+show("m3 shape       :", rf(m3.shape()))
+show("m3 is_square   :", rf(m3.is_square()))
+show("m1 is_square   :", rf(m1.is_square()))
+show("m3 rank        :", rf(m3.rank()))
+show("m3 frob norm   :", rf(m3.frobenius_norm()))
+
+# Matrix Factories (called on any instance)
+show("mat.zeros(2,3) :", rf(m1.zeros(2, 3).rows))
+show("mat.ones(3,2)  :", rf(m1.ones(3, 2).rows))
+show("mat.diagonal   :", rf(m1.diagonal([2, 5, 9]).rows))
+
+# Matrix powers
+show("m3 ** 0        :", rf((m3 ** 0).rows))
+show("m3 ** 2        :", rf((m3 ** 2).rows))
+
+show("--- mat invalid ops ---")
+risk {
+	bad = m1 + m2
+	show(rf(bad.rows))
+} trap IllegalOperationError e {
+	show("Caught expected error:", e.traceback)
+}
+
+risk {
+        bad = m1 * la.vec([1, 2])
+        show(rf(bad.data))
+} trap IllegalOperationError e {
+        show("Caught expected error:", e.traceback)
+}
+
+risk {
+        bad = not m1
+        show(rf(bad.rows))
+} trap IllegalOperationError e {
+        show("Caught expected error:", e.traceback)
+}
+
+risk {
+    bad = m1 - m3
+} trap IllegalOperationError e {
+    show("Caught expected sub mismatch error")
+}
+
+risk {
+    bad = m1 * m3
+} trap IllegalOperationError e {
+    show("Caught expected mul mismatch error")
+}
+
+risk {
+    bad = m1 ** 2
+} trap IllegalOperationError e {
+    show("Caught expected power non-square error")
+}
+
+risk {
+    bad = m3 ** 1.5
+} trap IllegalOperationError e {
+    show("Caught expected power non-integer error")
+}
+
+risk {
+    bad = m3 ** -2
+} trap IllegalOperationError e {
+    show("Caught expected power negative exponent error")
+}

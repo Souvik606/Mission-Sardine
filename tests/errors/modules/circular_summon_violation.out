@@ -1,0 +1,6 @@
+Error in tests/errors/modules/circular_summon_violation.sad:
+[E8001] Traceback (most recent call last):
+  File tests/errors/modules/circular_summon_violation.sad, line 1, in <program>
+    summon circ_a
+    ^^^^^^^^^^^^^
+ModuleError: Runtime error in module 'circ_a': Runtime error in module 'circ_b': Circular dependency detected: module 'circ_a' is already being loaded

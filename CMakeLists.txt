@@ -4,8 +4,13 @@ project(MissionSardine)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(WIN32 AND NOT MSVC)
+    add_compile_options(-Wa,-mbig-obj)
+endif()
+
 add_executable(MissionSardine
         shell.cpp
+        data_types/data_type.cpp
         data_types/user_function_type.cpp
         data_types/model_type.cpp
         ast_nodes/string_nodes.h
@@ -19,4 +24,6 @@ add_executable(MissionSardine
         ast_nodes/foreach_nodes.h
         ast_nodes/summon_nodes.h
         data_types/module_type.h
-        data_types/super_proxy.h)
+        data_types/super_proxy.h
+        data_types/file_type.h
+        data_types/null_type.h)

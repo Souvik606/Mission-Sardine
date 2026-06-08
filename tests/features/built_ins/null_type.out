@@ -1,0 +1,18 @@
+--- Testing Null primitive type ---
+Null representation: Null
+Type of Null: <type Null>
+Null is falsy? (Correct)
+Null == Null: True
+Null != Null: False
+Null == 5: False
+Null != 5: True
+5 == Null: False
+5 != Null: True
+empty_func() return: Null
+empty_return() return: Null
+not Null: True
+dummy == Null: False
+Null == dummy: False
+dummy != Null: True
+Null != dummy: True
+

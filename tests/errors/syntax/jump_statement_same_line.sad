@@ -1,0 +1,5 @@
+method inc(test) {
+    b = 4
+    a = 2
+    test = test + 1 yield test
+}

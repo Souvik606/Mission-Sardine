@@ -1,0 +1,13 @@
+--- Test: Complex Inheritance and Class Boundaries ---
+--- Multi-level Inheritance and Overriding ---
+Child describe, child_val: v_child
+Middle describe, middle_val: v_middle
+Base describe, value: v_base
+--- Trapping and Clean inside Method ---
+Success in division: 5.0
+Clean block inside method ran successfully
+Caught division error inside method
+Instance value: v_base
+Clean block inside method ran successfully
+--- Recursion inside Method ---
+Recursive sum of 5: 15

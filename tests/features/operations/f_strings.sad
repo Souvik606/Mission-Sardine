@@ -1,0 +1,30 @@
+show("--- Test: F-Strings ---")
+
+show("--- Basic F-string ---")
+name = "World"
+show($"Hello, {name}!")
+
+show("--- Inline Expressions ---")
+x = 10
+y = 20
+show($"Math: {x} + {y} = {x + y}")
+
+show("--- Object Property Access ---")
+model Item {
+    open attr <name, price>
+    init(name, price) {
+        name: name,
+        price: price
+    }
+}
+apple = Item("Apple", 1.5)
+show($"Item: {apple.name}, Price: ${apple.price}")
+
+show("--- Function Calls in Placeholders ---")
+method greet(n) {
+    yield "Hello " + n
+}
+show($"Greeting: {greet(name)}")
+
+show("--- Nested Quotes inside placeholder ---")
+show($"Quotes inside: {"value"}")

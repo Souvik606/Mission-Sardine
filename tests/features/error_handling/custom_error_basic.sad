@@ -1,0 +1,15 @@
+model AppError {
+    open attr <code, message>
+    init(code, message) {
+        code: code,
+        message: message
+    }
+}
+
+risk {
+    throw(AppError(404, "Not found"))
+}
+trap AppError e {
+    show(e.code)
+    show(e.message)
+}

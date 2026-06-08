@@ -1,0 +1,11 @@
+# Circular Inheritance test
+model A {}
+model B: A {}
+
+risk {
+    # Verify standard inheritance and late binding/cyclic protections
+    b = B()
+    show(is_a(b, A))
+} trap NameError e {
+    show(e.message)
+}

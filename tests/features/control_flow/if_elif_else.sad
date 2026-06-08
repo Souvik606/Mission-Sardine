@@ -24,3 +24,54 @@ when z > 0 {
 } otherwise {
     show("z is not positive")
 }
+
+show("--- Stress Test: Complex Logic Gate Precedence ---")
+# Precedence: not, and, or
+# (1 and 0) or (not 0) -> (0) or (1) -> 1 (Truthy)
+when (1 and 0) or not 0 {
+    show("Precedence test passed: truthy")
+} otherwise {
+    show("Precedence test failed!")
+}
+
+show("--- Stress Test: Truthiness of Primitives and Collections ---")
+# Zero is falsy, non-zero is truthy
+when 0 {
+    show("0 is truthy")
+} otherwise {
+    show("0 is falsy")
+}
+
+when 99 {
+    show("99 is truthy")
+} otherwise {
+    show("99 is falsy")
+}
+
+# Empty string is falsy
+when "" {
+    show("Empty string is truthy")
+} otherwise {
+    show("Empty string is falsy")
+}
+
+# Non-empty string is truthy
+when "hello" {
+    show("'hello' is truthy")
+} otherwise {
+    show("'hello' is falsy")
+}
+
+# Empty dictionary is falsy
+when {} {
+    show("Empty dict is truthy")
+} otherwise {
+    show("Empty dict is falsy")
+}
+
+# Non-empty dictionary is truthy
+when {"a": 1} {
+    show("Non-empty dict is truthy")
+} otherwise {
+    show("Non-empty dict is falsy")
+}

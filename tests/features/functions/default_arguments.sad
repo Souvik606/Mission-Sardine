@@ -6,3 +6,31 @@ method greet(name = "World") {
 
 show(greet())
 show(greet("SARDINE"))
+
+show("--- Stress Test: Multiple defaults and partial overrides ---")
+method build_config(host = "localhost", port = 8080, debug = 0) {
+    yield "host:" + host + ",port:" + String(port) + ",debug:" + String(debug)
+}
+
+# Override only one default parameter
+show("Default config:", build_config())
+show("Debug config:", build_config(debug = 1))
+show("Custom port config:", build_config(port = 9000, host = "google.com"))
+
+show("--- Stress Test: Mixed required and default arguments ---")
+method format_msg(prefix, msg = "Default message", suffix = ".") {
+    yield prefix + ": " + msg + suffix
+}
+
+show(format_msg("INFO"))
+show(format_msg("WARN", "Disk full"))
+show(format_msg("ERROR", suffix = "!!!", msg = "Crash"))
+
+show("--- Stress Test: Missing required argument error trapping ---")
+risk {
+    # prefix is required but not supplied
+    format_msg()
+} trap ArgumentError e {
+    show("Caught expected ArgumentError:")
+    show("  " + e.message)
+}

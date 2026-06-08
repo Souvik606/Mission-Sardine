@@ -1,0 +1,5 @@
+# Reversing a list containing non-copyable types should complete without crashing Python
+method foo() {}
+items = [foo]
+rev = items.reverse()
+show("Reverse completed without crash")

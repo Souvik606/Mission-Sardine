@@ -1,0 +1,91 @@
+# ============================================================
+# csv.sad — CSV Processing Standard Library for Sards
+# ============================================================
+
+model CSVReader {
+    attr <path, file, headers>
+
+    init(path) {
+        this.path = path
+        this.file = fopen(path, "r")
+        this.headers = []
+        
+        # Read the first line as headers automatically
+        first_line = this.file.lread()
+        when len(first_line) > 0 {
+            this.headers = this.parse_row(first_line)
+        }
+    }
+
+    # Helper to parse a line of CSV fields
+    open method parse_row(line) {
+        trimmed = line.trim()
+        when len(trimmed) == 0 {
+            yield []
+        }
+        parts = trimmed.split(",")
+        cleaned = []
+        trace part <- parts {
+            cleaned = cleaned + [part.trim()]
+        }
+        yield cleaned
+    }
+
+    # Read the next row as a simple list of values
+    open method read_row() {
+        line = this.file.lread()
+        when len(line) == 0 {
+            yield Null
+        }
+        yield this.parse_row(line)
+    }
+
+    # Read the next row as a dictionary mapped to headers
+    open method read_dict_row() {
+        line = this.file.lread()
+        when len(line) == 0 {
+            yield Null
+        }
+        fields = this.parse_row(line)
+        row_dict = {}
+        
+        # Map fields to headers
+        limit = len(this.headers) - 1
+        when len(fields) < len(this.headers) {
+            limit = len(fields) - 1
+        }
+        
+        cycle i = 0 : limit {
+            row_dict = row_dict.update({this.headers[i]: fields[i]})
+        }
+        yield row_dict
+    }
+
+    open method close() {
+        this.file.close()
+    }
+}
+
+model CSVWriter {
+    attr <path, file>
+
+    init(path, mode="w") {
+        this.path = path
+        this.file = fopen(path, mode)
+    }
+
+    open method write_row(fields) {
+        string_fields = []
+        trace field <- fields {
+            string_fields = string_fields + [String(field)]
+        }
+        
+        # Join by comma
+        line = string_fields.join(",")
+        this.file.lwrite(line)
+    }
+
+    open method close() {
+        this.file.close()
+    }
+}

@@ -1,0 +1,6 @@
+Error in tests/errors/syntax/lexical_abuses.sad:
+  [E1001] File tests/errors/syntax/lexical_abuses.sad, line 1
+    x = 10 @ 20
+           ^
+Illegal Character Error: "@"
+  Hint: Remove or replace the unrecognised character.

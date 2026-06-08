@@ -1,0 +1,9 @@
+Error in tests/errors/classes_and_functions/class_structure_violations.sad:
+[E6001] Traceback (most recent call last):
+  File tests/errors/classes_and_functions/class_structure_violations.sad, line 1, in <program>
+    val = super()
+          ^^^^^
+  File tests/errors/classes_and_functions/class_structure_violations.sad, line 1, in super
+    val = super()
+          ^
+ArgumentError: super() can only be called inside a method body

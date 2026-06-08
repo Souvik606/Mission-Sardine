@@ -2,6 +2,7 @@
 #include <string>
 #include <memory>
 #include "data_type.h"
+#include "number_type.h"
 #include "../language_core/symbol_table.h"
 #include "../language_core/error.h"
 
@@ -39,7 +40,7 @@ public:
         return "<module '" + name + "'>";
     }
 
-    OperationResult get_attr(const string& attr_name, const shared_ptr<Context>& calling_context) const {
+    [[nodiscard]] OperationResult get_attr(const string& attr_name, const shared_ptr<Context>& calling_context) const override {
         auto value = symbol_table->get(attr_name);
         if (!value) {
             return { nullptr, make_shared<AttributeError>(
@@ -59,8 +60,20 @@ public:
     [[nodiscard]] OperationResult modulus(const shared_ptr<DataType> &o) const override { return err("'%'"); }
     [[nodiscard]] OperationResult exponent(const shared_ptr<DataType> &o) const override { return err("'**'"); }
     [[nodiscard]] OperationResult floor_divide(const shared_ptr<DataType> &o) const override { return err("'//'"); }
-    [[nodiscard]] OperationResult get_comparison_eq(const shared_ptr<DataType> &o) const override { return err("'=='"); }
-    [[nodiscard]] OperationResult get_comparison_neq(const shared_ptr<DataType> &o) const override { return err("'!='"); }
+    [[nodiscard]] OperationResult get_comparison_eq(const shared_ptr<DataType>& other) const override {
+        if (other->get_type_name() == "Null") {
+            return { Number::make_bool(false), nullptr };
+        }
+        bool eq = (this == other.get());
+        return { Number::make_bool(eq), nullptr };
+    }
+    [[nodiscard]] OperationResult get_comparison_neq(const shared_ptr<DataType>& other) const override {
+        if (other->get_type_name() == "Null") {
+            return { Number::make_bool(true), nullptr };
+        }
+        bool neq = (this != other.get());
+        return { Number::make_bool(neq), nullptr };
+    }
     [[nodiscard]] OperationResult get_comparison_lt(const shared_ptr<DataType> &o) const override { return err("'<'"); }
     [[nodiscard]] OperationResult get_comparison_gt(const shared_ptr<DataType> &o) const override { return err("'>'"); }
     [[nodiscard]] OperationResult get_comparison_lte(const shared_ptr<DataType> &o) const override { return err("'<='"); }

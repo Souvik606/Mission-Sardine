@@ -6,3 +6,28 @@ method subtract(a, b) {
 
 show("10 - 5 =", subtract(a=10, b=5))
 show("5 - 10 =", subtract(b=10, a=5))
+
+show("--- Stress Test: Unexpected Keyword Argument ---")
+risk {
+    subtract(a=10, b=5, extra=42)
+} trap ArgumentError e {
+    show("Caught expected ArgumentError on unexpected keyword:")
+    show("  " + e.message)
+}
+
+show("--- Stress Test: Parameter Mismatches and Duplicates ---")
+risk {
+    # 'a' is passed positionally as 10, but also as a keyword argument
+    subtract(10, 5, a=20)
+} trap ArgumentError e {
+    show("Caught expected ArgumentError on duplicate argument value:")
+    show("  " + e.message)
+}
+
+risk {
+    # Too many positional arguments passed
+    subtract(1, 2, 3)
+} trap ArgumentError e {
+    show("Caught expected ArgumentError on too many positional arguments:")
+    show("  " + e.message)
+}

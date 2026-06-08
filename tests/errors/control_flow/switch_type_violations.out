@@ -1,0 +1,6 @@
+Error in tests/errors/control_flow/switch_type_violations.sad:
+[E5001] Traceback (most recent call last):
+  File tests/errors/control_flow/switch_type_violations.sad, line 2, in <program>
+    menu foo {
+         ^^^
+IllegalOperationError: Menu selection value must be a primitive value, not 'Function'

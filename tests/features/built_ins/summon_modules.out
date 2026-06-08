@@ -1,21 +1,21 @@
 === Test 1: summon math  (bare module) ===
-3.14159265358979
+3.1415926535898
 25
 720
 
 === Test 2: summon math as mu  (module alias) ===
-3.14159265358979
+3.1415926535898
 27
 
 === Test 3: summon square, circle_area from math  (specific names) ===
 16
-78.53981633974475
+78.5398163397447
 
 === Test 4: summon factorial as fact from math  (name with alias) ===
 5040
 
 === Test 5: summon * from math  (wildcard) ===
-3.14159265358979
+3.1415926535898
 42
 64
 

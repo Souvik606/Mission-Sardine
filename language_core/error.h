@@ -5,6 +5,14 @@
 #include "position.h"
 using namespace std;
 
+class CleanExitException : public std::exception {
+public:
+    [[nodiscard]] const char* what() const noexcept override {
+        return "CleanExitException";
+    }
+};
+
+
 class Error {
 public:
     virtual ~Error() = default;
@@ -13,21 +21,28 @@ public:
     Position pos_end;
     string error_name;
     string details;
+    string error_code;
+    string hint;
 
-    Error(Position pos_start, Position pos_end, string error_name, string details)
+    Error(Position pos_start, Position pos_end, string error_name, string details, string error_code = "E0000", string hint = "")
         : pos_start(std::move(pos_start)),
         pos_end(std::move(pos_end)),
         error_name(std::move(error_name)),
-        details(std::move(details)) {
+        details(std::move(details)),
+        error_code(std::move(error_code)),
+        hint(std::move(hint)) {
     }
 
     [[nodiscard]] virtual string to_string() const {
-        string rel_path = get_relative_path(pos_start.file_name);
-        string snippet = string_with_arrows(pos_start.file_text, pos_start, pos_end);
+        string rel_path = pos_start.file_name ? get_relative_path(*pos_start.file_name) : "";
+        string snippet = pos_start.file_text ? string_with_arrows(*pos_start.file_text, pos_start, pos_end) : "";
         stringstream ss;
-        ss << "  File " << rel_path << ", line " << (pos_start.line + 1) << "\n"
+        ss << "  [" << error_code << "] File " << (rel_path.empty() ? "<unknown>" : rel_path) << ", line " << (pos_start.line + 1) << "\n"
            << snippet << "\n"
            << error_name << ": " << details;
+        if (!hint.empty()) {
+            ss << "\n  Hint: " << hint;
+        }
         return ss.str();
     }
 
@@ -41,14 +56,18 @@ protected:
         try {
             namespace fs = std::filesystem;
             fs::path p(file_path);
+            string r_str;
             if (p.is_absolute()) {
                 auto rel = fs::relative(p, fs::current_path());
-                string r_str = rel.generic_string();
-                return r_str;
+                r_str = rel.generic_string();
+            } else {
+                r_str = file_path;
+                for (char& c : r_str) {
+                    if (c == '\\') c = '/';
+                }
             }
-            string r_str = file_path;
-            for (char& c : r_str) {
-                if (c == '\\') c = '/';
+            if (r_str.rfind("stdlib/", 0) == 0) {
+                r_str = "sards/" + r_str;
             }
             return r_str;
         } catch (...) {
@@ -56,11 +75,15 @@ protected:
             for (char& c : r_str) {
                 if (c == '\\') c = '/';
             }
+            if (r_str.rfind("stdlib/", 0) == 0) {
+                r_str = "sards/" + r_str;
+            }
             return r_str;
         }
     }
 
     static string string_with_arrows(const string& text, const Position& pos_start, const Position& pos_end) {
+        if (text.empty()) return "";
         vector<string> lines;
         stringstream ss(text);
         string item;
@@ -75,12 +98,47 @@ protected:
         int col_start = max(0, min(pos_start.col, (int)line.size()));
         int col_end;
         if (pos_end.line == pos_start.line) {
-            col_end = max(col_start + 1, min(pos_end.col + 1, (int)line.size()));
+            col_end = max(col_start + 1, min(pos_end.col, (int)line.size()));
         } else {
             col_end = max(col_start + 1, (int)line.size());
         }
 
         string indent = "    ";
+
+        // Smart Truncation for exceptionally long lines (e.g. minified files or flat expressions)
+        const int MAX_LINE_LENGTH = 120;
+        if ((int)line.size() > MAX_LINE_LENGTH) {
+            int error_width = col_end - col_start;
+            int remaining = MAX_LINE_LENGTH - error_width;
+            int left_padding = max(0, remaining / 2);
+
+            int start_idx = max(0, col_start - left_padding);
+            int end_idx = min((int)line.size(), start_idx + MAX_LINE_LENGTH);
+
+            // Re-adjust start_idx if near the end of the line to show more left context
+            if (end_idx - start_idx < MAX_LINE_LENGTH) {
+                start_idx = max(0, end_idx - MAX_LINE_LENGTH);
+            }
+
+            string truncated = line.substr(start_idx, end_idx - start_idx);
+
+            int offset = -start_idx;
+            if (start_idx > 0) {
+                truncated = "..." + truncated;
+                offset += 3;
+            }
+            if (end_idx < (int)line.size()) {
+                truncated += "...";
+            }
+
+            int new_col_start = max(0, min((int)truncated.size(), col_start + offset));
+            int new_col_end = max(new_col_start + 1, min((int)truncated.size(), col_end + offset));
+
+            string snippet = indent + truncated + "\n";
+            snippet += indent + string(new_col_start, ' ') + string(new_col_end - new_col_start, '^');
+            return snippet;
+        }
+
         string snippet = indent + line + "\n";
         snippet += indent + string(col_start, ' ') + string(col_end - col_start, '^');
         return snippet;
@@ -89,8 +147,8 @@ protected:
 
 class IllegalCharError final : public Error {
 public:
-    IllegalCharError(const Position& pos_start, const Position& pos_end, const string& details = "")
-        : Error(pos_start, pos_end, "Illegal Character", details) {
+    IllegalCharError(const Position& pos_start, const Position& pos_end, const string& details = "", string hint = "")
+        : Error(pos_start, pos_end, "Illegal Character Error", details, "E1001", hint.empty() ? "Remove or replace the unrecognised character." : std::move(hint)) {
     }
 
     [[nodiscard]] shared_ptr<Error> clone() const override {
@@ -100,8 +158,8 @@ public:
 
 class ExpectedCharError final : public Error {
 public:
-    ExpectedCharError(const Position& pos_start, const Position& pos_end, const string& details = "")
-        : Error(pos_start, pos_end, "Expected Character", details) {
+    ExpectedCharError(const Position& pos_start, const Position& pos_end, const string& details = "", string hint = "")
+        : Error(pos_start, pos_end, "Expected Character", details, "E1002", std::move(hint)) {
     }
 
     [[nodiscard]] shared_ptr<Error> clone() const override {
@@ -111,8 +169,8 @@ public:
 
 class InvalidSyntaxError final : public Error {
 public:
-    InvalidSyntaxError(const Position& pos_start, const Position& pos_end, const string& details = "")
-        : Error(pos_start, pos_end, "Invalid Syntax", details) {
+    InvalidSyntaxError(const Position& pos_start, const Position& pos_end, const string& details = "", string hint = "")
+        : Error(pos_start, pos_end, "Invalid Syntax Error", details, "E2001", std::move(hint)) {
     }
 
     [[nodiscard]] shared_ptr<Error> clone() const override {
@@ -124,8 +182,8 @@ class RunTimeError : public Error {
 public:
     shared_ptr<Context> context;
 
-    RunTimeError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context, const string& error_name = "RunTimeError")
-        : Error(pos_start, pos_end, error_name, details), context(std::move(context)) {
+    RunTimeError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context, const string& error_name = "RunTimeError", string error_code = "E9001", string hint = "")
+        : Error(pos_start, pos_end, error_name, details, std::move(error_code), std::move(hint)), context(std::move(context)) {
     }
 
     [[nodiscard]] string to_string() const override {
@@ -136,14 +194,30 @@ public:
         vector<string> frames;
         Position pos = this->pos_start;
         shared_ptr<Context> ctx = this->context;
+        unordered_set<uintptr_t> visited;
 
-        while (ctx) {
-            string rel_path = get_relative_path(pos.file_name);
-            Position end_pos = (ctx->parent == nullptr) ? this->pos_end : pos;
-            string snippet = string_with_arrows(pos.file_text, pos, end_pos);
+        while (ctx && frames.size() < 1000) {
+            if (visited.count(reinterpret_cast<uintptr_t>(ctx.get()))) {
+                break;
+            }
+            visited.insert(reinterpret_cast<uintptr_t>(ctx.get()));
+
+            string rel_path;
+            string snippet;
+            string line_str;
+            if (!pos.file_name || pos.file_name->empty()) {
+                rel_path = "<unknown>";
+                snippet = "";
+                line_str = "?";
+            } else {
+                rel_path = get_relative_path(*pos.file_name);
+                Position end_pos = (ctx->parent == nullptr) ? this->pos_end : pos;
+                snippet = pos.file_text ? string_with_arrows(*pos.file_text, pos, end_pos) : "";
+                line_str = std::to_string(pos.line + 1);
+            }
 
             stringstream frame_ss;
-            frame_ss << "  File " << rel_path << ", line " << (pos.line + 1)
+            frame_ss << "  File " << rel_path << ", line " << line_str
                      << ", in " << ctx->display_name << "\n"
                      << snippet;
             frames.push_back(frame_ss.str());
@@ -164,9 +238,12 @@ public:
         }
 
         stringstream final_ss;
-        final_ss << "Traceback (most recent call last):\n"
+        final_ss << "[" << error_code << "] Traceback (most recent call last):\n"
                  << traceback_body.str() << "\n"
                  << this->error_name << ": " << this->details;
+        if (!hint.empty()) {
+            final_ss << "\n  Hint: " << hint;
+        }
 
         return final_ss.str();
     }
@@ -178,8 +255,8 @@ public:
 
 class IllegalOperationError final : public RunTimeError {
 public:
-    IllegalOperationError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context)
-        : RunTimeError(pos_start, pos_end, details, context, "IllegalOperationError") {
+    IllegalOperationError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context, string hint = "")
+        : RunTimeError(pos_start, pos_end, details, std::move(context), "IllegalOperationError", "E5001", std::move(hint)) {
     }
 
     [[nodiscard]] shared_ptr<Error> clone() const override {
@@ -189,8 +266,9 @@ public:
 
 class DivisionByZeroError final : public RunTimeError {
 public:
-    DivisionByZeroError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context)
-        : RunTimeError(pos_start, pos_end, details, context, "DivisionByZeroError") {
+    DivisionByZeroError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context, string hint = "")
+        : RunTimeError(pos_start, pos_end, details, std::move(context), "DivisionByZeroError", "E5002",
+                       hint.empty() ? "Check that the divisor is not zero before dividing. Example: `when b != 0 { result = a / b }`" : std::move(hint)) {
     }
 
     [[nodiscard]] shared_ptr<Error> clone() const override {
@@ -200,8 +278,9 @@ public:
 
 class IndexOutOfBoundsError final : public RunTimeError {
 public:
-    IndexOutOfBoundsError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context)
-        : RunTimeError(pos_start, pos_end, details, context, "IndexOutOfBoundsError") {
+    IndexOutOfBoundsError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context, string hint = "")
+        : RunTimeError(pos_start, pos_end, details, std::move(context), "IndexOutOfBoundsError", "E7001",
+                       hint.empty() ? "Use `len(collection) - 1` to find the last valid index, or check bounds before accessing." : std::move(hint)) {
     }
 
     [[nodiscard]] shared_ptr<Error> clone() const override {
@@ -211,8 +290,9 @@ public:
 
 class NameError final : public RunTimeError {
 public:
-    NameError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context)
-        : RunTimeError(pos_start, pos_end, details, context, "NameError") {
+    NameError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context, string hint = "")
+        : RunTimeError(pos_start, pos_end, details, std::move(context), "NameError", "E3001",
+                       hint.empty() ? "Check for typos or make sure the variable is assigned before use." : std::move(hint)) {
     }
 
     [[nodiscard]] shared_ptr<Error> clone() const override {
@@ -222,8 +302,8 @@ public:
 
 class ArgumentError final : public RunTimeError {
 public:
-    ArgumentError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context)
-        : RunTimeError(pos_start, pos_end, details, context, "ArgumentError") {
+    ArgumentError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context, string hint = "")
+        : RunTimeError(pos_start, pos_end, details, std::move(context), "ArgumentError", "E6001", std::move(hint)) {
     }
 
     [[nodiscard]] shared_ptr<Error> clone() const override {
@@ -233,8 +313,8 @@ public:
 
 class NotImplementedError final : public RunTimeError {
 public:
-    NotImplementedError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context)
-        : RunTimeError(pos_start, pos_end, details, context, "NotImplementedError") {
+    NotImplementedError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context, string hint = "")
+        : RunTimeError(pos_start, pos_end, details, std::move(context), "NotImplementedError", "E9004", std::move(hint)) {
     }
 
     [[nodiscard]] shared_ptr<Error> clone() const override {
@@ -244,8 +324,9 @@ public:
 
 class InvalidErrorTypeError final : public RunTimeError {
 public:
-    InvalidErrorTypeError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context)
-        : RunTimeError(pos_start, pos_end, details, context, "InvalidErrorTypeError") {
+    InvalidErrorTypeError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context, string hint = "")
+        : RunTimeError(pos_start, pos_end, details, std::move(context), "InvalidErrorTypeError", "E9003",
+                       hint.empty() ? "Valid error types are: RunTimeError, IllegalOperationError, DivisionByZeroError, IndexOutOfBoundsError, NameError, ArgumentError, TypeError, AttributeError, DictKeyError, ValueError, ModuleError, StackDepthExceededError." : std::move(hint)) {
     }
 
     [[nodiscard]] shared_ptr<Error> clone() const override {
@@ -255,8 +336,9 @@ public:
 
 class DictKeyError final : public RunTimeError {
 public:
-    DictKeyError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context)
-        : RunTimeError(pos_start, pos_end, details, context, "DictKeyError") {
+    DictKeyError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context, string hint = "")
+        : RunTimeError(pos_start, pos_end, details, std::move(context), "DictKeyError", "E7003",
+                       hint.empty() ? "Check whether the key exists before accessing it." : std::move(hint)) {
     }
 
     [[nodiscard]] shared_ptr<Error> clone() const override {
@@ -266,8 +348,8 @@ public:
 
 class AttributeError final : public RunTimeError {
 public:
-    AttributeError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context)
-        : RunTimeError(pos_start, pos_end, details, context, "AttributeError") {
+    AttributeError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context, string hint = "")
+        : RunTimeError(pos_start, pos_end, details, std::move(context), "AttributeError", "E7002", std::move(hint)) {
     }
 
     [[nodiscard]] shared_ptr<Error> clone() const override {
@@ -277,11 +359,74 @@ public:
 
 class TypeError final : public RunTimeError {
 public:
-    TypeError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context)
-        : RunTimeError(pos_start, pos_end, details, context, "TypeError") {
+    TypeError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context, string hint = "")
+        : RunTimeError(pos_start, pos_end, details, std::move(context), "TypeError", "E4001", std::move(hint)) {
     }
 
     [[nodiscard]] shared_ptr<Error> clone() const override {
         return make_shared<TypeError>(*this);
     }
-};
+};
+
+class ValueError final : public RunTimeError {
+public:
+    ValueError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context, string hint = "")
+        : RunTimeError(pos_start, pos_end, details, std::move(context), "ValueError", "E9005", std::move(hint)) {
+    }
+
+    [[nodiscard]] shared_ptr<Error> clone() const override {
+        return make_shared<ValueError>(*this);
+    }
+};
+
+class ModuleError final : public RunTimeError {
+public:
+    ModuleError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context, string hint = "")
+        : RunTimeError(pos_start, pos_end, details, std::move(context), "ModuleError", "E8001", std::move(hint)) {
+    }
+
+    [[nodiscard]] shared_ptr<Error> clone() const override {
+        return make_shared<ModuleError>(*this);
+    }
+};
+
+class StackDepthExceededError final : public RunTimeError {
+public:
+    StackDepthExceededError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context, string hint = "")
+        : RunTimeError(pos_start, pos_end, details, std::move(context), "StackDepthExceededError", "E9002",
+                       hint.empty() ? "This usually means a function is calling itself infinitely. Check your recursive functions for a proper base case." : std::move(hint)) {
+    }
+
+    [[nodiscard]] shared_ptr<Error> clone() const override {
+        return make_shared<StackDepthExceededError>(*this);
+    }
+};
+
+class FileIOError final : public RunTimeError {
+public:
+    FileIOError(const Position& pos_start, const Position& pos_end, const string& details, shared_ptr<Context> context, string hint = "")
+        : RunTimeError(pos_start, pos_end, details, std::move(context), "FileIOError", "E9006",
+                       hint.empty() ? "Verify that the path is correct, the file exists, and you have necessary permissions." : std::move(hint)) {
+    }
+
+    [[nodiscard]] shared_ptr<Error> clone() const override {
+        return make_shared<FileIOError>(*this);
+    }
+};
+
+class DataType;
+
+class UserDefinedError final : public RunTimeError {
+public:
+    shared_ptr<DataType> instance;
+
+    UserDefinedError(const Position& pos_start, const Position& pos_end, shared_ptr<DataType> inst, shared_ptr<Context> context, string hint = "");
+
+    [[nodiscard]] shared_ptr<Error> clone() const override {
+        return make_shared<UserDefinedError>(*this);
+    }
+
+private:
+    static string get_name_from_instance(const shared_ptr<DataType>& inst);
+    static string get_details_from_instance(const shared_ptr<DataType>& inst);
+};

@@ -44,6 +44,8 @@ public:
     explicit Function(string name, shared_ptr<Node> body, vector<pair<string, shared_ptr<Node>>> args, bool return_null,
                       shared_ptr<DataType> instance = nullptr);
 
+    [[nodiscard]] string get_type_name() const override { return "Function"; }
+
     DataType& set_context(const shared_ptr<Context>& ctx) override {
         if (!this->context) {
             this->context = ctx;
@@ -76,8 +78,20 @@ public:
     [[nodiscard]] OperationResult modulus(const shared_ptr<DataType> &other) const override { return std::make_pair(nullptr, illegal_op_error(this, other.get())); }
     [[nodiscard]] OperationResult floor_divide(const shared_ptr<DataType> &other) const override { return std::make_pair(nullptr, illegal_op_error(this, other.get())); }
     [[nodiscard]] OperationResult exponent(const shared_ptr<DataType> &other) const override { return std::make_pair(nullptr, illegal_op_error(this, other.get())); }
-    [[nodiscard]] OperationResult get_comparison_eq(const shared_ptr<DataType> &other) const override { return std::make_pair(nullptr, illegal_op_error(this, other.get())); }
-    [[nodiscard]] OperationResult get_comparison_neq(const shared_ptr<DataType> &other) const override { return std::make_pair(nullptr, illegal_op_error(this, other.get())); }
+    [[nodiscard]] OperationResult get_comparison_eq(const shared_ptr<DataType>& other) const override {
+        if (other->get_type_name() == "Null") {
+            return { Number::make_bool(false), nullptr };
+        }
+        bool eq = (this == other.get());
+        return { Number::make_bool(eq), nullptr };
+    }
+    [[nodiscard]] OperationResult get_comparison_neq(const shared_ptr<DataType>& other) const override {
+        if (other->get_type_name() == "Null") {
+            return { Number::make_bool(true), nullptr };
+        }
+        bool neq = (this != other.get());
+        return { Number::make_bool(neq), nullptr };
+    }
     [[nodiscard]] OperationResult get_comparison_lt(const shared_ptr<DataType> &other) const override { return std::make_pair(nullptr, illegal_op_error(this, other.get())); }
     [[nodiscard]] OperationResult get_comparison_gt(const shared_ptr<DataType> &other) const override { return std::make_pair(nullptr, illegal_op_error(this, other.get())); }
     [[nodiscard]] OperationResult get_comparison_lte(const shared_ptr<DataType> &other) const override { return std::make_pair(nullptr, illegal_op_error(this, other.get())); }

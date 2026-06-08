@@ -1,0 +1,5 @@
+Error in tests/errors/syntax/jump_statement_same_line.sad:
+  [E2001] File tests/errors/syntax/jump_statement_same_line.sad, line 4
+        test = test + 1 yield test
+                        ^^^^^
+Invalid Syntax Error: Expected newline to separate statements. Jump statements (like 'yield') must be on a new line.

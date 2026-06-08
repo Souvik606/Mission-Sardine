@@ -60,14 +60,14 @@ public:
 
 class Lexer {
 public:
-    string filename;
-    string text;
+    shared_ptr<const string> filename;
+    shared_ptr<const string> text;
     Position pos;
     optional<char> current_char;
 
-    Lexer(const string& filename, const string& text)
-        : filename(filename),
-        text(text),
+    Lexer(const string& filename_str, const string& text_str)
+        : filename(make_shared<const string>(filename_str)),
+        text(make_shared<const string>(text_str)),
         pos(Position(-1, 0, -1, filename, text)),
         current_char(nullopt) {
         advance();
@@ -75,8 +75,8 @@ public:
 
     void advance() {
         pos.advance(current_char.value_or('\0'));
-        if (pos.index < text.length()) {
-            current_char = text[pos.index];
+        if (pos.index < text->length()) {
+            current_char = (*text)[pos.index];
         }
         else {
             current_char = nullopt;
@@ -399,7 +399,7 @@ public:
         return Token(token_type, {}, pos_start, pos);
     }
 
-    Token make_number() {
+    variant<Token, shared_ptr<Error>> make_number() {
         string number_str;
         bool is_float = false;
         Position pos_start = pos.copy();
@@ -415,11 +415,19 @@ public:
             }
             advance();
         }
-        if (is_float) {
-            return Token(T_FLOAT, stod(number_str), pos_start, pos);
-        }
-        else {
-            return Token(T_INT, stoll(number_str), pos_start, pos);
+        try {
+            if (is_float) {
+                return Token(T_FLOAT, stod(number_str), pos_start, pos);
+            }
+            else {
+                try {
+                    return Token(T_INT, stoll(number_str), pos_start, pos);
+                } catch (...) {
+                    return Token(T_INT, stod(number_str), pos_start, pos);
+                }
+            }
+        } catch (...) {
+            return make_shared<IllegalCharError>(pos_start, pos, "Numerical literal exceeds digit conversion limits or is invalid");
         }
     }
 
@@ -439,7 +447,11 @@ public:
                 advance();
             }
             else if (DIGITS.find(c) != string::npos) {
-                tokens.push_back(make_number());
+                auto result = make_number();
+                if (holds_alternative<shared_ptr<Error>>(result)) {
+                    return { {}, get<shared_ptr<Error>>(result) };
+                }
+                tokens.push_back(get<Token>(result));
             }
             else if (LETTERS.find(c) != string::npos || c == '_') {
                 tokens.push_back(make_identifier());

@@ -1,0 +1,7 @@
+# list_overflow_slice test
+a = [1, 2]
+risk {
+    show(a.slice(0, 100000000000000000000000000000000000000))
+} trap IndexOutOfBoundsError e {
+    show(e.message)
+}

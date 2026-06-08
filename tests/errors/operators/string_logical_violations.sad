@@ -1,0 +1,2 @@
+show("foo" and "bar")
+show("" or "fallback")

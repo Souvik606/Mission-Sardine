@@ -1,0 +1,179 @@
+# ============================================================
+# math_stdlib.sad — Comprehensive tests for math.sad
+# ============================================================
+
+summon math as m
+
+summon test_utils as tu
+
+method rf(x) {
+    yield tu.rf(x)
+}
+
+show("--- math stdlib: constants ---")
+show("PI :", rf(m.PI))
+show("E  :", rf(m.E))
+show("TAU:", rf(m.TAU))
+show("PHI:", rf(m.PHI))
+show("INF:", rf(m.INF))
+
+show("--- math stdlib: basic operations ---")
+show("abs(5)        :", rf(m.abs(5)))
+show("abs(-7.5)     :", rf(m.abs(-7.5)))
+show("absolute(-3)  :", rf(m.absolute(-3)))
+show("sign(-12)     :", rf(m.sign(-12)))
+show("sign(0)       :", rf(m.sign(0)))
+show("sign(4.2)     :", rf(m.sign(4.2)))
+show("square(4)     :", rf(m.square(4)))
+show("square(-2.5)  :", rf(m.square(-2.5)))
+show("cube(3)       :", rf(m.cube(3)))
+show("cube(-2)      :", rf(m.cube(-2)))
+show("pow(2, 5)     :", rf(m.pow(2, 5)))
+show("pow(1.5, 3)   :", rf(m.pow(1.5, 3)))
+show("pow(4, 0)     :", rf(m.pow(4, 0)))
+show("pow(2, -3)    :", rf(m.pow(2, -3)))
+show("sqrt(16)      :", rf(m.sqrt(16)))
+show("sqrt(2)       :", rf(m.sqrt(2)))
+show("sqrt(0)       :", rf(m.sqrt(0)))
+show("cbrt(27)      :", rf(m.cbrt(27)))
+show("cbrt(-8)      :", rf(m.cbrt(-8)))
+show("cbrt(0)       :", rf(m.cbrt(0)))
+show("hypot(3, 4)   :", rf(m.hypot(3, 4)))
+show("hypot(5, 12)  :", rf(m.hypot(5, 12)))
+
+show("--- math stdlib: rounding & division ---")
+show("floor(3.7)    :", rf(m.floor(3.7)))
+show("floor(-2.3)   :", rf(m.floor(-2.3)))
+show("floor(5)      :", rf(m.floor(5)))
+show("ceil(3.2)     :", rf(m.ceil(3.2)))
+show("ceil(-2.7)    :", rf(m.ceil(-2.7)))
+show("ceil(5)       :", rf(m.ceil(5)))
+show("round(3.4)    :", rf(m.round(3.4)))
+show("round(3.6)    :", rf(m.round(3.6)))
+show("round(-2.5)   :", rf(m.round(-2.5)))
+show("round(-2.4)   :", rf(m.round(-2.4)))
+show("clamp(5, 1, 10) :", rf(m.clamp(5, 1, 10)))
+show("clamp(0, 1, 10) :", rf(m.clamp(0, 1, 10)))
+show("clamp(12, 1, 10):", rf(m.clamp(12, 1, 10)))
+show("gcd(12, 18)   :", rf(m.gcd(12, 18)))
+show("gcd(-6, 9)    :", rf(m.gcd(-6, 9)))
+show("lcm(12, 18)   :", rf(m.lcm(12, 18)))
+show("lcm(0, 5)     :", rf(m.lcm(0, 5)))
+
+show("--- math stdlib: exponentials & logarithms ---")
+show("exp(0)        :", rf(m.exp(0)))
+show("exp(1)        :", rf(m.exp(1)))
+show("exp(-1)       :", rf(m.exp(-1)))
+show("ln(m.E)       :", rf(m.ln(m.E)))
+show("ln(1)         :", rf(m.ln(1)))
+show("log2(8)       :", rf(m.log2(8)))
+show("log10(100)    :", rf(m.log10(100)))
+show("log(27, 3)    :", rf(m.log(27, 3)))
+
+show("--- math stdlib: trigonometry ---")
+show("sin(0)        :", rf(m.sin(0)))
+show("sin(m.PI/2)   :", rf(m.sin(m.PI / 2)))
+show("cos(0)        :", rf(m.cos(0)))
+show("cos(m.PI)     :", rf(m.cos(m.PI)))
+show("tan(0)        :", rf(m.tan(0)))
+show("tan(m.PI/4)   :", rf(m.tan(m.PI / 4)))
+show("asin(0.5)     :", rf(m.asin(0.5)))
+show("acos(0.5)     :", rf(m.acos(0.5)))
+show("atan(1)       :", rf(m.atan(1)))
+show("atan2(1, 1)   :", rf(m.atan2(1, 1)))
+show("atan2(-1, 0)  :", rf(m.atan2(-1, 0)))
+show("deg_to_rad(90):", rf(m.deg_to_rad(90)))
+show("rad_to_deg(m.PI/6):", rf(m.rad_to_deg(m.PI / 6)))
+
+show("--- math stdlib: number theory ---")
+show("factorial(5)  :", rf(m.factorial(5)))
+show("factorial(0)  :", rf(m.factorial(0)))
+show("fibonacci(0)  :", rf(m.fibonacci(0)))
+show("fibonacci(1)  :", rf(m.fibonacci(1)))
+show("fibonacci(10) :", rf(m.fibonacci(10)))
+show("is_prime(2)   :", rf(m.is_prime(2)))
+show("is_prime(17)  :", rf(m.is_prime(17)))
+show("is_prime(4)   :", rf(m.is_prime(4)))
+show("is_prime(1)   :", rf(m.is_prime(1)))
+show("is_even(6)    :", rf(m.is_even(6)))
+show("is_even(7)    :", rf(m.is_even(7)))
+show("is_odd(6)     :", rf(m.is_odd(6)))
+show("is_odd(7)     :", rf(m.is_odd(7)))
+
+show("--- math stdlib: geometry ---")
+show("circle_area(3.0)      :", rf(m.circle_area(3.0)))
+show("circle_perimeter(2.5) :", rf(m.circle_perimeter(2.5)))
+show("triangle_area(4, 5)   :", rf(m.triangle_area(4, 5)))
+show("sphere_volume(1.5)    :", rf(m.sphere_volume(1.5)))
+show("cylinder_volume(2, 3) :", rf(m.cylinder_volume(2, 3)))
+
+show("--- math stdlib: combinatorics ---")
+show("permutations(5, 2)  :", rf(m.permutations(5, 2)))
+show("combinations(5, 2)  :", rf(m.combinations(5, 2)))
+
+show("--- math stdlib: error handling ---")
+risk {
+    bad = m.sqrt(-1)
+} trap RunTimeError e {
+    show("Caught sqrt(-1) error")
+}
+
+risk {
+    bad = m.ln(0)
+} trap RunTimeError e {
+    show("Caught ln(0) error")
+}
+
+risk {
+    bad = m.log(10, 1)
+} trap RunTimeError e {
+    show("Caught log with base 1 error")
+}
+
+risk {
+    bad = m.tan(m.PI / 2)
+} trap RunTimeError e {
+    show("Caught tan(PI/2) error")
+}
+
+risk {
+    bad = m.asin(2.5)
+} trap RunTimeError e {
+    show("Caught asin(2.5) error")
+}
+
+risk {
+    bad = m.acos(-1.5)
+} trap RunTimeError e {
+    show("Caught acos(-1.5) error")
+}
+
+risk {
+    bad = m.atan2(0, 0)
+} trap RunTimeError e {
+    show("Caught atan2(0,0) error")
+}
+
+risk {
+    bad = m.factorial(-3)
+} trap RunTimeError e {
+    show("Caught negative factorial error")
+}
+
+risk {
+    bad = m.fibonacci(-5)
+} trap RunTimeError e {
+    show("Caught negative fibonacci error")
+}
+
+risk {
+    bad = m.permutations(3, 4)
+} trap RunTimeError e {
+    show("Caught permutations r > n error")
+}
+
+risk {
+    bad = m.combinations(4, -1)
+} trap RunTimeError e {
+    show("Caught combinations r < 0 error")
+}

@@ -5,3 +5,27 @@ during i < 5 {
     show("i:", i)
     i = i + 1
 }
+
+show("--- Stress Test: Whenever Loop with collection truthiness ---")
+# An empty list is falsy (length = 0)
+empty_list = []
+during empty_list {
+    show("This should not be printed!")
+}
+
+# A non-empty list is truthy (length > 0)
+items = [1, 2, 3]
+during items {
+    show("Length before pop:", len(items))
+    popped = items.pop()
+    # Manually reducing the list to test loop termination
+    items = [1, 2]
+    show("Items reduced:", items)
+    items = []
+}
+
+show("--- Stress Test: Loop with initially false condition ---")
+k = 100
+during k < 10 {
+    show("Should not print k:", k)
+}

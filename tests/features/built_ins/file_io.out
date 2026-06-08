@@ -1,0 +1,17 @@
+--- Testing File I/O Happy Path ---
+file is open: <file 'tests/features/built_ins/test_temp.txt' mode='w' state=open>
+file2 is open: <file 'tests/features/built_ins/test_temp.txt' mode='r' state=open>
+content:
+Line 1: Hello from Sardine!
+Line 2: Enhanced line writing.
+
+Line 1 trimmed: Line 1: Hello from Sardine!
+Line 2 trimmed: Line 2: Enhanced line writing.
+Line 3 trimmed: Line 3: Appended content.
+Line 4 is empty: True
+file4 is closed: <file 'tests/features/built_ins/test_temp.txt' mode='r' state=closed>
+--- Testing File Line Iteration via trace ---
+trace line: Line 1: Hello from Sardine!
+trace line: Line 2: Enhanced line writing.
+trace line: Line 3: Appended content.
+comprehension lines: ['Line 1: Hello from Sardine!', 'Line 2: Enhanced line writing.', 'Line 3: Appended content.']

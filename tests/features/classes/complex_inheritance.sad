@@ -1,0 +1,68 @@
+show("--- Test: Complex Inheritance and Class Boundaries ---")
+
+model Base {
+    open attr <value>
+    init(val) {
+        value: val
+    }
+
+    open method describe() {
+        show("Base describe, value:", value)
+    }
+}
+
+model Middle: Base {
+    open attr <middle_val>
+    init(val, mid) {
+        value: val,
+        middle_val: mid
+    }
+
+    open method describe() {
+        show("Middle describe, middle_val:", middle_val)
+        super().describe()
+    }
+}
+
+model Child: Middle {
+    open attr <child_val>
+    init(val, mid, child) {
+        value: val,
+        middle_val: mid,
+        child_val: child
+    }
+
+    open method describe() {
+        show("Child describe, child_val:", child_val)
+        super().describe()
+    }
+
+    # Test clean block and trapping inside a class method
+    open method division_safety(num, denom) {
+        risk {
+            result = num / denom
+            show("Success in division:", result)
+        } trap DivisionByZeroError e {
+            show("Caught division error inside method")
+            show("Instance value:", value)
+        } clean {
+            show("Clean block inside method ran successfully")
+        }
+    }
+
+    # Test recursive call on a class method
+    open method recursive_sum(n) {
+        yield (n <= 1) ? n : (n + this.recursive_sum(n - 1))
+    }
+}
+
+show("--- Multi-level Inheritance and Overriding ---")
+c = Child("v_base", "v_middle", "v_child")
+c.describe()
+
+show("--- Trapping and Clean inside Method ---")
+c.division_safety(10, 2)
+c.division_safety(10, 0)
+
+show("--- Recursion inside Method ---")
+show("Recursive sum of 5:", c.recursive_sum(5))

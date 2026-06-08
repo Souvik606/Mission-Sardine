@@ -1,0 +1,29 @@
+True
+True
+False
+True
+False
+<type Integer>
+<type Float>
+<type Boolean>
+False
+True
+4
+2.5
+<type Integer>
+<type Float>
+3.3333333333333
+3
+5.0
+3
+False
+True
+1
+2
+3
+4
+5
+1
+2
+3
+truthy branch works

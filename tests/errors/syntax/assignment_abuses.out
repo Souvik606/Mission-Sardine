@@ -1,0 +1,5 @@
+Error in tests/errors/syntax/assignment_abuses.sad:
+  [E2001] File tests/errors/syntax/assignment_abuses.sad, line 4
+    a() = 10
+        ^
+Invalid Syntax Error: Expected newline to separate statements

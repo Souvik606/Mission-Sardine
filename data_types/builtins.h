@@ -6,7 +6,7 @@
 
 using namespace std;
 
-using BuiltInFuncType = std::function<RunTimeResult(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args, const shared_ptr<Context>& context)>;
+using BuiltInFuncType = std::function<RunTimeResult(const Position& pos_start, const Position& pos_end, const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args, const shared_ptr<Context>& context)>;
 
 inline shared_ptr<RunTimeError> illegal_op_for_builtin(const DataType* self) {
     return make_shared<RunTimeError>(
@@ -21,13 +21,16 @@ class BuiltInFunction final : public DataType {
 public:
     string name;
     BuiltInFuncType execute_impl;
-
     explicit BuiltInFunction(string name, BuiltInFuncType impl)
         : name(std::move(name)), execute_impl(std::move(impl)) {
     }
 
+    [[nodiscard]] string get_type_name() const override { return "BuiltInFunction"; }
+
     [[nodiscard]] RunTimeResult execute(const vector<shared_ptr<DataType>>& args, const map<string, shared_ptr<DataType>>& kw_args, const shared_ptr<Context>& context) const {
-        return this->execute_impl(args, kw_args, context);
+        auto exec_context = make_shared<Context>(this->name, context, this->pos_start);
+        exec_context->symbol_table = make_shared<SymbolTable>(context->symbol_table);
+        return this->execute_impl(this->pos_start.value_or(Position()), this->pos_end.value_or(Position()), args, kw_args, exec_context);
     }
 
     [[nodiscard]] bool is_truthy() const override {
@@ -59,8 +62,20 @@ public:
     [[nodiscard]] OperationResult modulus(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_builtin(this)); }
     [[nodiscard]] OperationResult floor_divide(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_builtin(this)); }
     [[nodiscard]] OperationResult exponent(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_builtin(this)); }
-    [[nodiscard]] OperationResult get_comparison_eq(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_builtin(this)); }
-    [[nodiscard]] OperationResult get_comparison_neq(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_builtin(this)); }
+    [[nodiscard]] OperationResult get_comparison_eq(const shared_ptr<DataType>& other) const override {
+        if (other->get_type_name() == "Null") {
+            return { Number::make_bool(false), nullptr };
+        }
+        bool eq = (this == other.get());
+        return { Number::make_bool(eq), nullptr };
+    }
+    [[nodiscard]] OperationResult get_comparison_neq(const shared_ptr<DataType>& other) const override {
+        if (other->get_type_name() == "Null") {
+            return { Number::make_bool(true), nullptr };
+        }
+        bool neq = (this != other.get());
+        return { Number::make_bool(neq), nullptr };
+    }
     [[nodiscard]] OperationResult get_comparison_lt(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_builtin(this)); }
     [[nodiscard]] OperationResult get_comparison_gt(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_builtin(this)); }
     [[nodiscard]] OperationResult get_comparison_lte(const shared_ptr<DataType>& other) const override { return std::make_pair(nullptr, illegal_op_for_builtin(this)); }
