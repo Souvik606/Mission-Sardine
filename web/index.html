@@ -1,957 +1,1239 @@
 <!DOCTYPE html>
 <html lang="en" class="h-full bg-slate-950 text-slate-100">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Mission-Sardine Language Playground</title>
-        <!-- Tailwind CSS for high fidelity dark theme styling -->
-        <script src="https://cdn.tailwindcss.com"></script>
-        <!-- Lucide icons -->
-        <script src="https://unpkg.com/lucide@latest"></script>
-        <!-- Load COI Service Worker to enable SharedArrayBuffer -->
-        <script src="coi-serviceworker.js"></script>
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
-            body {
-                font-family: 'Outfit', sans-serif;
-            }
-            .font-mono {
-                font-family: 'JetBrains Mono', monospace;
-            }
-        </style>
-    </head>
-    <body class="h-full flex flex-col overflow-hidden font-sans select-none">
 
-        <!-- Header Navigation -->
-        <header class="border-b border-slate-800 bg-slate-900 px-6 py-4 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                    <i data-lucide="terminal" class="h-5 w-5 text-white"></i>
-                </div>
-                <div>
-                    <h1 class="font-bold text-lg leading-none">Mission-Sardine Playground</h1>
-                    <p class="text-xs text-slate-400 mt-1">C++ interpreter running client-side via WebAssembly</p>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sardine</title>
+    <!-- Favicon configurations -->
+    <link rel="apple-touch-icon" sizes="180x180" href="media/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="media/icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="media/icons/favicon-16x16.png">
+    <link rel="manifest" href="media/icons/site.webmanifest">
+    <link rel="shortcut icon" href="media/icons/favicon.ico">
+    <!-- Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Load COI Service Worker to enable SharedArrayBuffer -->
+    <script src="coi-serviceworker.js"></script>
+    <!-- Monaco Editor Loader -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs/loader.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet" crossorigin>
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .font-mono {
+            font-family: Consolas, "Courier New", Courier, monospace;
+        }
+
+        /* Custom glassmorphism scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.3);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.2);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.4);
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-4px);
+            }
+
+            75% {
+                transform: translateX(4px);
+            }
+        }
+
+        .animate-shake {
+            animation: shake 0.2s ease-in-out 0s 2;
+        }
+    </style>
+</head>
+
+<body
+    class="h-full flex flex-col overflow-hidden font-sans select-none bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900">
+
+    <!-- Full Screen Loading Overlay -->
+    <div id="page-loading-overlay"
+        class="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center transition-opacity duration-500 ease-out">
+        <div class="relative flex flex-col items-center text-center">
+            <!-- Rotating gradient border circle -->
+            <div class="w-16 h-16 rounded-full border-4 border-slate-800 border-t-indigo-500 animate-spin mb-6"></div>
+            <!-- Muted Logo -->
+            <img src="media/v0.3d-cropped.png" alt="Sardine Logo" class="h-10 w-auto opacity-80 mb-2 animate-pulse">
+            <p class="text-xs text-slate-400 font-mono tracking-widest uppercase animate-pulse">Initializing
+                Environment...</p>
+        </div>
+    </div>
+
+    <!-- Global Header Navigation -->
+    <header
+        class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md px-6 py-4 flex items-center justify-between z-30 shrink-0">
+        <div class="flex items-center space-x-3">
+            <a href="#/" class="flex items-center space-x-3 group">
+                <img src="media/v0.3d-cropped.png" alt="Sardine Logo"
+                    class="h-9 w-auto transition-transform group-hover:scale-105">
+            </a>
+        </div>
+
+        <nav class="flex items-center space-x-1">
+            <a href="#/" id="nav-home"
+                class="px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-gray-900/60 hover:text-indigo-400 text-slate-400">Home</a>
+            <a href="#/docs" id="nav-docs"
+                class="px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-gray-900/60 hover:text-indigo-400 text-slate-400">Documentation</a>
+            <a href="#/editor" id="nav-editor"
+                class="px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-gray-900/60 hover:text-indigo-400 text-slate-400">Playground</a>
+            <a href="#/educational" id="nav-educational"
+                class="px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-gray-900/60 hover:text-indigo-400 text-slate-400">Educational
+                Mode</a>
+        </nav>
+    </header>
+
+    <!-- Dynamic SPA View Containers -->
+    <div id="spa-container" class="flex-1 flex overflow-hidden relative">
+
+        <!-- HOME PAGE VIEW -->
+        <div id="view-home"
+            class="view-pane hidden absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
+            <div
+                class="max-w-2xl bg-slate-900/40 border border-slate-800/80 p-8 rounded-2xl backdrop-blur-md shadow-2xl">
+                <img src="media/v0.3d-cropped.png" class="h-24 mx-auto mb-6 opacity-90" alt="Logo">
+                <h2 class="text-3xl font-extrabold text-white mb-2">Welcome to Sardine</h2>
+                <p class="text-slate-400 mb-6 leading-relaxed">
+                    Sardine is a dynamic programming language built in C++17 and compiled to WebAssembly. Explore
+                    syntax, access advanced debugging tools, and run sandboxed code directly in your browser.
+                </p>
+                <div class="flex justify-center space-x-4">
+                    <a href="#/editor"
+                        class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow-lg shadow-indigo-500/20 transition-all">
+                        Open Playground
+                    </a>
+                    <a href="#/docs"
+                        class="border border-slate-700 bg-slate-800/40 hover:bg-slate-800 text-slate-300 px-6 py-2.5 rounded-lg text-sm font-bold transition-all">
+                        Read User Guide
+                    </a>
                 </div>
             </div>
-            <div class="flex items-center space-x-3">
-                <a href="#setup" onclick="toggleSetupModal(true)"
-                    class="text-slate-400 hover:text-slate-100 p-2 rounded-lg hover:bg-slate-800 transition-colors"
-                    title="How to compile locally">
-                    <i data-lucide="help-circle" class="h-5 w-5"></i>
-                </a>
-            </div>
-        </header>
+        </div>
 
-        <!-- Main Workspace -->
-        <main class="flex-1 flex overflow-hidden">
-            <!-- Sidebar Controls / Presets -->
-            <section class="w-80 border-r border-slate-800 bg-slate-900/50 flex flex-col overflow-y-auto">
-                <div class="p-4 border-b border-slate-800/80">
-                    <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Example Presets</h3>
-                    <div class="mt-3 space-y-2">
-                        <button onclick="loadExample('hello')"
-                            class="w-full text-left px-3 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 transition-all text-sm font-medium flex items-center space-x-2 border border-slate-700/50">
-                            <i data-lucide="file-text" class="h-4 w-4 text-indigo-400"></i>
-                            <span>Hello World & Class</span>
-                        </button>
-                        <button onclick="loadExample('stdlib')"
-                            class="w-full text-left px-3 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 transition-all text-sm font-medium flex items-center space-x-2 border border-slate-700/50">
-                            <i data-lucide="book-open" class="h-4 w-4 text-emerald-400"></i>
-                            <span>Standard Library</span>
-                        </button>
-                        <button onclick="loadExample('loops')"
-                            class="w-full text-left px-3 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 transition-all text-sm font-medium flex items-center space-x-2 border border-slate-700/50">
-                            <i data-lucide="refresh-cw" class="h-4 w-4 text-amber-400"></i>
-                            <span>Loops & Conditionals</span>
-                        </button>
-                        <button onclick="loadExample('risk_trap')"
-                            class="w-full text-left px-3 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 transition-all text-sm font-medium flex items-center space-x-2 border border-slate-700/50">
-                            <i data-lucide="shield-alert" class="h-4 w-4 text-rose-400"></i>
-                            <span>Risk & Trap (Try-Catch)</span>
-                        </button>
-                        <button onclick="loadExample('input')"
-                            class="w-full text-left px-3 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 transition-all text-sm font-medium flex items-center space-x-2 border border-slate-700/50">
-                            <i data-lucide="message-square" class="h-4 w-4 text-cyan-400"></i>
-                            <span>Interactive Input</span>
-                        </button>
-                        <button onclick="loadExample('file_io')"
-                            class="w-full text-left px-3 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 transition-all text-sm font-medium flex items-center space-x-2 border border-slate-700/50">
-                            <i data-lucide="file" class="h-4 w-4 text-purple-400"></i>
-                            <span>File Handling (MEMFS)</span>
-                        </button>
-                    </div>
+        <!-- DOCUMENTATION VIEW -->
+        <div id="view-docs" class="view-pane hidden absolute inset-0 flex items-center justify-center p-6">
+            <div class="text-center text-slate-400">
+                <i data-lucide="book-open" class="h-12 w-12 mx-auto text-indigo-500 mb-3 animate-pulse"></i>
+                <h2 class="text-xl font-bold text-white mb-1">Documentation</h2>
+                <p class="text-sm">User Guide & Reference manual loading shortly...</p>
+            </div>
+        </div>
+
+        <!-- REGULAR PLAYGROUND EDITOR VIEW -->
+        <div id="view-editor" class="view-pane hidden absolute inset-0 flex overflow-hidden bg-stone-900">
+            <!-- Sandbox Virtual Files Sidebar -->
+            <aside id="editor-sidebar"
+                class="w-72 border-r border-slate-800/80 bg-zinc-950/45 backdrop-blur-md flex flex-col shrink-0 transition-all duration-300">
+                <!-- COLLAPSED CONTENT STATE -->
+                <div id="sidebar-collapsed-content" class="hidden flex-1 flex flex-col items-center py-4 space-y-4">
+                    <button onclick="toggleSidebar()"
+                        class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-900 transition-colors"
+                        title="Expand Files Sidebar">
+                        <i data-lucide="folder" class="h-6 w-6"></i>
+                    </button>
                 </div>
 
-                <div class="p-4 flex-1">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Virtual Files (MEMFS)</h3>
-                        <button onclick="clearVirtualFiles()" class="text-xs text-rose-400 hover:text-rose-300">Clear</button>
+                <!-- EXPANDED CONTENT STATE -->
+                <div id="sidebar-expanded-content" class="flex-1 flex flex-col min-h-0">
+                    <div class="p-4 border-b border-slate-800/60 flex items-center justify-between shrink-0">
+                        <span
+                            class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1.5">
+                            <i data-lucide="folder" class="h-4 w-4 text-slate-400"></i>
+                            <span>Files</span>
+                        </span>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="createNewFilePrompt()"
+                                class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold flex items-center space-x-0.5">
+                                <i data-lucide="plus" class="h-3 w-3"></i>
+                                <span>Add</span>
+                            </button>
+                            <button onclick="clearVirtualFiles()"
+                                class="text-[10px] text-rose-400 hover:text-rose-300 transition-colors font-semibold">Clear</button>
+                            <button onclick="toggleSidebar()"
+                                class="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-900 transition-colors ml-1"
+                                title="Collapse Sidebar">
+                                <i data-lucide="chevron-left" class="h-3.5 w-3.5"></i>
+                            </button>
+                        </div>
                     </div>
-                    <p class="text-xs text-slate-500 mt-1">Files created inside the WebAssembly volatile sandbox memory.</p>
-                    <div id="virtual-files-container" class="mt-3 space-y-2">
-                        <div class="text-xs text-slate-500 italic p-3 text-center border border-dashed border-slate-800 rounded-lg">
+                    <div class="p-3 text-[11px] text-slate-500 border-b border-slate-800/30">
+                        User-created files and files generated by the interpreter. Click a file to open in the editor.
+                    </div>
+                    <div id="virtual-files-list" class="flex-1 overflow-y-auto p-4 space-y-2">
+                        <div class="text-m text-slate-600 italic p-4 text-center rounded-xl">
                             No files created yet.
                         </div>
                     </div>
                 </div>
+            </aside>
 
-                <!-- Footer Stats -->
-                <div class="p-4 bg-slate-950/40 border-t border-slate-800 mt-auto">
-                    <div class="flex items-center justify-between text-xs text-slate-400">
-                        <span>Engine Status:</span>
-                        <span id="engine-status" class="flex items-center text-amber-400 font-semibold">
-                            <span class="h-2 w-2 rounded-full bg-amber-400 mr-1.5 animate-pulse"></span>
-                            Loading WASM...
-                        </span>
+            <!-- Center Workspace split vertically (Editor + Console Terminal) -->
+            <main class="flex-1 flex flex-col min-w-0 bg-slate-950/20">
+                <!-- Action Bar -->
+                <div
+                    class="h-14 border-b border-slate-800/80 bg-slate-950/50 backdrop-blur-md px-6 flex items-center justify-between shrink-0">
+                    <div class="flex items-center space-x-2">
+                        <span id="editor-active-filename"
+                            class="bg-slate-900 px-2.5 py-1 rounded text-[11px] font-mono text-indigo-300 border border-slate-800">No
+                            file open</span>
                     </div>
-                </div>
-            </section>
+                    <div class="flex items-center space-x-5">
+                        <label
+                            class="flex items-center space-x-2 cursor-pointer select-none text-slate-400 hover:text-slate-200 transition-colors">
+                            <input type="checkbox" id="editor-toggle-clear-terminal"
+                                class="rounded border-slate-800 bg-slate-950 text-indigo-600 focus:ring-indigo-500/50 focus:ring-offset-slate-950 h-4 w-4">
+                            <span class="text-xs font-medium">Clear Terminal upon execution</span>
+                        </label>
 
-            <!-- Editor & Console Split View -->
-            <section class="flex-1 flex flex-col min-w-0">
-                <!-- IDE Code Area -->
-                <div class="flex-1 flex flex-col min-h-0 relative">
-                    <!-- Action bar on top of editor -->
-                    <div class="h-12 bg-slate-900 border-b border-slate-800 px-4 flex items-center justify-between">
-                        <span class="text-xs text-slate-400 font-mono">main.sad</span>
-                        <div class="flex items-center space-x-4">
-                            <!-- Unbounded Mode Toggle -->
-                            <label class="flex items-center space-x-2 cursor-pointer select-none text-slate-400 hover:text-slate-200 transition-colors">
-                                <input type="checkbox" id="toggle-unbounded" class="rounded border-slate-700 bg-slate-950 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-900 h-4 w-4">
-                                <span class="text-xs font-medium">Unbounded Mode</span>
-                            </label>
-                            <!-- Educational Mode Toggle -->
-                            <label class="flex items-center space-x-2 cursor-pointer select-none text-slate-400 hover:text-slate-200 transition-colors">
-                                <input type="checkbox" id="toggle-educational" class="rounded border-slate-700 bg-slate-950 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-900 h-4 w-4">
-                                <span class="text-xs font-medium">Educational Mode</span>
-                            </label>
+                        <label
+                            class="flex items-center space-x-2 cursor-pointer select-none text-slate-400 hover:text-slate-200 transition-colors">
+                            <input type="checkbox" id="editor-toggle-unbounded"
+                                class="rounded border-slate-800 bg-slate-950 text-indigo-600 focus:ring-indigo-500/50 focus:ring-offset-slate-950 h-4 w-4">
+                            <span class="text-xs font-medium">Unbounded Mode</span>
+                        </label>
 
-                            <div class="flex items-center space-x-2">
-                                <button id="btn-run" onclick="runInterpreterCode()" disabled
-                                    class="flex items-center space-x-1.5 bg-indigo-800 text-indigo-400 px-4 py-1.5 rounded-md text-xs font-semibold cursor-not-allowed shadow-none">
-                                    <i data-lucide="play" class="h-3.5 w-3.5"></i>
-                                    <span>Run Code</span>
-                                </button>
-                                <button id="btn-stop" onclick="terminateInterpreterExecution()" disabled
-                                    class="flex items-center space-x-1.5 bg-rose-900/50 hover:bg-rose-950 text-rose-300 border border-rose-800/80 px-4 py-1.5 rounded-md text-xs font-semibold transition-all opacity-40 cursor-not-allowed">
-                                    <i data-lucide="square" class="h-3.5 w-3.5"></i>
-                                    <span>Stop Execution</span>
-                                </button>
-                            </div>
+                        <div class="flex items-center space-x-2">
+                            <button id="editor-btn-run" onclick="runCode(false)" disabled
+                                class="flex items-center space-x-1.5 bg-slate-900 border border-slate-800 text-slate-500 px-6 py-2.5 rounded-lg text-xs font-semibold cursor-not-allowed transition-all">
+                                <i data-lucide="play" class="h-3.5 w-3.5"></i>
+                                <span>Run Code</span>
+                            </button>
+                            <button id="editor-btn-stop" onclick="terminateExecution()" disabled
+                                class="flex items-center space-x-1.5 bg-rose-950/30 border border-rose-900/20 text-rose-500/40 px-6 py-2.5 rounded-lg text-xs font-semibold cursor-not-allowed transition-all">
+                                <i data-lucide="square" class="h-3.5 w-3.5"></i>
+                                <span>Stop</span>
+                            </button>
                         </div>
-                    </div>
-
-                    <!-- Textarea Editor -->
-                    <div class="flex-1 relative flex">
-                        <!-- Line numbers -->
-                        <div class="w-12 bg-slate-950 text-right pr-3 select-none py-4 text-xs font-mono text-slate-600 leading-6 border-r border-slate-900">
-                            1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13<br>14<br>15<br>16<br>17<br>18<br>19<br>20
-                        </div>
-                        <textarea id="code-editor"
-                            class="flex-1 bg-slate-950 text-slate-100 font-mono text-sm p-4 focus:outline-none resize-none leading-6 placeholder-slate-700"
-                            placeholder="# Enter your Mission-Sardine code here..." spellcheck="false"></textarea>
                     </div>
                 </div>
 
-                <!-- Terminal Output Area -->
-                <div class="h-64 border-t border-slate-800 bg-slate-950 flex flex-col min-w-0 shrink-0">
-                    <div class="h-10 bg-slate-900/80 px-4 flex items-center justify-between border-b border-slate-800 shrink-0">
-                        <span class="text-xs text-slate-400 font-semibold uppercase tracking-wider flex items-center space-x-1">
-                            <i data-lucide="terminal" class="h-3.5 w-3.5 text-slate-400"></i>
-                            <span>Standard Terminal I/O</span>
+                <!-- Monaco Editor Workspace Container -->
+                <div class="flex-1 min-h-0 relative bg-slate-950">
+                    <!-- Editor container -->
+                    <div id="monaco-editor-container" class="absolute inset-0 font-mono"></div>
+                    <!-- Empty state overlay placeholder -->
+                    <div id="editor-empty-state"
+                        class="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0a0a] text-slate-500 z-10">
+                        <i data-lucide="file-code" class="h-12 w-12 text-slate-700 mb-3"></i>
+                        <p class="text-sm font-semibold text-slate-400">Select a file to get started!</p>
+                        <p class="text-xs text-slate-600 mt-1">Create or open a file from the sidebar.</p>
+                    </div>
+                </div>
+
+                <!-- Terminal Output Panel -->
+                <section id="terminal-section"
+                    class="h-72 border-t border-slate-800/80 bg-slate-950 flex flex-col shrink-0 shadow-2xl bg-black relative">
+                    <!-- Resize Handle -->
+                    <div id="terminal-resize-handle"
+                        class="absolute top-0 left-0 right-0 h-1.5 cursor-ns-resize hover:bg-indigo-500/50 transition-colors z-20"
+                        title="Drag to resize terminal"></div>
+                    <div
+                        class="h-11 bg-slate-900/60 backdrop-blur-md px-6 flex items-center justify-between border-b border-slate-800/60 shrink-0">
+                        <span
+                            class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-2">
+                            <i data-lucide="terminal" class="h-4 w-4 text-indigo-400"></i>
+                            <span>Terminal Sandbox IO</span>
                         </span>
-                        <button onclick="clearTerminal()" class="text-xs text-slate-400 hover:text-slate-200 flex items-center space-x-1">
+                        <button onclick="clearTerminal()"
+                            class="text-xs text-slate-400 hover:text-slate-200 transition-colors flex items-center space-x-1">
                             <i data-lucide="trash-2" class="h-3 w-3"></i>
                             <span>Clear</span>
                         </button>
                     </div>
-                    <div id="terminal-console" class="flex-1 overflow-y-auto p-4 font-mono text-xs space-y-1.5 select-text">
-                        <div class="text-slate-500">// Engine initializing...</div>
+                    <div id="terminal-console"
+                        class="flex-1 overflow-y-auto p-5 font-mono text-[12px] space-y-1.5 select-text bg-black text-slate-300">
+                        <div class="text-slate-500">// WASM Interpreter initializing...</div>
                     </div>
-                </div>
-            </section>
+                    <!-- Writable terminal input prompt -->
+                    <div id="terminal-input-row"
+                        class="h-10 border-t border-slate-900/40 bg-black flex items-center px-6 shrink-0 hidden">
+                        <span class="text-indigo-400 font-mono text-xs mr-2 font-bold">&gt;</span>
+                        <input type="text" id="terminal-stdin"
+                            class="flex-1 bg-transparent border-none outline-none font-mono text-xs text-slate-200"
+                            placeholder="Type input here and press Enter..."
+                            onkeydown="if(event.key === 'Enter') submitTerminalStdin()">
+                    </div>
+                </section>
+            </main>
+        </div>
 
-            <!-- Right half: Educational view panel (Full Height) -->
-            <div id="educational-panel" class="w-1/2 border-l border-slate-800 flex hidden bg-slate-900/30">
-                <!-- Left sub-column: Tokens Table -->
-                <div class="w-1/2 h-full flex flex-col border-r border-slate-800">
-                    <div class="h-10 bg-slate-900/80 px-4 flex items-center border-b border-slate-800 shrink-0 select-none">
-                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center space-x-1.5">
-                            <i data-lucide="list" class="h-3.5 w-3.5 text-slate-400"></i>
-                            <span>Tokens</span>
-                        </span>
-                    </div>
-                    <div class="flex-1 overflow-auto p-3 select-text">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="border-b border-slate-800 text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
-                                    <th class="pb-1.5 px-2">Type</th>
-                                    <th class="pb-1.5 px-2">Value</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tokens-table-body" class="divide-y divide-slate-850 font-mono text-[10px]">
-                                <tr>
-                                    <td colspan="2" class="p-2 text-center text-slate-500 italic">// Run code with "Educational Mode" on.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <!-- Right sub-column: AST graphical tree -->
-                <div class="w-1/2 h-full flex flex-col">
-                    <div class="h-10 bg-slate-900/80 px-4 flex items-center border-b border-slate-800 shrink-0 select-none">
-                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center space-x-1.5">
-                            <i data-lucide="git-merge" class="h-3.5 w-3.5 text-indigo-400"></i>
-                            <span>AST Tree</span>
-                        </span>
-                    </div>
-                    <div class="flex-1 overflow-hidden relative">
-                        <div id="edu-content-ast" class="absolute inset-0 overflow-auto p-4 font-mono text-xs select-none">
-                            <div class="text-slate-500 italic">// Run code with "Educational Mode" on.</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-
-        <!-- Setup / Tutorial Modal overlay -->
-        <div id="setup-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-2xl w-full p-6 shadow-2xl overflow-y-auto max-h-[85vh]">
-                <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
-                    <h2 class="text-lg font-bold text-slate-100 flex items-center space-x-2">
-                        <i data-lucide="sliders" class="h-5 w-5 text-indigo-500"></i>
-                        <span>Compilation Workflow & Local Hosting</span>
-                    </h2>
-                    <button onclick="toggleSetupModal(false)" class="text-slate-400 hover:text-slate-100 p-1.5 rounded-lg hover:bg-slate-800">
-                        <i data-lucide="x" class="h-5 w-5"></i>
-                    </button>
-                </div>
-
-                <div class="space-y-4 text-sm text-slate-300 leading-relaxed">
-                    <p>To compile the Mission-Sardine C++ code directly into WebAssembly and host it locally:</p>
-
-                    <div>
-                        <h4 class="font-semibold text-white mb-1.5 flex items-center space-x-2">
-                            <span class="bg-slate-800 text-slate-300 w-5 h-5 rounded-full inline-flex items-center justify-center text-xs">1</span>
-                            <span>Compile to WASM</span>
-                        </h4>
-                        <p class="text-xs text-slate-400 mb-2">Run the compile script from the workspace directory:</p>
-                        <pre class="bg-slate-950 p-3 rounded-lg text-xs font-mono border border-slate-800 text-indigo-300 overflow-x-auto">
-web\compile.bat</pre>
-                        <p class="text-[11px] text-slate-500 mt-1">This uses Emscripten to compile shell.cpp, embeds standard library modules, and exports required methods.</p>
-                    </div>
-
-                    <div>
-                        <h4 class="font-semibold text-white mb-1.5 flex items-center space-x-2">
-                            <span class="bg-slate-800 text-slate-300 w-5 h-5 rounded-full inline-flex items-center justify-center text-xs">2</span>
-                            <span>Start Local Server</span>
-                        </h4>
-                        <p class="text-xs text-slate-400 mb-2">Host the web folder on a local server. A simple Python command is sufficient:</p>
-                        <pre class="bg-slate-950 p-3 rounded-lg text-xs font-mono border border-slate-800 text-indigo-300 overflow-x-auto">
-cd web
-python -m http.server 8000</pre>
-                    </div>
-
-                    <div>
-                        <h4 class="font-semibold text-white mb-1.5 flex items-center space-x-2">
-                            <span class="bg-slate-800 text-slate-300 w-5 h-5 rounded-full inline-flex items-center justify-center text-xs">3</span>
-                            <span>Access in Browser</span>
-                        </h4>
-                        <p class="text-xs text-slate-400">Open <code class="text-emerald-400">http://localhost:8000</code> in your browser. The page is automatically cross-origin isolated by the service worker, enabling high-performance features like blocking input.</p>
-                    </div>
-                </div>
-
-                <div class="mt-6 border-t border-slate-800 pt-4 flex justify-end">
-                    <button onclick="toggleSetupModal(false)" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg text-xs font-semibold">
-                        Got it!
-                    </button>
-                </div>
+        <!-- EDUCATIONAL PLAYGROUND VIEW -->
+        <div id="view-educational" class="view-pane hidden absolute inset-0 flex items-center justify-center p-6">
+            <div class="text-center text-slate-400">
+                <i data-lucide="git-merge" class="h-12 w-12 mx-auto text-indigo-500 mb-3 animate-pulse"></i>
+                <h2 class="text-xl font-bold text-white mb-1">Educational Mode</h2>
+                <p class="text-sm">AST visualization interface under construction...</p>
             </div>
         </div>
 
-        <!-- Input Prompt Modal -->
-        <div id="input-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-6 shadow-2xl">
-                <h3 class="text-md font-bold text-slate-100 mb-2 flex items-center space-x-2">
-                    <i data-lucide="help-circle" class="h-5 w-5 text-indigo-500"></i>
-                    <span>Program Input Required</span>
+    </div>
+
+    <!-- File Viewer Detail Modal Overlay -->
+    <div id="file-viewer-modal"
+        class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl flex flex-col h-[70vh]">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4 shrink-0">
+                <h3 class="text-md font-bold text-slate-100 flex items-center space-x-2 font-mono">
+                    <i data-lucide="file-text" class="h-5 w-5 text-indigo-400"></i>
+                    <span id="modal-file-name">file.txt</span>
                 </h3>
-                <p class="text-xs text-slate-400 mb-4">The running program is waiting for your input (stdin).</p>
-                <input type="text" id="stdin-input" onkeydown="if(event.key === 'Enter') submitStdin()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 font-mono" placeholder="Type input here and press Enter..." autofocus>
-                <div class="mt-4 flex justify-end">
-                    <button onclick="submitStdin()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg text-xs font-semibold">
-                        Submit
-                    </button>
-                </div>
+                <button onclick="closeFileViewer()"
+                    class="text-slate-400 hover:text-slate-100 p-1 rounded-lg hover:bg-slate-800 transition-colors">
+                    <i data-lucide="x" class="h-5 w-5"></i>
+                </button>
+            </div>
+            <div class="flex-1 min-h-0 bg-slate-950 rounded-xl overflow-hidden relative border border-slate-800/60">
+                <div id="file-monaco-container" class="absolute inset-0 font-mono"></div>
+            </div>
+            <div class="mt-4 flex justify-end shrink-0">
+                <button onclick="closeFileViewer()"
+                    class="border border-slate-700 bg-slate-850 hover:bg-slate-800 text-slate-300 px-5 py-2 rounded-lg text-xs font-bold transition-all">
+                    Close
+                </button>
             </div>
         </div>
+    </div>
 
-        <!-- Playground Script Logic -->
-        <script>
-            let worker = null;
-            let virtualFiles = {};
+    <!-- Delete Confirmation Modal Overlay -->
+    <div id="delete-confirm-modal"
+        class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl flex flex-col space-y-4">
+            <div class="flex items-center space-x-3 text-rose-500">
+                <i data-lucide="alert-triangle" class="h-6 w-6 shrink-0"></i>
+                <h3 class="text-md font-bold text-slate-100">Delete File</h3>
+            </div>
+            <p class="text-sm text-slate-400">
+                Are you sure you want to delete <span id="delete-modal-filename"
+                    class="font-mono text-indigo-300 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800"></span>?
+                This action cannot be undone.
+            </p>
+            <div class="flex justify-end space-x-3 pt-2">
+                <button id="delete-modal-btn-cancel"
+                    class="border border-slate-700 bg-slate-800/40 hover:bg-slate-800 text-slate-300 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer">
+                    Cancel
+                </button>
+                <button id="delete-modal-btn-confirm"
+                    class="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-md shadow-rose-600/10 transition-all cursor-pointer">
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
 
-            // Shared buffer for interactive inputs
-            let sharedBuffer = null;
-            let sharedInt32 = null;
-            let sharedUint8 = null;
+    <!-- System & SPA Page Routing Script -->
+    <script>
+        // App Routing and State Configuration
+        const routes = {
+            '#/': 'view-home',
+            '#/docs': 'view-docs',
+            '#/editor': 'view-editor',
+            '#/educational': 'view-educational'
+        };
 
-            // Examples presets content mapping
-            const examples = {
-                hello: `# Welcome to the Mission-Sardine Language Playground!
-show("--- Basic Hello & Class definitions ---")
+        function handleRoute() {
+            const rawHash = window.location.hash || '#/';
+            // Match prefix matching (e.g. if we have arguments later)
+            let matchedRoute = '#/';
+            for (const route in routes) {
+                if (rawHash.startsWith(route)) {
+                    matchedRoute = route;
+                }
+            }
 
-model ServerConfig {
-    attr<user, host, port, debug_mode>
+            // Toggle views visibility
+            document.querySelectorAll('.view-pane').forEach(el => el.classList.add('hidden'));
+            const targetViewId = routes[matchedRoute];
+            if (targetViewId) {
+                document.getElementById(targetViewId).classList.remove('hidden');
+            }
 
-    init(user, host = "127.0.0.1", port = 8080, debug_mode = False) {
-        user: user
-        host: host
-        port: port
-        debug_mode: debug_mode
-    }
+            // Update active navigation state
+            document.querySelectorAll('nav a').forEach(el => {
+                const href = el.getAttribute('href');
+                if (href === matchedRoute) {
+                    el.className = "px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-indigo-600/10 text-indigo-400 shadow-sm border border-indigo-500/10";
+                } else {
+                    el.className = "px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-slate-900/60 hover:text-indigo-400 text-slate-400";
+                }
+            });
 
-    method display_config(prefix = "Config:") {
-        show(prefix, "User=" + user, "Host=" + host, "Port=" + String(port), sep=" | ", end="\\n")
-    }
+            // Trigger layout refresh for Monaco editor if it became visible
+            if (matchedRoute === '#/editor' && editorInstance) {
+                setTimeout(() => editorInstance.layout(), 50);
+            }
+        }
+
+        window.addEventListener('hashchange', handleRoute);
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            handleRoute();
+        });
+    </script>
+
+    <!-- Wasm Engine Integration Script -->
+    <script>
+        const defaultCode = `# Welcome to the Sardine Language Playground!
+show("--- Standard control flow demo ---")
+
+cycle x = 0 : 5 {
+    show("  Loop index =", x)
 }
+`;
 
-config = ServerConfig("admin")
-config.display_config()`,
+        let worker = null;
+        let virtualFiles = {
+            'main.sad': defaultCode
+        };
+        let activeFilename = null;
+        let wasmReady = false;
+        let isRunning = false;
 
-                stdlib: `# Standard Library Modules demonstration
-show("--- Standard library modules loaded via 'summon' ---")
+        // Shared buffer communication variables
+        let sharedBuffer = null;
+        let sharedInt32 = null;
+        let sharedUint8 = null;
 
-summon math
-
-show("Value of PI:", math.PI)
-show("Square of 9 is:", math.square(9))
-show("Cube of 3 is:", math.cube(3))
-show("Factorial of 5 is:", math.factorial(5))
-show("Absolute of -42 is:", math.absolute(-42))`,
-
-                loops: `# Control flow syntax using custom keywords
-show("--- Control flow & Loops ---")
-
-show("1. Numeric loop using 'cycle':")
-cycle i = 0 : 5 {
-    show("  i =", i)
-}
-
-show("2. Conditional loop using 'during':")
-j = 0
-during j < 3 {
-    show("  j =", j)
-    j = j + 1
-}
-
-show("3. Custom 'when/orwhen/otherwise' branching:")
-num = 15
-when num > 20 {
-    show("  num is greater than 20")
-} orwhen num > 10 {
-    show("  num is between 11 and 20")
-} otherwise {
-    show("  num is 10 or less")
-}`,
-
-                risk_trap: `# Robust exception handling using risk/trap blocks
-show("--- Exception Handling ---")
-
-risk {
-    show("Attempting division by zero...")
-    result = 10 / 0
-} trap RunTimeError err {
-    show("Caught error type: ", err.type)
-    show("Caught error details: ", err.message)
-} clean {
-    show("Clean block successfully executed.")
-}`,
-
-                input: `# Interactive inputs via listen()
-show("--- Interactive Inputs ---")
-
-show("What is your username?")
-username = listen()
-
-show("How old are you?")
-age = listen()
-
-show("Welcome " + username + "! In 5 years, you will be " + String(Integer(age) + 5) + " years old.")` ,
-
-                file_io: `# File Handling using virtual filesystem (MEMFS)
-show("--- Testing Virtual File System (MEMFS) ---")
-
-# 1. Write content to a file
-f = fopen("test_file.txt", "w")
-show("Opened file for writing:", f)
-f.write("Line 1: Mission-Sardine supports virtual file systems!\\n")
-f.lwrite("Line 2: Any files created here populate the sidebar.")
-f.close()
-
-# 2. Read content back
-f2 = fopen("test_file.txt", "r")
-show("Opened file for reading:", f2)
-content = f2.read()
-show("File content:")
-show(content)
-f2.close()
-
-# 3. Append content
-f3 = fopen("test_file.txt", "a")
-f3.lwrite("Line 3: Appended content dynamically!")
-f3.close()
-
-# Let's read the file line-by-line using lread()
-f4 = fopen("test_file.txt", "r")
-show("Line-by-line reading:")
-show("  L1:", f4.lread().trim())
-show("  L2:", f4.lread().trim())
-show("  L3:", f4.lread().trim())
-f4.close()`
-            };
-
-            // Initialization
-            window.onload = function () {
-                lucide.createIcons();
-                loadExample('hello');
-                
-                // Initialize SharedArrayBuffer (4 bytes for status, 4 bytes for length, rest for text)
-                if (typeof SharedArrayBuffer !== 'undefined') {
-                    sharedBuffer = new SharedArrayBuffer(1024);
-                    sharedInt32 = new Int32Array(sharedBuffer);
-                    sharedUint8 = new Uint8Array(sharedBuffer, 8); // Data starts at offset 8
-                } else {
-                    console.error("SharedArrayBuffer is not available. Ensure page is cross-origin isolated.");
-                }
-
-                // Layout state for educational mode
-                updateEducationalLayout();
-                document.getElementById('toggle-educational').addEventListener('change', updateEducationalLayout);
-
-                // Bind wheel event to AST tree container to scroll horizontally
-                const astContainer = document.getElementById('edu-content-ast');
-                if (astContainer) {
-                    astContainer.addEventListener('wheel', function(e) {
-                        if (e.deltaY !== 0) {
-                            e.preventDefault();
-                            astContainer.scrollLeft += e.deltaY;
-                        }
-                    });
-                }
-
-                initWasmWorker();
-            };
-
-            function initWasmWorker() {
-                if (worker) {
-                    worker.terminate();
-                }
-
-                const statusIndicator = document.getElementById('engine-status');
-                statusIndicator.className = "flex items-center text-amber-400 font-semibold animate-pulse";
-                statusIndicator.innerHTML = `<span class="h-2 w-2 rounded-full bg-amber-400 mr-1.5"></span>Loading WASM...`;
-
-                worker = new Worker('worker.js?v=' + Date.now());
-
-                // Initialize shared buffer in worker if available
-                if (sharedBuffer) {
-                    worker.postMessage({ type: 'init', sharedBuffer: sharedBuffer });
-                }
-
-                worker.onmessage = function (event) {
-                    const { type, data, files } = event.data;
-
-                    if (type === 'ready') {
-                        statusIndicator.className = "flex items-center text-emerald-400 font-semibold";
-                        statusIndicator.innerHTML = `<span class="h-2 w-2 rounded-full bg-emerald-400 mr-1.5"></span>WASM Ready`;
-                        document.getElementById('btn-run').disabled = false;
-                        document.getElementById('btn-run').className = "flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-md text-xs font-semibold transition-colors shadow-md";
-                        writeToTerminal("// WebAssembly Sandbox interpreter engine successfully loaded!");
-                    }
-                    else if (type === 'stdout') {
-                        writeToTerminal(data);
-                    }
-                    else if (type === 'stderr') {
-                        writeToTerminal(data, true);
-                    }
-                    else if (type === 'educational_json') {
-                        if (data) {
-                            if (data.tokens) {
-                                renderTokensTable(data.tokens);
-                            }
-                            if (data.ast) {
-                                renderAstTree(data.ast);
-                            } else if (data.error) {
-                                renderAstError(data.error);
-                            }
-                        }
-                    }
-                    else if (type === 'error') {
-                        writeToTerminal(data, true);
-                        statusIndicator.className = "flex items-center text-rose-500 font-semibold";
-                        statusIndicator.innerHTML = `<span class="h-2 w-2 rounded-full bg-rose-500 mr-1.5"></span>WASM Load Fail`;
-                    }
-                    else if (type === 'request_input') {
-                        showInputPrompt();
-                    }
-                    else if (type === 'done') {
-                        setRunningState(false);
-                        if (files) {
-                            virtualFiles = files;
-                            updateVirtualFilesUI();
-                        }
-                    }
-                };
-
-                worker.postMessage({ type: 'load' });
+        // Initialize background WASM worker and SharedArrayBuffer
+        function initWasmWorker() {
+            if (worker) {
+                worker.terminate();
             }
 
-            function loadExample(presetKey) {
-                if (examples[presetKey]) {
-                    document.getElementById('code-editor').value = examples[presetKey];
-                    writeToTerminal(`// Loaded example preset: [${presetKey}]`);
-                }
+            const statusText = document.getElementById('terminal-console');
+            if (statusText) {
+                statusText.innerHTML = `<div class="text-slate-500">// Engine initialization...</div>`;
             }
 
-            const TOKEN_LITERALS = {
-                "PLUS": "+",
-                "MINUS": "-",
-                "MUL": "*",
-                "DIV": "/",
-                "MOD": "%",
-                "FLOOR": "//",
-                "EXP": "**",
-                "EQUAL": "=",
-                "PLUSEQUAL": "+=",
-                "MINUSEQUAL": "-=",
-                "MULEQUAL": "*=",
-                "DIVIDEEQUAL": "/=",
-                "MODULUSEQUAL": "%=",
-                "FLOOREQUAL": "//=",
-                "EXPEQUAL": "**=",
-                "BITAND": "&",
-                "BITANDEQUAL": "&=",
-                "BITXOR": "^",
-                "BITXOREQUAL": "^=",
-                "BITOR": "|",
-                "BITOREQUAL": "|=",
-                "BITNOT": "~",
-                "LSHIFT": "<<",
-                "LSHIFTEQUAL": "<<=",
-                "RSHIFT": ">>",
-                "RSHIFTEQUAL": ">>=",
-                "ARROW": "->",
-                "LARROW": "<-",
-                "NOTEQUAL": "!=",
-                "DOUBLEEQUAL": "==",
-                "LESSTHAN": "<",
-                "GREATERTHAN": ">",
-                "LESSERTHANEQUAL": "<=",
-                "GREATERTHANEQUAL": ">=",
-                "LPAREN": "(",
-                "RPAREN": ")",
-                "LPAREN2": "[",
-                "RPAREN2": "]",
-                "LPAREN3": "{",
-                "RPAREN3": "}",
-                "COLON": ":",
-                "QUESTION": "?",
-                "COMMA": ",",
-                "DOT": ".",
-                "NEWLINE": "\\n",
-                "EOF": "EOF"
-            };
-
-            function updateEducationalLayout() {
-                const isEdu = document.getElementById('toggle-educational').checked;
-                const eduPanel = document.getElementById('educational-panel');
-                if (isEdu) {
-                    if (eduPanel) eduPanel.classList.remove('hidden');
-                } else {
-                    if (eduPanel) eduPanel.classList.add('hidden');
-                }
+            // Check SharedArrayBuffer capability
+            if (typeof SharedArrayBuffer !== 'undefined') {
+                sharedBuffer = new SharedArrayBuffer(1024);
+                sharedInt32 = new Int32Array(sharedBuffer);
+                sharedUint8 = new Uint8Array(sharedBuffer, 8); // Data block offset 8
+            } else {
+                console.error("SharedArrayBuffer is not available. Cross-origin isolation header failed to load.");
+                writeToTerminal("[Warning] SharedArrayBuffer is unavailable. Inputs with listen() will not function.", true);
             }
 
-            function renderTokensTable(tokens) {
-                const tbody = document.getElementById('tokens-table-body');
-                if (!tbody) return;
-                tbody.innerHTML = '';
+            worker = new Worker('worker.js?v=' + Date.now());
 
-                if (!tokens || tokens.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="2" class="p-2 text-center text-slate-500 italic">No tokens found.</td></tr>';
-                    return;
-                }
-
-                tokens.forEach(tok => {
-                    const tr = document.createElement('tr');
-                    tr.className = "hover:bg-slate-800/40 transition-colors";
-
-                    const tdType = document.createElement('td');
-                    tdType.className = "py-1.5 px-2 text-indigo-400 font-medium font-mono text-[10px]";
-                    tdType.innerText = tok.type || '';
-
-                    const tdValue = document.createElement('td');
-                    tdValue.className = "py-1.5 px-2 text-slate-300 font-mono text-[10px]";
-                    
-                    let val = tok.value;
-                    if (val === null || val === undefined) {
-                        val = TOKEN_LITERALS[tok.type] || '';
-                    } else if (typeof val === 'string') {
-                        val = `"${val}"`;
-                    }
-                    tdValue.innerText = val;
-
-                    tr.appendChild(tdType);
-                    tr.appendChild(tdValue);
-                    tbody.appendChild(tr);
-                });
+            if (sharedBuffer) {
+                worker.postMessage({ type: 'init', sharedBuffer: sharedBuffer });
             }
 
-            function extractAstNode(obj) {
-                if (!obj || typeof obj !== 'object') return null;
+            worker.onmessage = function (event) {
+                const { type, data, files } = event.data;
 
-                let nodeType = obj.node_type || 'Node';
-                let value = null;
-                let children = [];
-
-                // Extract values from token wrapper structures, fallback to mapped literals if value is empty/null
-                if (obj.token && obj.token.value !== undefined) {
-                    value = obj.token.value !== null ? obj.token.value : (TOKEN_LITERALS[obj.token.type] || null);
-                } else if (obj.operator && obj.operator.value !== undefined) {
-                    value = obj.operator.value !== null ? obj.operator.value : (TOKEN_LITERALS[obj.operator.type] || null);
-                } else if (obj.var_name_tok && obj.var_name_tok.value !== undefined) {
-                    value = obj.var_name_tok.value !== null ? obj.var_name_tok.value : (TOKEN_LITERALS[obj.var_name_tok.type] || null);
-                } else if (obj.module_tok && obj.module_tok.value !== undefined) {
-                    value = obj.module_tok.value !== null ? obj.module_tok.value : (TOKEN_LITERALS[obj.module_tok.type] || null);
-                } else if (obj.name_tok && obj.name_tok.value !== undefined) {
-                    value = obj.name_tok.value !== null ? obj.name_tok.value : (TOKEN_LITERALS[obj.name_tok.type] || null);
-                } else if (obj.value !== undefined && typeof obj.value !== 'object') {
-                    value = obj.value;
+                if (type === 'ready') {
+                    setWasmReadyState(true);
+                    writeToTerminal("// Sandbox WebAssembly execution engine loaded and ready.");
                 }
-
-                // Recursively extract AST sub-nodes
-                Object.keys(obj).forEach(key => {
-                    if (key === 'node_type' || key === 'token' || key === 'operator' || key === 'var_name_tok' || key === 'module_tok' || key === 'name_tok') {
-                        return;
-                    }
-                    
-                    const val = obj[key];
-                    if (!val) return;
-
-                    if (typeof val === 'object') {
-                        if (Array.isArray(val)) {
-                            val.forEach(item => {
-                                let child = extractAstNode(item);
-                                if (child) {
-                                    child.label = key;
-                                    children.push(child);
-                                }
-                            });
-                        } else {
-                            let child = extractAstNode(val);
-                            if (child) {
-                                child.label = key;
-                                children.push(child);
-                            }
-                        }
-                    }
-                });
-
-                return { nodeType, value, children };
-            }
-
-            function buildGraphicalTreeNode(astNode, isRoot = true, index = 0, childrenCount = 1) {
-                const wrapper = document.createElement('div');
-                wrapper.className = "flex flex-col items-center relative mx-3";
-
-                // Connector lines from parent (if not root)
-                if (!isRoot) {
-                    // Top vertical line segment going into the node box
-                    const topVertLine = document.createElement('div');
-                    topVertLine.className = "w-0.5 h-4 border-l-2 border-slate-700 shrink-0";
-                    wrapper.appendChild(topVertLine);
-
-                    // Horizontal sibling connector line
-                    if (childrenCount > 1) {
-                        const horizLine = document.createElement('div');
-                        horizLine.className = "absolute border-t-2 border-slate-700";
-                        horizLine.style.top = "0px";
-                        
-                        if (index === 0) {
-                            horizLine.style.left = "50%";
-                            horizLine.style.right = "0";
-                        } else if (index === childrenCount - 1) {
-                            horizLine.style.left = "0";
-                            horizLine.style.right = "50%";
-                        } else {
-                            horizLine.style.left = "0";
-                            horizLine.style.right = "0";
-                        }
-                        wrapper.appendChild(horizLine);
-                    }
+                else if (type === 'stdout') {
+                    writeToTerminal(data);
                 }
-
-                // Node box card
-                const box = document.createElement('div');
-                box.className = "px-3 py-1.5 rounded bg-slate-900 border border-slate-700 hover:border-indigo-500 hover:bg-slate-850 text-slate-100 flex flex-col items-center min-w-[125px] max-w-[200px] shadow-lg transition-all z-10 shrink-0 select-none text-center";
-                
-                if (astNode.label) {
-                    const lbl = document.createElement('span');
-                    lbl.className = "text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-0.5";
-                    lbl.innerText = astNode.label;
-                    box.appendChild(lbl);
+                else if (type === 'stderr') {
+                    writeToTerminal(data, true);
                 }
-
-                const type = document.createElement('span');
-                type.className = "text-[11px] font-bold text-indigo-300 font-sans leading-none";
-                type.innerText = astNode.nodeType.replace("Node", "");
-                box.appendChild(type);
-
-                if (astNode.value !== null && astNode.value !== undefined) {
-                    const val = document.createElement('span');
-                    val.className = "text-[10px] text-emerald-400 font-mono mt-0.5 truncate max-w-[170px] leading-tight";
-                    val.innerText = typeof astNode.value === 'string' ? `"${astNode.value}"` : astNode.value;
-                    box.appendChild(val);
+                else if (type === 'request_input') {
+                    showInputPrompt();
                 }
-
-                wrapper.appendChild(box);
-
-                // Children column (flow vertical -> horizontal flex row of sibling subtrees)
-                const hasChildren = astNode.children && astNode.children.length > 0;
-                if (hasChildren) {
-                    // Outgoing vertical line segment below parent box
-                    const bottomVertLine = document.createElement('div');
-                    bottomVertLine.className = "w-0.5 h-4 border-l-2 border-slate-700 shrink-0";
-                    wrapper.appendChild(bottomVertLine);
-
-                    const childrenRow = document.createElement('div');
-                    childrenRow.className = "flex items-start relative";
-                    
-                    astNode.children.forEach((child, idx) => {
-                        childrenRow.appendChild(buildGraphicalTreeNode(child, false, idx, astNode.children.length));
-                    });
-
-                    wrapper.appendChild(childrenRow);
-                }
-
-                return wrapper;
-            }
-
-            function renderAstTree(astObj) {
-                const container = document.getElementById('edu-content-ast');
-                if (!container) return;
-                container.innerHTML = '';
-
-                if (!astObj) {
-                    container.innerHTML = '<div class="text-slate-500 italic">// No AST available.</div>';
-                    return;
-                }
-
-                const simplifiedAst = extractAstNode(astObj);
-
-                const treeRoot = document.createElement('div');
-                treeRoot.className = "font-mono text-xs select-none w-max min-w-max p-4 flex justify-center mx-auto";
-                treeRoot.appendChild(buildGraphicalTreeNode(simplifiedAst, true));
-                container.appendChild(treeRoot);
-            }
-
-            function renderAstError(err) {
-                const container = document.getElementById('edu-content-ast');
-                if (!container) return;
-                container.innerHTML = `
-                    <div class="p-3 rounded-lg bg-rose-950/30 border border-rose-900/50 text-rose-300 font-sans text-xs">
-                        <div class="font-bold uppercase tracking-wider flex items-center space-x-1.5 text-rose-400">
-                            <i data-lucide="shield-alert" class="h-4 w-4"></i>
-                            <span>Parser / Lexer Error</span>
-                        </div>
-                        <div class="mt-2 font-mono text-[11px] font-semibold">${err.type || 'Error'}</div>
-                        <div class="mt-1 text-slate-300">${err.details || ''}</div>
-                        ${err.pos_start ? `<div class="mt-2 text-[10px] text-rose-400/80 font-mono">Line ${err.pos_start.line}, Col ${err.pos_start.col}</div>` : ''}
-                    </div>
-                `;
-                lucide.createIcons();
-            }
-
-            function clearTerminal() {
-                document.getElementById('terminal-console').innerHTML = "";
-                const astContainer = document.getElementById('edu-content-ast');
-                const tokensTbody = document.getElementById('tokens-table-body');
-                if (astContainer) {
-                    astContainer.innerHTML = '<div class="text-slate-500 italic">// Run code with "Educational Mode" on.</div>';
-                }
-                if (tokensTbody) {
-                    tokensTbody.innerHTML = '<tr><td colspan="2" class="p-2 text-center text-slate-500 italic">// Run code with "Educational Mode" on.</td></tr>';
-                }
-            }
-
-            function writeToTerminal(message, isError = false) {
-                const consoleEl = document.getElementById('terminal-console');
-                const newLine = document.createElement('div');
-
-                if (isError) {
-                    newLine.className = "text-rose-400 font-semibold font-mono";
-                } else if (message.startsWith("//") || message.startsWith("[System")) {
-                    newLine.className = "text-slate-500 font-mono";
-                } else {
-                    newLine.className = "text-slate-200 font-mono";
-                }
-
-                newLine.innerText = message;
-                consoleEl.appendChild(newLine);
-                consoleEl.scrollTop = consoleEl.scrollHeight;
-            }
-
-            function setRunningState(isRunning) {
-                const runBtn = document.getElementById('btn-run');
-                const stopBtn = document.getElementById('btn-stop');
-
-                if (isRunning) {
-                    runBtn.disabled = true;
-                    runBtn.className = "flex items-center space-x-1.5 bg-indigo-800 text-indigo-400 px-4 py-1.5 rounded-md text-xs font-semibold cursor-not-allowed shadow-none";
-
-                    stopBtn.disabled = false;
-                    stopBtn.className = "flex items-center space-x-1.5 bg-rose-600 hover:bg-rose-500 text-white px-4 py-1.5 rounded-md text-xs font-semibold transition-all shadow-md";
-                } else {
-                    runBtn.disabled = false;
-                    runBtn.className = "flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-md text-xs font-semibold transition-colors shadow-md";
-
-                    stopBtn.disabled = true;
-                    stopBtn.className = "flex items-center space-x-1.5 bg-rose-900/50 hover:bg-rose-950 text-rose-300 border border-rose-800/80 px-4 py-1.5 rounded-md text-xs font-semibold transition-all opacity-40 cursor-not-allowed";
-                }
-            }
-
-            function runInterpreterCode() {
-                const code = document.getElementById('code-editor').value;
-                const unbounded = document.getElementById('toggle-unbounded').checked;
-                const educational = document.getElementById('toggle-educational').checked;
-
-                // Reset educational displays before running
-                const astContainer = document.getElementById('edu-content-ast');
-                const tokensTbody = document.getElementById('tokens-table-body');
-                if (astContainer) {
-                    astContainer.innerHTML = '<div class="text-slate-500 italic">// Waiting for educational AST Tree...</div>';
-                }
-                if (tokensTbody) {
-                    tokensTbody.innerHTML = '<tr><td colspan="2" class="p-2 text-center text-slate-500 italic">// Waiting for educational tokens...</td></tr>';
-                }
-
-                writeToTerminal("// ------ Execution Start ------");
-                setRunningState(true);
-
-                if (worker) {
-                    worker.postMessage({
-                        type: 'run',
-                        code: code,
-                        unbounded: unbounded,
-                        educational: educational
-                    });
-                } else {
-                    writeToTerminal("[Error] WASM sandbox thread is not running. Reload page.", true);
+                else if (type === 'done') {
                     setRunningState(false);
+                    if (files) {
+                        // Merge worker files back into our registry
+                        for (let filename in files) {
+                            virtualFiles[filename] = files[filename];
+                        }
+
+                        updateVirtualFilesUI();
+
+                        // Update Monaco value if current file was changed by interpreter run
+                        if (activeFilename && virtualFiles[activeFilename] !== undefined) {
+                            if (editorInstance && editorInstance.getValue() !== virtualFiles[activeFilename]) {
+                                editorInstance.setValue(virtualFiles[activeFilename]);
+                            }
+                        }
+                    }
+                }
+            };
+
+            worker.postMessage({ type: 'load' });
+        }
+
+        function updateRunButtonState() {
+            const runBtn = document.getElementById('editor-btn-run');
+            if (!runBtn) return;
+
+            const isSad = activeFilename && activeFilename.endsWith('.sad');
+
+            if (wasmReady && !isRunning && isSad) {
+                runBtn.disabled = false;
+                runBtn.className = "flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-lg text-xs font-bold transition-all shadow-md shadow-indigo-600/10 cursor-pointer";
+            } else {
+                runBtn.disabled = true;
+                if (isRunning) {
+                    runBtn.className = "flex items-center space-x-1.5 bg-slate-900 border border-slate-800 text-slate-600 px-6 py-2.5 rounded-lg text-xs font-semibold cursor-not-allowed";
+                } else {
+                    runBtn.className = "flex items-center space-x-1.5 bg-slate-900 border border-slate-800 text-slate-500 px-6 py-2.5 rounded-lg text-xs font-semibold cursor-not-allowed transition-all";
                 }
             }
+        }
 
-            function terminateInterpreterExecution() {
-                writeToTerminal("// ------ Execution Interrupted by User ------", true);
-                initWasmWorker(); // Spawns a clean background thread
-                setRunningState(false);
-                toggleInputPrompt(false);
+        function setWasmReadyState(isReady) {
+            wasmReady = isReady;
+            updateRunButtonState();
+        }
+
+        function setRunningState(running) {
+            isRunning = running;
+            updateRunButtonState();
+
+            const stopBtn = document.getElementById('editor-btn-stop');
+            if (isRunning) {
+                stopBtn.disabled = false;
+                stopBtn.className = "flex items-center space-x-1.5 bg-rose-600 hover:bg-rose-500 text-white px-6 py-2.5 rounded-lg text-xs font-bold shadow-md shadow-rose-600/10 transition-all cursor-pointer";
+            } else {
+                stopBtn.disabled = true;
+                stopBtn.className = "flex items-center space-x-1.5 bg-rose-950/30 border border-rose-900/20 text-rose-500/40 px-6 py-2.5 rounded-lg text-xs font-semibold cursor-not-allowed transition-all";
+            }
+        }
+
+        function writeToTerminal(message, isError = false) {
+            const consoleEl = document.getElementById('terminal-console');
+            if (!consoleEl) return;
+            const newLine = document.createElement('div');
+
+            if (isError) {
+                newLine.className = "text-rose-400 font-semibold font-mono";
+            } else if (message.startsWith("//") || message.startsWith("[System]")) {
+                newLine.className = "text-slate-500 font-mono";
+            } else {
+                newLine.className = "text-slate-200 font-mono";
             }
 
-            // Input prompt routines
-            function showInputPrompt() {
-                toggleInputPrompt(true);
-                const inputEl = document.getElementById('stdin-input');
+            newLine.innerText = message;
+            consoleEl.appendChild(newLine);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        function clearTerminal() {
+            const consoleEl = document.getElementById('terminal-console');
+            if (consoleEl) {
+                consoleEl.innerHTML = "";
+            }
+        }
+
+        function runCode(educationalMode = false) {
+            if (!editorInstance) return;
+
+            // Save active editor contents to virtualFiles registry
+            if (activeFilename) {
+                virtualFiles[activeFilename] = editorInstance.getValue();
+            }
+
+            // Clear terminal if "Clear Terminal upon execution" is checked
+            if (document.getElementById('editor-toggle-clear-terminal').checked) {
+                clearTerminal();
+            }
+
+            // Run active file if it is a .sad file, otherwise fall back to main.sad
+            let code = "";
+            if (activeFilename && activeFilename.endsWith('.sad')) {
+                code = virtualFiles[activeFilename];
+            } else if (virtualFiles['main.sad'] !== undefined) {
+                code = virtualFiles['main.sad'];
+                writeToTerminal("// Running main.sad...");
+            } else {
+                writeToTerminal("[Error] No runnable .sad file available.", true);
+                setRunningState(false);
+                return;
+            }
+
+            const unbounded = document.getElementById('editor-toggle-unbounded').checked;
+
+            writeToTerminal("// ------ Execution Start ------");
+            setRunningState(true);
+
+            if (worker) {
+                worker.postMessage({
+                    type: 'run',
+                    code: code,
+                    unbounded: unbounded,
+                    educational: educationalMode,
+                    files: virtualFiles // Pass all files to the worker MEMFS
+                });
+            } else {
+                writeToTerminal("[Error] Wasm background thread unavailable.", true);
+                setRunningState(false);
+            }
+        }
+
+        function terminateExecution() {
+            writeToTerminal("// ------ Execution Interrupted by User ------", true);
+            initWasmWorker(); // Spawns a clean background thread
+            setRunningState(false);
+
+            // Hide terminal input prompt if active
+            const inputRow = document.getElementById('terminal-input-row');
+            if (inputRow) {
+                inputRow.classList.add('hidden');
+            }
+        }
+
+        // Interactive terminal input handlers
+        function showInputPrompt() {
+            const inputRow = document.getElementById('terminal-input-row');
+            if (inputRow) {
+                inputRow.classList.remove('hidden');
+            }
+            const inputEl = document.getElementById('terminal-stdin');
+            if (inputEl) {
                 inputEl.value = "";
                 inputEl.focus();
             }
+        }
 
-            function submitStdin() {
-                const inputEl = document.getElementById('stdin-input');
-                const val = inputEl.value;
-                
-                // Print user response back in terminal
-                writeToTerminal(val);
+        function submitTerminalStdin() {
+            const inputEl = document.getElementById('terminal-stdin');
+            const val = inputEl.value;
 
-                // Write string into shared Uint8 array
-                const encoder = new TextEncoder();
-                const encoded = encoder.encode(val + "\n");
-                sharedUint8.set(encoded);
+            // Print the prompt symbol and user response directly into the terminal
+            writeToTerminal("> " + val);
 
-                // Write length of data to index 1
-                sharedInt32[1] = encoded.length;
+            const encoder = new TextEncoder();
+            const encoded = encoder.encode(val + "\n");
+            sharedUint8.set(encoded);
 
-                // Signal data ready (status = 1) at index 0
-                Atomics.store(sharedInt32, 0, 1);
-                Atomics.notify(sharedInt32, 0, 1);
+            sharedInt32[1] = encoded.length;
 
-                toggleInputPrompt(false);
+            Atomics.store(sharedInt32, 0, 1);
+            Atomics.notify(sharedInt32, 0, 1);
+
+            const inputRow = document.getElementById('terminal-input-row');
+            if (inputRow) {
+                inputRow.classList.add('hidden');
+            }
+        }
+
+        // Select and display file contents in the main editor
+        function selectFile(filename) {
+            // Save current editor content to active file before switching, but ONLY if the file still exists in our registry!
+            if (activeFilename && virtualFiles[activeFilename] !== undefined && editorInstance) {
+                virtualFiles[activeFilename] = editorInstance.getValue();
             }
 
-            function toggleInputPrompt(show) {
-                const modal = document.getElementById('input-modal');
-                if (show) {
-                    modal.classList.remove('hidden');
-                } else {
-                    modal.classList.add('hidden');
+            activeFilename = filename;
+            updateVirtualFilesUI();
+            updateRunButtonState(); // Enable/disable Run Code button based on file extension
+
+            const emptyState = document.getElementById('editor-empty-state');
+            const activeSpan = document.getElementById('editor-active-filename');
+
+            if (!filename) {
+                // Show empty state overlay, hide editor contents
+                if (emptyState) emptyState.classList.remove('hidden');
+                if (activeSpan) {
+                    activeSpan.innerText = "No file open";
+                    activeSpan.className = "bg-slate-900 px-2.5 py-1 rounded text-[11px] font-mono text-slate-500 border border-slate-800";
+                }
+                return;
+            }
+
+            // Show file contents
+            if (emptyState) emptyState.classList.add('hidden');
+            if (activeSpan) {
+                activeSpan.innerText = filename;
+                activeSpan.className = "bg-slate-900 px-2.5 py-1 rounded text-[11px] font-mono text-indigo-300 border border-slate-800";
+            }
+
+            if (editorInstance) {
+                editorInstance.setValue(virtualFiles[filename]);
+                // Set language syntax highlighting based on extension
+                const isSad = filename.endsWith('.sad');
+                const model = editorInstance.getModel();
+                if (model) {
+                    monaco.editor.setModelLanguage(model, isSad ? 'sardine' : 'plaintext');
+                }
+                setTimeout(() => editorInstance.layout(), 50);
+            }
+        }
+
+        // Prompt user to create a new file
+        function createNewFilePrompt() {
+            // Check if there's already an active inline input box
+            const existingInput = document.getElementById('new-file-inline-input');
+            if (existingInput) {
+                existingInput.focus();
+                return;
+            }
+
+            const container = document.getElementById('virtual-files-list');
+
+            // Remove the empty state message if it is showing
+            const emptyState = container.querySelector('.text-slate-600');
+            if (emptyState) {
+                container.innerHTML = "";
+            }
+
+            // Create temporary list item
+            const tempItem = document.createElement('div');
+            tempItem.id = 'new-file-temp-item';
+            tempItem.className = 'p-2.5 rounded-lg border bg-indigo-600/10 border-indigo-500/30 flex items-center text-xs transition-all';
+
+            tempItem.innerHTML = `
+                <div class="flex items-center space-x-2 w-full">
+                    <div class="icon-wrapper shrink-0">
+                        <i data-lucide="file-code" class="h-3.5 w-3.5 text-indigo-400 shrink-0"></i>
+                    </div>
+                    <input type="text" id="new-file-inline-input" 
+                        class="bg-transparent border-none outline-none font-mono text-xs text-slate-200 flex-1 p-0 focus:ring-0 focus:outline-none placeholder-slate-500" 
+                        placeholder="filename.sad"
+                    />
+                </div>
+            `;
+
+            container.appendChild(tempItem);
+            lucide.createIcons();
+
+            const input = document.getElementById('new-file-inline-input');
+            input.focus();
+
+            // Scroll sidebar container to the bottom so input is fully visible
+            container.scrollTop = container.scrollHeight;
+
+            let finished = false;
+
+            function handleCancel() {
+                if (finished) return;
+                finished = true;
+                tempItem.remove();
+                if (Object.keys(virtualFiles).length === 0) {
+                    updateVirtualFilesUI();
                 }
             }
 
-            // Virtual file system visualization
-            function updateVirtualFilesUI() {
-                const container = document.getElementById('virtual-files-container');
-                const fileKeys = Object.keys(virtualFiles);
-
-                if (fileKeys.length === 0) {
-                    container.innerHTML = `
-                        <div class="text-xs text-slate-500 italic p-3 text-center border border-dashed border-slate-800 rounded-lg">
-                            No files created yet.
-                        </div>
-                    `;
+            function handleSubmit() {
+                if (finished) return;
+                const filename = input.value.trim();
+                if (!filename) {
+                    handleCancel();
                     return;
                 }
 
-                container.innerHTML = "";
-                fileKeys.forEach(name => {
-                    const item = document.createElement('div');
-                    item.className = "p-2 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between text-xs cursor-pointer hover:border-indigo-500/50 hover:bg-slate-900 transition-all group";
-                    item.setAttribute('onclick', `openVirtualFile("${name}")`);
-
-                    item.innerHTML = `
-                        <div class="flex items-center space-x-2 truncate">
-                            <i data-lucide="file" class="h-3.5 w-3.5 text-indigo-400 shrink-0 group-hover:text-indigo-300"></i>
-                            <span class="font-mono text-slate-300 truncate group-hover:text-white">${name}</span>
-                        </div>
-                        <span class="text-slate-500 text-[10px] shrink-0 font-mono">${virtualFiles[name].length} B</span>
-                    `;
-                    container.appendChild(item);
-                });
-                lucide.createIcons();
-            }
-
-            function openVirtualFile(filename) {
+                // Double check duplicate filenames
                 if (virtualFiles[filename] !== undefined) {
-                    writeToTerminal(`\n// --- Viewing File: ${filename} ---`);
-                    writeToTerminal(virtualFiles[filename]);
-                    writeToTerminal(`// --------------------------------\n`);
+                    tempItem.classList.remove('animate-shake');
+                    void tempItem.offsetWidth; // trigger reflow to restart animation
+                    tempItem.classList.add('animate-shake');
+                    input.focus();
+                    return;
                 }
+
+                finished = true;
+                virtualFiles[filename] = "";
+                tempItem.remove();
+                selectFile(filename);
             }
 
-            function clearVirtualFiles() {
-                virtualFiles = {};
-                updateVirtualFilesUI();
-                writeToTerminal("// Cleared all virtual sandbox files.");
-            }
+            // Bind keydown events (Enter to submit, Escape to cancel)
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSubmit();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    handleCancel();
+                }
+            });
 
-            function toggleSetupModal(show) {
-                const modal = document.getElementById('setup-modal');
-                if (show) {
-                    modal.classList.remove('hidden');
+            // Dynamically sanitize input & change icon/styles based on validity and file extension
+            const iconWrapper = tempItem.querySelector('.icon-wrapper');
+            input.addEventListener('input', () => {
+                input.value = input.value.replace(/[<>:"\/\\|?*]/g, '');
+                const name = input.value.trim();
+                const isSad = name.endsWith('.sad');
+                const isDuplicate = (virtualFiles[name] !== undefined);
+
+                if (isDuplicate) {
+                    tempItem.className = 'p-2.5 rounded-lg border bg-rose-950/20 border-rose-500/40 flex items-center text-xs transition-all';
+                    iconWrapper.innerHTML = `<i data-lucide="alert-circle" class="h-3.5 w-3.5 text-rose-400 shrink-0"></i>`;
                 } else {
-                    modal.classList.add('hidden');
+                    tempItem.className = 'p-2.5 rounded-lg border bg-indigo-600/10 border-indigo-500/30 flex items-center text-xs transition-all';
+                    const iconName = isSad ? 'file-code' : 'file-text';
+                    const iconColor = isSad ? 'text-indigo-400' : 'text-slate-400';
+                    iconWrapper.innerHTML = `<i data-lucide="${iconName}" class="h-3.5 w-3.5 ${iconColor} shrink-0"></i>`;
+                }
+                lucide.createIcons();
+            });
+
+            // On blur, cancel the creation (delay slightly so click/keydown events process first)
+            input.addEventListener('blur', () => {
+                setTimeout(() => {
+                    if (finished) return;
+                    if (!document.getElementById('new-file-inline-input')) return;
+                    handleCancel();
+                }, 150);
+            });
+        }
+
+        let fileToDelete = null;
+
+        // Delete an individual file (custom in-browser modal)
+        function deleteFile(filename, event) {
+            if (event) event.stopPropagation(); // Prevent choosing the file
+            fileToDelete = filename;
+
+            const modal = document.getElementById('delete-confirm-modal');
+            const span = document.getElementById('delete-modal-filename');
+            if (modal && span) {
+                span.innerText = filename;
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function closeDeleteModal() {
+            const modal = document.getElementById('delete-confirm-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+            fileToDelete = null;
+        }
+
+        function confirmDeleteFile() {
+            if (!fileToDelete) return;
+            const filename = fileToDelete;
+            delete virtualFiles[filename];
+
+            if (activeFilename === filename) {
+                const keys = Object.keys(virtualFiles);
+                selectFile(keys.length > 0 ? keys[0] : null);
+            } else {
+                updateVirtualFilesUI();
+            }
+
+            closeDeleteModal();
+        }
+
+        // Download an individual file
+        function downloadFile(filename, event) {
+            if (event) event.stopPropagation(); // Prevent choosing the file
+            if (virtualFiles[filename] === undefined) return;
+
+            const blob = new Blob([virtualFiles[filename]], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function updateVirtualFilesUI() {
+            const container = document.getElementById('virtual-files-list');
+            const fileKeys = Object.keys(virtualFiles);
+
+            if (fileKeys.length === 0) {
+                container.innerHTML = `
+                    <div class="text-m text-slate-600 italic p-4 text-center rounded-xl">
+                        No files created yet.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = "";
+            fileKeys.forEach(name => {
+                const isSad = name.endsWith('.sad');
+                const isActive = (name === activeFilename);
+                const item = document.createElement('div');
+
+                item.className = `p-2.5 rounded-lg border flex items-center justify-between text-xs cursor-pointer transition-all group ${isActive
+                    ? 'bg-indigo-600/10 border-indigo-500/30'
+                    : 'bg-slate-900/40 border-slate-800/80 hover:border-indigo-500/30 hover:bg-slate-900/80'
+                    }`;
+                item.setAttribute('onclick', `selectFile("${name}")`);
+
+                // Set icon depending on whether it is a .sad file
+                const iconName = isSad ? 'file-code' : 'file-text';
+                const iconColor = isSad ? 'text-indigo-400' : 'text-slate-400';
+
+                item.innerHTML = `
+                    <div class="flex items-center space-x-2 truncate flex-1 mr-2">
+                        <i data-lucide="${iconName}" class="h-3.5 w-3.5 ${iconColor} group-hover:text-indigo-300 shrink-0"></i>
+                        <span class="font-mono text-slate-300 truncate group-hover:text-white">${name}</span>
+                    </div>
+                    <div class="flex items-center space-x-1.5 opacity-40 group-hover:opacity-100 transition-opacity">
+                        <button onclick="downloadFile('${name}', event)" class="p-1 text-slate-400 hover:text-indigo-400 hover:bg-slate-850 rounded" title="Download">
+                            <i data-lucide="download" class="h-3.5 w-3.5"></i>
+                        </button>
+                        <button onclick="deleteFile('${name}', event)" class="p-1 text-slate-400 hover:text-rose-400 hover:bg-slate-850 rounded" title="Delete">
+                            <i data-lucide="trash-2" class="h-3.5 w-3.5"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+            lucide.createIcons();
+        }
+
+        function clearVirtualFiles() {
+            virtualFiles = {};
+            selectFile(null);
+            writeToTerminal("// Sandbox filesystem cleared.");
+        }
+
+        // Pop-up File Viewer details
+        let fileViewerEditor = null;
+
+        function openVirtualFile(filename) {
+            if (virtualFiles[filename] === undefined) return;
+
+            document.getElementById('modal-file-name').innerText = filename;
+            document.getElementById('file-viewer-modal').classList.remove('hidden');
+
+            // Initialize modal's read-only monaco container
+            setTimeout(() => {
+                const container = document.getElementById('file-monaco-container');
+                if (!fileViewerEditor) {
+                    fileViewerEditor = monaco.editor.create(container, {
+                        value: virtualFiles[filename],
+                        language: 'plaintext',
+                        theme: 'sardine-dark',
+                        readOnly: true,
+                        minimap: { enabled: false },
+                        automaticLayout: true,
+                        fontFamily: 'Consolas, "Courier New", Courier, monospace'
+                    });
+                } else {
+                    fileViewerEditor.setValue(virtualFiles[filename]);
+                }
+            }, 50);
+        }
+
+        function closeFileViewer() {
+            document.getElementById('file-viewer-modal').classList.add('hidden');
+        }
+
+        // Toggle Virtual Files Sidebar (collapsible)
+        function toggleSidebar() {
+            const sidebar = document.getElementById('editor-sidebar');
+            const expanded = document.getElementById('sidebar-expanded-content');
+            const collapsed = document.getElementById('sidebar-collapsed-content');
+
+            if (!sidebar || !expanded || !collapsed) return;
+
+            if (sidebar.classList.contains('w-72')) {
+                // Collapse into narrow bar
+                sidebar.classList.remove('w-72');
+                sidebar.classList.add('w-14');
+                expanded.classList.add('hidden');
+                collapsed.classList.remove('hidden');
+            } else {
+                // Expand back to normal width
+                sidebar.classList.remove('w-14');
+                sidebar.classList.add('w-72');
+                expanded.classList.remove('hidden');
+                collapsed.classList.add('hidden');
+            }
+
+            // Update Monaco Editor layout dynamically to fit the new width
+            if (editorInstance) {
+                setTimeout(() => editorInstance.layout(), 350); // allow sidebar transition to finish
+            }
+        }
+
+        // Adjustable Terminal Height
+        function initTerminalResizer() {
+            const handle = document.getElementById('terminal-resize-handle');
+            const terminal = document.getElementById('terminal-section');
+            if (!handle || !terminal) return;
+
+            let startY = 0;
+            let startHeight = 0;
+
+            function onMouseDown(e) {
+                e.preventDefault();
+                startY = e.clientY;
+                startHeight = terminal.offsetHeight;
+
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+
+                document.body.classList.add('cursor-ns-resize', 'select-none');
+            }
+
+            function onMouseMove(e) {
+                const deltaY = e.clientY - startY;
+                let newHeight = startHeight - deltaY;
+
+                // Constraints (min 60px, max 75% window height)
+                const minHeight = 60;
+                const maxHeight = window.innerHeight * 0.75;
+                if (newHeight < minHeight) newHeight = minHeight;
+                if (newHeight > maxHeight) newHeight = maxHeight;
+
+                terminal.style.height = `${newHeight}px`;
+
+                // Update Monaco geometry in real time
+                if (editorInstance) {
+                    editorInstance.layout();
                 }
             }
-        </script>
-    </body>
+
+            function onMouseUp() {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+                document.body.classList.remove('cursor-ns-resize', 'select-none');
+
+                if (editorInstance) {
+                    editorInstance.layout();
+                }
+            }
+
+            handle.addEventListener('mousedown', onMouseDown);
+        }
+
+        // Global page loading overlay controller
+        function hideLoadingOverlay() {
+            const overlay = document.getElementById('page-loading-overlay');
+            if (overlay) {
+                overlay.classList.add('opacity-0');
+                // Remove from DOM to prevent pointer/keyboard events blocking
+                setTimeout(() => {
+                    if (overlay.parentNode) {
+                        overlay.parentNode.removeChild(overlay);
+                    }
+                }, 500);
+            }
+        }
+
+        // Trigger worker startup
+        window.addEventListener('load', () => {
+            initWasmWorker();
+            updateVirtualFilesUI();
+            initTerminalResizer();
+
+            // Fail-safe: hide overlay after 3 seconds if Monaco/worker loads too slow
+            setTimeout(hideLoadingOverlay, 3000);
+
+            // Set up custom delete confirmation modal handlers
+            const cancelBtn = document.getElementById('delete-modal-btn-cancel');
+            const confirmBtn = document.getElementById('delete-modal-btn-confirm');
+            const deleteModal = document.getElementById('delete-confirm-modal');
+
+            if (cancelBtn) cancelBtn.addEventListener('click', closeDeleteModal);
+            if (confirmBtn) confirmBtn.addEventListener('click', confirmDeleteFile);
+            if (deleteModal) {
+                deleteModal.addEventListener('click', (e) => {
+                    if (e.target === deleteModal) {
+                        closeDeleteModal();
+                    }
+                });
+            }
+
+            // Keyboard overlay handlers (Escape to close open modals)
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    if (deleteModal && !deleteModal.classList.contains('hidden')) {
+                        closeDeleteModal();
+                    }
+                    const viewerModal = document.getElementById('file-viewer-modal');
+                    if (viewerModal && !viewerModal.classList.contains('hidden')) {
+                        closeFileViewer();
+                    }
+                }
+            });
+        });
+    </script>
+
+    <!-- Monaco Editor Configuration Script -->
+    <script>
+        let editorInstance = null;
+
+        // Load Monaco files via loader.js
+        require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs' } });
+        require(['vs/editor/editor.main'], function () {
+
+            // Define custom editor color theme. Change the hex values below to customize syntax colors!
+            monaco.editor.defineTheme('sardine-dark', {
+                base: 'vs-dark',
+                inherit: true,
+                rules: [
+                    { token: 'keyword', foreground: '818cf8', fontStyle: 'bold' }, // Indigo-400 (model, init, yield, etc.)
+                    { token: 'type', foreground: '34d399' },                      // Emerald-400 (Integer, String, etc.)
+                    { token: 'operator', foreground: 'f472b6' },                   // Pink-400 (+, -, *, ==, etc.)
+                    { token: 'identifier', foreground: '91bfb8' },                 // Bluish-White
+                    { token: 'number', foreground: 'fbbf24' },                     // Amber-400
+                    { token: 'string', foreground: '38bdf8' },                     // Sky-400
+                    { token: 'comment', foreground: '64748b', fontStyle: 'italic' } // Slate-500
+                ],
+                colors: {
+                    'editor.background': '#0a0a0a',              // Slate-955
+                    'editor.foreground': '#94a3b8',              // Slate-400 (Muted color for punctuation/braces)
+                    'editorLineNumber.foreground': '#475569',    // Slate-600
+                    'editorLineNumber.activeForeground': '#818cf8', // Indigo-400
+                    'editor.lineHighlightBackground': '#0f172a',  // Slate-900
+                }
+            });
+
+            // Register Sardine syntax highlight profile
+            monaco.languages.register({ id: 'sardine' });
+
+            monaco.languages.setMonarchTokensProvider('sardine', {
+                keywords: [
+                    'model', 'init', 'method', 'attr', 'open', 'guarded', 'secret',
+                    'proceed', 'escape', 'yield', 'menu', 'choice', 'fallback',
+                    'risk', 'trap', 'clean', 'during', 'cycle', 'trace', 'summon',
+                    'from', 'as', 'when', 'orwhen', 'otherwise', 'and', 'or', 'not'
+                ],
+                typeKeywords: [
+                    'Integer', 'Float', 'String', 'List', 'Dictionary', 'RunTimeError', 'Error'
+                ],
+                operators: [
+                    '=', '+=', '-=', '*=', '/=', '%=', '//=', '**=', '&=', '^=', '|=',
+                    '<<=', '>>=', '+', '-', '*', '/', '%', '//', '**', '&', '|', '^',
+                    '~', '<<', '>>', '==', '!=', '<', '>', '<=', '>=', '->', '<-', '?', ':'
+                ],
+                symbols: /[=><!~?:&|+\-*\/\^%]+/,
+                escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
+                tokenizer: {
+                    root: [
+                        [/[a-zA-Z_]\w*/, {
+                            cases: {
+                                '@keywords': 'keyword',
+                                '@typeKeywords': 'type',
+                                '@default': 'identifier'
+                            }
+                        }],
+                        { include: '@whitespace' },
+                        [/"([^"\\]|\\.)*$/, 'string.invalid'],
+                        [/"/, { token: 'string.quote', bracket: '@open', next: '@string' }],
+                        [/\d*\.\d+([eE][\-+]?\d+)?/, 'number.float'],
+                        [/\d+/, 'number'],
+                        [/[{}()\[\]]/, '@brackets'],
+                        [/@symbols/, {
+                            cases: {
+                                '@operators': 'operator',
+                                '@default': ''
+                            }
+                        }]
+                    ],
+                    string: [
+                        [/[^\\"]+/, 'string'],
+                        [/@escapes/, 'string.escape'],
+                        [/\\./, 'string.escape.invalid'],
+                        [/"/, { token: 'string.quote', bracket: '@close', next: '@pop' }]
+                    ],
+                    whitespace: [
+                        [/[ \t\r\n]+/, 'white'],
+                        [/#\*.*\*#/, 'comment'], // multiline comment
+                        [/#.*$/, 'comment'],     // singleline comment
+                    ]
+                }
+            });
+
+            // Configure language configurations (braces, matching brackets)
+            monaco.languages.setLanguageConfiguration('sardine', {
+                brackets: [
+                    ['{', '}'],
+                    ['[', ']'],
+                    ['(', ')']
+                ],
+                autoClosingPairs: [
+                    { open: '{', close: '}' },
+                    { open: '[', close: ']' },
+                    { open: '(', close: ')' },
+                    { open: '"', close: '"' }
+                ],
+                surroundingPairs: [
+                    { open: '{', close: '}' },
+                    { open: '[', close: ']' },
+                    { open: '(', close: ')' },
+                    { open: '"', close: '"' }
+                ]
+            });
+
+            // Create Monaco regular editor instance
+            const defaultCode = `# Welcome to the Sardine Language Playground!
+show("--- Standard control flow demo ---")
+
+cycle x = 0 : 5 {
+    show("  Loop index =", x)
+}
+`;
+
+            // Create Monaco editor instance (without default value initially, since selectFile will set it)
+            editorInstance = monaco.editor.create(document.getElementById('monaco-editor-container'), {
+                value: "",
+                language: 'sardine',
+                theme: 'sardine-dark',
+                fontSize: 14,
+                lineHeight: 22,
+                fontFamily: 'Consolas, "Courier New", Courier, monospace',
+                minimap: { enabled: true },
+                automaticLayout: true,
+                tabSize: 4
+            });
+
+            // Auto-save changes back to our virtual files registry
+            editorInstance.onDidChangeModelContent(() => {
+                if (activeFilename) {
+                    virtualFiles[activeFilename] = editorInstance.getValue();
+                }
+            });
+
+            // Select main.sad by default
+            selectFile('main.sad');
+
+            // Let layout adjust itself initially
+            setTimeout(() => editorInstance.layout(), 100);
+
+            // Redraw Monaco once fonts are fully loaded to prevent cursor alignment offset bugs
+            if (document.fonts) {
+                document.fonts.ready.then(function () {
+                    if (editorInstance) {
+                        editorInstance.layout();
+                    }
+                });
+            }
+
+            // Hide loading animation screen since environment is ready
+            hideLoadingOverlay();
+        });
+    </script>
+</body>
+
 </html>

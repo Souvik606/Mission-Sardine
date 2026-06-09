@@ -132,6 +132,34 @@ onmessage = function (e) {
         isCollectingJson = false;
         jsonBuffer = [];
 
+        // Sync files to WebAssembly virtual filesystem (MEMFS)
+        if (e.data.files && Module.FS) {
+          try {
+            // Delete old files to prevent deleted files from persisting across runs
+            let existing = Module.FS.readdir('/');
+            existing.forEach(name => {
+              if (name !== '.' && name !== '..' && name !== 'dev' && name !== 'proc' && name !== 'tmp' && name !== 'stdlib') {
+                let path = '/' + name;
+                let stat = Module.FS.stat(path);
+                if (Module.FS.isFile(stat.mode)) {
+                  Module.FS.unlink(path);
+                }
+              }
+            });
+          } catch (cleanErr) {
+            console.error("Failed to clean MEMFS before execution:", cleanErr);
+          }
+
+          // Write fresh files
+          for (let filename in e.data.files) {
+            try {
+              Module.FS.writeFile('/' + filename, e.data.files[filename]);
+            } catch (writeErr) {
+              console.error("Failed to write to MEMFS:", filename, writeErr);
+            }
+          }
+        }
+
         // Execute the interpreter entrypoint
         Module.ccall(
           "run_interpreter",
