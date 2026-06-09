@@ -897,13 +897,21 @@ struct ProfileGuard {
     }
 
     ~ProfileGuard() {
-        if (TIME_PROFILE_MODE) {
+        if (TIME_PROFILE_MODE && MEMORY_PROFILE_MODE) {
+            double lex_dur = has_lex_end ? chrono::duration<double, milli>(lex_end - lex_start).count() : 0.0;
+            double parse_dur = has_parse_end ? chrono::duration<double, milli>(parse_end - parse_start).count() : 0.0;
+            double interpret_dur = has_interpret_end ? chrono::duration<double, milli>(interpret_end - interpret_start).count() : 0.0;
+            double lex_mem = has_lex_end ? (double)(lex_mem_end - lex_mem_start) / 1024.0 : 0.0;
+            double parse_mem = has_parse_end ? (double)(parse_mem_end - parse_mem_start) / 1024.0 : 0.0;
+            double interpret_mem = has_interpret_end ? (double)(interpret_mem_end - interpret_mem_start) / 1024.0 : 0.0;
+            cerr << "{\"profile\": {\"lex_ms\": " << lex_dur << ", \"parse_ms\": " << parse_dur << ", \"interpret_ms\": " << interpret_dur
+                 << ", \"lex_kb\": " << lex_mem << ", \"parse_kb\": " << parse_mem << ", \"interpret_kb\": " << interpret_mem << "}}" << endl;
+        } else if (TIME_PROFILE_MODE) {
             double lex_dur = has_lex_end ? chrono::duration<double, milli>(lex_end - lex_start).count() : 0.0;
             double parse_dur = has_parse_end ? chrono::duration<double, milli>(parse_end - parse_start).count() : 0.0;
             double interpret_dur = has_interpret_end ? chrono::duration<double, milli>(interpret_end - interpret_start).count() : 0.0;
             cerr << "{\"profile\": {\"lex_ms\": " << lex_dur << ", \"parse_ms\": " << parse_dur << ", \"interpret_ms\": " << interpret_dur << "}}" << endl;
-        }
-        if (MEMORY_PROFILE_MODE) {
+        } else if (MEMORY_PROFILE_MODE) {
             double lex_mem = has_lex_end ? (double)(lex_mem_end - lex_mem_start) / 1024.0 : 0.0;
             double parse_mem = has_parse_end ? (double)(parse_mem_end - parse_mem_start) / 1024.0 : 0.0;
             double interpret_mem = has_interpret_end ? (double)(interpret_mem_end - interpret_mem_start) / 1024.0 : 0.0;
@@ -1172,6 +1180,7 @@ int main(int argc, char* argv[]) {
     if (it_profile != args.end()) {
         PROFILE_MODE = true;
         TIME_PROFILE_MODE = true;
+        MEMORY_PROFILE_MODE = true;
         args.erase(it_profile);
     }
     auto it_timeprofile = find(args.begin(), args.end(), "--timeprofile");
