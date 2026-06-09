@@ -4,6 +4,7 @@
 #include "number_type.h"
 #include "string_type.h"
 #include "../language_core/error.h"
+#include "../language_core/constants.h"
 #include "cow_containers.h"
 
 using namespace std;
@@ -11,11 +12,13 @@ using namespace std;
 class Dict final : public DataType, public enable_shared_from_this<Dict> {
 public:
     static string get_dict_key(const shared_ptr<DataType>& key) {
-        if (const auto n = dynamic_cast<const Number*>(key.get())) {
+        if (key->is_number()) {
+            const auto n = static_cast<const Number*>(key.get());
             if (holds_alternative<long long>(n->value)) return "I:" + std::to_string(std::get<long long>(n->value));
             return "D:" + std::to_string(std::get<double>(n->value));
         }
-        else if (const auto s = dynamic_cast<const String*>(key.get())) {
+        else if (key->is_string()) {
+            const auto s = static_cast<const String*>(key.get());
             return "S:" + s->value;
         }
         return "";
@@ -91,7 +94,7 @@ public:
                     combined_keys++;
                 }
             }
-            if (combined_keys > 100000) {
+            if (!UNBOUNDED_MODE && combined_keys > 100000) {
                 return { nullptr, make_shared<ValueError>(operand->pos_start.value_or(Position{}), operand->pos_end.value_or(Position{}), "Dictionary size limit exceeded (max 100,000 elements)", this->context) };
             }
             auto new_dict = dynamic_pointer_cast<Dict>(this->copy());
@@ -205,10 +208,9 @@ public:
     }
 
     OperationResult getByIndex(const vector<shared_ptr<DataType>>& indexes, const Position& pos_start = Position(), const Position& pos_end = Position()) const override {
-        // Fast path: single key index into a Dict (by far the most common case)
         if (indexes.size() == 1) {
             const auto& idx = indexes[0];
-            if (dynamic_cast<const Number*>(idx.get()) || dynamic_cast<const String*>(idx.get())) {
+            if (idx->is_number() || idx->is_string()) {
                 string key = get_dict_key(idx);
                 auto it = elements.find(key);
                 if (it != elements.end()) {
@@ -221,14 +223,14 @@ public:
             }
         }
 
-        // General path: multi-level indexing (no upfront copy)
         const DataType* cur = this;
         shared_ptr<DataType> cur_owned;
 
         try {
             for (const auto& idx : indexes) {
-                if (const auto dict_temp = dynamic_cast<const Dict*>(cur)) {
-                    if (dynamic_cast<const Number*>(idx.get()) || dynamic_cast<const String*>(idx.get())) {
+                if (cur->is_dict()) {
+                    const auto dict_temp = static_cast<const Dict*>(cur);
+                    if (idx->is_number() || idx->is_string()) {
                         string key = get_dict_key(idx);
                         auto it = dict_temp->elements.find(key);
                         if (it != dict_temp->elements.end()) {
@@ -258,12 +260,37 @@ public:
     OperationResult assignIndex(const vector<shared_ptr<DataType>>& indexes, const shared_ptr<DataType>& val, const Position& pos_start = Position(), const Position& pos_end = Position()) const override {
         if (indexes.empty()) return { nullptr, make_shared<IndexOutOfBoundsError>(pos_start, pos_end, "Index out of bounds", context) };
 
+        if (indexes.size() == 1) {
+            const auto& idx = indexes[0];
+            if (idx->is_number() || idx->is_string()) {
+                string key = get_dict_key(idx);
+                shared_ptr<Dict> new_dict;
+                auto self_shared = const_pointer_cast<Dict>(this->shared_from_this());
+                if (self_shared.use_count() <= 3) {
+                    new_dict = std::move(self_shared);
+                } else {
+                    new_dict = std::static_pointer_cast<Dict>(copy());
+                }
+                
+                if (new_dict->elements.find(key) == new_dict->elements.end()) {
+                    if (!UNBOUNDED_MODE && new_dict->elements.size() >= 100000) {
+                        return { nullptr, make_shared<ValueError>(idx->pos_start.value_or(pos_start), idx->pos_end.value_or(pos_end), "Dictionary size limit exceeded (max 100,000 elements)", context) };
+                    }
+                    new_dict->keys_order.push_back(key);
+                }
+                new_dict->elements[key] = val;
+                return { new_dict, nullptr };
+            } else {
+                return { nullptr, make_shared<DictKeyError>(idx->pos_start.value_or(pos_start), idx->pos_end.value_or(pos_end), "Dictionary keys must be numbers or strings", context) };
+            }
+        }
+
         shared_ptr<Dict> new_dict;
-        auto self_shared = const_pointer_cast<Dict>(dynamic_pointer_cast<const Dict>(this->shared_from_this()));
+        auto self_shared = const_pointer_cast<Dict>(this->shared_from_this());
         if (self_shared.use_count() <= 3) {
             new_dict = std::move(self_shared);
         } else {
-            new_dict = dynamic_pointer_cast<Dict>(copy());
+            new_dict = std::static_pointer_cast<Dict>(copy());
         }
         shared_ptr<DataType> current = new_dict;
 
@@ -276,8 +303,9 @@ public:
                 parent_indexes.push_back(indexes[i]);
 
                 const auto& idx = indexes[i];
-                if (const auto dict_temp = dynamic_cast<Dict*>(current.get())) {
-                    if (dynamic_cast<const Number*>(idx.get()) || dynamic_cast<const String*>(idx.get())) {
+                if (current->is_dict()) {
+                    const auto dict_temp = static_cast<Dict*>(current.get());
+                    if (idx->is_number() || idx->is_string()) {
                         string key = get_dict_key(idx);
                         if (dict_temp->elements.find(key) != dict_temp->elements.end()) {
                             current = dict_temp->elements[key];
@@ -301,18 +329,19 @@ public:
             shared_ptr<RunTimeError> leaf_error;
             auto last_idx = indexes.back();
 
-            if (const auto dict_temp = dynamic_cast<Dict*>(current.get())) {
-                auto dict_shared = dynamic_pointer_cast<Dict>(current);
+            if (current->is_dict()) {
+                const auto dict_temp = static_cast<Dict*>(current.get());
+                auto dict_shared = std::static_pointer_cast<Dict>(current);
                 if (dict_shared.use_count() <= 3) {
                     updated_current = dict_shared;
                 } else {
                     updated_current = dict_temp->copy();
                 }
-                auto updated_dict_ptr = dynamic_pointer_cast<Dict>(updated_current);
-                if (dynamic_cast<const Number*>(last_idx.get()) || dynamic_cast<const String*>(last_idx.get())) {
+                auto updated_dict_ptr = std::static_pointer_cast<Dict>(updated_current);
+                if (last_idx->is_number() || last_idx->is_string()) {
                     string key = get_dict_key(last_idx);
                     if (updated_dict_ptr->elements.find(key) == updated_dict_ptr->elements.end()) {
-                        if (updated_dict_ptr->elements.size() >= 100000) {
+                        if (!UNBOUNDED_MODE && updated_dict_ptr->elements.size() >= 100000) {
                             return { nullptr, make_shared<ValueError>(last_idx->pos_start.value_or(pos_start), last_idx->pos_end.value_or(pos_end), "Dictionary size limit exceeded (max 100,000 elements)", context) };
                         }
                         updated_dict_ptr->keys_order.push_back(key);

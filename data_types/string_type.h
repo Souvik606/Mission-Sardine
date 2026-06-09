@@ -3,12 +3,13 @@
 #include "data_type.h"
 #include "number_type.h"
 #include "../language_core/error.h"
+#include "../language_core/constants.h"
 
 using namespace std;
 
 inline string repeat_string(const string& str, const long long n) {
     if (n < 0) return "";
-    if (n > 0 && str.size() > 1000000 / n) {
+    if (!UNBOUNDED_MODE && n > 0 && str.size() > 1000000 / n) {
         throw std::length_error("String length limit exceeded (max 1,000,000 characters)");
     }
     string result;
@@ -136,7 +137,7 @@ public:
     [[nodiscard]] OperationResult add(const shared_ptr<DataType>& operand) const override {
         if (operand->is_string()) {
             const auto other = static_cast<const String*>(operand.get());
-            if (this->value.length() + other->value.length() > 1000000) {
+            if (!UNBOUNDED_MODE && this->value.length() + other->value.length() > 1000000) {
                 return std::make_pair(nullptr, make_shared<ValueError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "String size limit exceeded (max 1,000,000 characters)", this->context));
             }
             auto result = make_shared<String>(this->value + other->value);
@@ -158,7 +159,7 @@ public:
                 if (*int_val < 0) {
                     return std::make_pair(nullptr, make_shared<IllegalOperationError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "String repetition cannot be negative", this->context));
                 }
-                if (*int_val > 0 && this->value.length() > 1000000 / *int_val) {
+                if (!UNBOUNDED_MODE && *int_val > 0 && this->value.length() > 1000000 / *int_val) {
                     return std::make_pair(nullptr, make_shared<ValueError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "String size limit exceeded (max 1,000,000 characters)", this->context));
                 }
                 auto result = make_shared<String>(repeat_string(this->value, *int_val));

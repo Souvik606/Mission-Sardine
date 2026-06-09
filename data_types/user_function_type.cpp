@@ -105,7 +105,7 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>> &pos_args, co
         exec_context->symbol_table->reset(this->closure_context ? this->closure_context->symbol_table : nullptr);
     }
 
-    if (exec_context->depth > MAX_RECURSION_DEPTH)
+    if (!UNBOUNDED_MODE && exec_context->depth > MAX_RECURSION_DEPTH)
     {
         return res.failure(StackDepthExceededError(
             this->pos_start.value_or(Position()), this->pos_end.value_or(Position()),

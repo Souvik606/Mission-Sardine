@@ -587,7 +587,7 @@ RunTimeResult builtin_range(const Position& pos_start, const Position& pos_end, 
         num_elements_double = std::ceil(diff / std::abs(step));
     }
 
-    if (num_elements_double > 1000000.0) {
+    if (!UNBOUNDED_MODE && num_elements_double > 1000000.0) {
         return RunTimeResult().failure(ValueError(
             args.front()->pos_start.value_or(Position()), args.back()->pos_end.value_or(Position()),
             "range() limit exceeded (size " + format_double_as_clean_int(num_elements_double) + " > 1,000,000 limit)",

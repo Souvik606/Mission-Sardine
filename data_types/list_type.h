@@ -4,6 +4,7 @@
 #include "number_type.h"
 #include "string_type.h"
 #include "../language_core/error.h"
+#include "../language_core/constants.h"
 #include "cow_containers.h"
 
 using namespace std;
@@ -68,24 +69,26 @@ public:
     [[nodiscard]] OperationResult getByIndex(const vector<shared_ptr<DataType>>& indexes, const Position& pos_start = Position(), const Position& pos_end = Position()) const override {
         // Fast path: single integer index into a List (by far the most common case)
         if (indexes.size() == 1) {
-            if (const auto num_idx = dynamic_cast<const Number*>(indexes[0].get())) {
+            const auto& first_idx = indexes[0];
+            if (first_idx->is_number()) {
+                const auto num_idx = static_cast<const Number*>(first_idx.get());
                 if (num_idx->is_float) {
                     return std::make_pair(nullptr, make_shared<IllegalOperationError>(
-                        indexes[0]->pos_start.value_or(Position()),
-                        indexes[0]->pos_end.value_or(Position()),
+                        first_idx->pos_start.value_or(Position()),
+                        first_idx->pos_end.value_or(Position()),
                         "Invalid Index Type", this->context));
                 }
                 if (holds_alternative<double>(num_idx->value)) {
                     return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(
-                        indexes[0]->pos_start.value_or(Position()),
-                        indexes[0]->pos_end.value_or(Position()),
+                        first_idx->pos_start.value_or(Position()),
+                        first_idx->pos_end.value_or(Position()),
                         "Index out of bounds", this->context));
                 }
-                long long idx = get<long long>(num_idx->value);
+                long long idx = std::get<long long>(num_idx->value);
                 if (idx < 0 || idx >= static_cast<long long>(elements.size())) {
                     return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(
-                        indexes[0]->pos_start.value_or(Position()),
-                        indexes[0]->pos_end.value_or(Position()),
+                        first_idx->pos_start.value_or(Position()),
+                        first_idx->pos_end.value_or(Position()),
                         "Index out of bounds", this->context));
                 }
                 return std::make_pair(elements[idx], nullptr);
@@ -99,7 +102,7 @@ public:
         try {
             for (const auto& idx : indexes) {
                 if (cur->is_dict()) {
-                    if (dynamic_cast<const Number*>(idx.get()) || dynamic_cast<const String*>(idx.get())) {
+                    if (idx->is_number() || idx->is_string()) {
                         auto [next, error] = cur->getByIndex({ idx });
                         if (error) return std::make_pair(nullptr, error);
                         cur_owned = next;
@@ -111,23 +114,21 @@ public:
                             "Dictionary keys must be numbers or strings", this->context));
                     }
                 }
-                else if (const auto num_idx = dynamic_cast<const Number*>(idx.get())) {
+                else if (idx->is_number()) {
+                    const auto num_idx = static_cast<const Number*>(idx.get());
                     if (num_idx->is_float) {
                         return std::make_pair(nullptr, make_shared<IllegalOperationError>(
                             idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()),
                             "Invalid Index Type", this->context));
                     }
-                    if (holds_alternative<double>(num_idx->value)) {
-                        return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(
-                            idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()),
-                            "Index out of bounds", this->context));
-                    }
-                    long long i = get<long long>(num_idx->value);
-                    if (const auto list_cur = dynamic_cast<const List*>(cur)) {
+                    long long i = std::get<long long>(num_idx->value);
+                    if (cur->is_list()) {
+                        const auto list_cur = static_cast<const List*>(cur);
                         cur_owned = list_cur->elements.at(i);
                         cur = cur_owned.get();
                     }
-                    else if (const auto str_cur = dynamic_cast<const String*>(cur)) {
+                    else if (cur->is_string()) {
+                        const auto str_cur = static_cast<const String*>(cur);
                         cur_owned = make_shared<String>(string(1, str_cur->value.at(i)));
                         cur_owned->set_context(this->context);
                         cur = cur_owned.get();
@@ -157,6 +158,36 @@ public:
     [[nodiscard]] OperationResult assignIndex(const vector<shared_ptr<DataType>>& indexes, const shared_ptr<DataType>& val, const Position& pos_start = Position(), const Position& pos_end = Position()) const override {
         if (indexes.empty()) return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(this->pos_start.value_or(Position()), this->pos_end.value_or(Position()), "Index out of bounds", this->context));
 
+        if (indexes.size() == 1) {
+            const auto& idx = indexes[0];
+            if (idx->is_number()) {
+                const auto num_idx = static_cast<const Number*>(idx.get());
+                if (num_idx->is_float) {
+                    return std::make_pair(nullptr, make_shared<IllegalOperationError>(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Invalid Index Type", this->context));
+                }
+                if (holds_alternative<double>(num_idx->value)) {
+                    return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
+                }
+                long long idx_val = std::get<long long>(num_idx->value);
+                if (idx_val < 0 || idx_val >= static_cast<long long>(elements.size())) {
+                    return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
+                }
+
+                shared_ptr<List> new_list;
+                auto self_shared = const_pointer_cast<List>(this->shared_from_this());
+                if (self_shared.use_count() <= 3) {
+                    new_list = std::move(self_shared);
+                } else {
+                    new_list = make_shared<List>(this->elements);
+                    new_list->set_pos(this->pos_start, this->pos_end);
+                    new_list->set_context(this->context);
+                }
+                new_list->elements[idx_val] = val;
+                return std::make_pair(new_list, nullptr);
+            }
+            return std::make_pair(nullptr, make_shared<IllegalOperationError>(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Invalid Index Type", this->context));
+        }
+
         shared_ptr<List> new_list;
         auto self_shared = const_pointer_cast<List>(this->shared_from_this());
         if (self_shared.use_count() <= 3) {
@@ -178,7 +209,7 @@ public:
 
                 const auto& idx = indexes[i];
                 if (current->is_dict()) {
-                    if (dynamic_cast<const Number*>(idx.get()) || dynamic_cast<const String*>(idx.get())) {
+                    if (idx->is_number() || idx->is_string()) {
                         auto [next_current, error] = current->getByIndex({ idx });
                         if (error) return std::make_pair(nullptr, error);
                         current = next_current;
@@ -187,18 +218,17 @@ public:
                         return std::make_pair(nullptr, make_shared<DictKeyError>(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Dictionary keys must be numbers or strings", this->context));
                     }
                 }
-                else if (const auto num_idx = dynamic_cast<const Number*>(idx.get())) {
+                else if (idx->is_number()) {
+                    const auto num_idx = static_cast<const Number*>(idx.get());
                     if (num_idx->is_float) {
                         return std::make_pair(nullptr, make_shared<IllegalOperationError>(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Invalid Index Type", this->context));
                     }
-                    if (holds_alternative<double>(num_idx->value)) {
-                        return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
-                    }
-                    long long idx_val = get<long long>(num_idx->value);
-                    if (const auto list_temp = dynamic_cast<List*>(current.get())) {
+                    long long idx_val = std::get<long long>(num_idx->value);
+                    if (current->is_list()) {
+                        auto list_temp = static_cast<List*>(current.get());
                         current = list_temp->elements.at(idx_val);
                     }
-                    else if (dynamic_cast<String*>(current.get())) {
+                    else if (current->is_string()) {
                         return std::make_pair(nullptr, make_shared<IllegalOperationError>(idx->pos_start.value_or(Position()), idx->pos_end.value_or(Position()), "Can't assign inside string beyond one level", this->context));
                     }
                     else {
@@ -216,28 +246,28 @@ public:
             if (current->is_dict()) {
                 tie(updated_current, leaf_error) = current->assignIndex({ indexes.back() }, val);
             }
-            else if (dynamic_cast<List*>(current.get())) {
-                auto list_current = dynamic_pointer_cast<List>(current);
+            else if (current->is_list()) {
+                auto list_current = std::static_pointer_cast<List>(current);
                 if (list_current.use_count() <= 3) {
                     updated_current = list_current;
                 } else {
-                    updated_current = dynamic_pointer_cast<DataType>(list_current->copy());
+                    updated_current = std::static_pointer_cast<DataType>(list_current->copy());
                 }
 
                 auto last_idx = indexes.back();
-                auto num_last_idx = dynamic_cast<const Number*>(last_idx.get());
-                if (!num_last_idx || num_last_idx->is_float) {
+                if (last_idx->is_number()) {
+                    auto num_last_idx = static_cast<const Number*>(last_idx.get());
+                    if (num_last_idx->is_float) {
+                        return std::make_pair(nullptr, make_shared<IllegalOperationError>(last_idx->pos_start.value_or(Position()), last_idx->pos_end.value_or(Position()), "Invalid Index Type", this->context));
+                    }
+                    try {
+                        std::static_pointer_cast<List>(updated_current)->elements.at(std::get<long long>(num_last_idx->value)) = val;
+                    }
+                    catch (const out_of_range&) {
+                        return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(last_idx->pos_start.value_or(Position()), last_idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
+                    }
+                } else {
                     return std::make_pair(nullptr, make_shared<IllegalOperationError>(last_idx->pos_start.value_or(Position()), last_idx->pos_end.value_or(Position()), "Invalid Index Type", this->context));
-                }
-                if (holds_alternative<double>(num_last_idx->value)) {
-                    return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(last_idx->pos_start.value_or(Position()), last_idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
-                }
-
-                try {
-                    dynamic_pointer_cast<List>(updated_current)->elements.at(get<long long>(num_last_idx->value)) = val;
-                }
-                catch (const out_of_range&) {
-                    return std::make_pair(nullptr, make_shared<IndexOutOfBoundsError>(last_idx->pos_start.value_or(Position()), last_idx->pos_end.value_or(Position()), "Index out of bounds", this->context));
                 }
             }
             else if (dynamic_cast<String*>(current.get())) {
@@ -278,7 +308,7 @@ public:
             new_list = make_shared<List>(this->elements);
         }
         if (dynamic_cast<const Number*>(operand.get()) || dynamic_cast<const String*>(operand.get()) || operand->is_dict()) {
-            if (new_list->elements.size() >= 1000000) {
+            if (!UNBOUNDED_MODE && new_list->elements.size() >= 1000000) {
                 return std::make_pair(nullptr, make_shared<ValueError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", this->context));
             }
             new_list->elements.push_back(operand);
@@ -286,7 +316,7 @@ public:
             return std::make_pair(std::static_pointer_cast<DataType>(new_list), nullptr);
         }
         if (const auto other_list = dynamic_cast<const List*>(operand.get())) {
-            if (new_list->elements.size() + other_list->elements.size() > 1000000) {
+            if (!UNBOUNDED_MODE && new_list->elements.size() + other_list->elements.size() > 1000000) {
                 return std::make_pair(nullptr, make_shared<ValueError>(operand->pos_start.value_or(Position()), operand->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", this->context));
             }
             new_list->elements.insert(
@@ -332,7 +362,7 @@ public:
                 if (*int_val < 0) {
                     return std::make_pair(nullptr, make_shared<IllegalOperationError>(num->pos_start.value_or(Position()), num->pos_end.value_or(Position()), "List repetition cannot be negative", this->context));
                 }
-                if (*int_val > 0 && this->elements.size() > 1000000 / *int_val) {
+                if (!UNBOUNDED_MODE && *int_val > 0 && this->elements.size() > 1000000 / *int_val) {
                     return std::make_pair(nullptr, make_shared<ValueError>(num->pos_start.value_or(Position()), num->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", this->context));
                 }
                 shared_ptr<List> new_list;

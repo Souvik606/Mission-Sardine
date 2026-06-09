@@ -6,6 +6,7 @@
 #include "list_type.h"
 #include "dict_type.h"
 #include "../language_core/error.h"
+#include "../language_core/constants.h"
 
 using namespace std;
 
@@ -36,7 +37,7 @@ inline DataType::OperationResult String::get_attr(const string& attr_name, const
             string d = delim->value;
             size_t pos = 0;
             while ((pos = s.find(d)) != string::npos) {
-                if (parts.size() >= 1000000) {
+                if (!UNBOUNDED_MODE && parts.size() >= 1000000) {
                     return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "Split size limit exceeded (max 1,000,000 elements)", context) };
                 }
                 auto part = make_shared<String>(s.substr(0, pos));
@@ -44,7 +45,7 @@ inline DataType::OperationResult String::get_attr(const string& attr_name, const
                 parts.push_back(part);
                 s.erase(0, pos + d.length());
             }
-            if (parts.size() >= 1000000) {
+            if (!UNBOUNDED_MODE && parts.size() >= 1000000) {
                 return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "Split size limit exceeded (max 1,000,000 elements)", context) };
             }
             auto last_part = make_shared<String>(s);
@@ -174,7 +175,7 @@ inline DataType::OperationResult String::get_attr(const string& attr_name, const
             }
             size_t start_pos = 0;
             while((start_pos = s.find(from, start_pos)) != string::npos) {
-                if (s.length() - from.length() + to.length() > 1000000) {
+                if (!UNBOUNDED_MODE && s.length() - from.length() + to.length() > 1000000) {
                     return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "String size limit exceeded (max 1,000,000 characters)", context) };
                 }
                 s.replace(start_pos, from.length(), to);
@@ -272,7 +273,7 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             if (args.size() != 1 || !kw_args.empty()) {
                 return { nullptr, make_shared<ArgumentError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "append() takes exactly 1 argument", context) };
             }
-            if (list_self->elements.size() >= 1000000) {
+            if (!UNBOUNDED_MODE && list_self->elements.size() >= 1000000) {
                 return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", context) };
             }
             list_self->detach();
@@ -290,7 +291,7 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             if (args.size() != 1 || !kw_args.empty()) {
                 return { nullptr, make_shared<ArgumentError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "prepend() takes exactly 1 argument", context) };
             }
-            if (list_self->elements.size() >= 1000000) {
+            if (!UNBOUNDED_MODE && list_self->elements.size() >= 1000000) {
                 return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", context) };
             }
             list_self->detach();
@@ -308,7 +309,7 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             if (args.size() != 2 || !kw_args.empty()) {
                 return { nullptr, make_shared<ArgumentError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "insert() takes exactly 2 arguments: (index, item)", context) };
             }
-            if (list_self->elements.size() >= 1000000) {
+            if (!UNBOUNDED_MODE && list_self->elements.size() >= 1000000) {
                 return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", context) };
             }
             auto num_idx = dynamic_pointer_cast<Number>(args[0]);
@@ -613,7 +614,7 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             if (!other) {
                 return { nullptr, make_shared<IllegalOperationError>(args[0]->pos_start.value_or(Position()), args[0]->pos_end.value_or(Position()), "Argument to extend() must be a List", context) };
             }
-            if (list_self->elements.size() + other->elements.size() > 1000000) {
+            if (!UNBOUNDED_MODE && list_self->elements.size() + other->elements.size() > 1000000) {
                 return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", context) };
             }
             list_self->detach();
@@ -843,7 +844,7 @@ inline DataType::OperationResult Dict::get_attr(const string& attr_name, const s
                     combined_keys++;
                 }
             }
-            if (combined_keys > 100000) {
+            if (!UNBOUNDED_MODE && combined_keys > 100000) {
                 return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "Dictionary size limit exceeded (max 100,000 elements)", context) };
             }
             dict_self->detach();

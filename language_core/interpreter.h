@@ -1055,7 +1055,26 @@ private:
 
                 if (!indexes_vals.empty())
                 {
-                    auto list_value = context->symbol_table->get(var_use->interned_name);
+                    shared_ptr<DataType> list_value;
+                    if (var_use->cached_symbol_table_id == context->symbol_table->id && var_use->cached_value_ptr)
+                    {
+                        list_value = *const_cast<shared_ptr<DataType>*>(var_use->cached_value_ptr);
+                    }
+                    else
+                    {
+                        list_value = context->symbol_table->get(var_use->interned_name);
+                        if (list_value)
+                        {
+                            const SymbolTable* found_table = nullptr;
+                            const shared_ptr<DataType>* ptr = context->symbol_table->get_ptr(var_use->interned_name, found_table);
+                            if (ptr)
+                            {
+                                var_use->cached_symbol_table_id = found_table->id;
+                                var_use->cached_value_ptr = ptr;
+                            }
+                        }
+                    }
+
                     if (!list_value)
                     {
                         return res.failure(NameError(
@@ -1067,7 +1086,11 @@ private:
                     auto [new_list, error] = list_value->assignIndex(indexes_vals, value, node->pos_start.value_or(Position()), node->pos_end.value_or(Position()));
                     if (error)
                         return res.failure(*error);
-                    context->symbol_table->set(var_use->interned_name, new_list);
+                    if (new_list != list_value)
+                    {
+                        context->symbol_table->set(var_use->interned_name, new_list);
+                        var_use->cached_value_ptr = nullptr; // Invalidate cache on modification
+                    }
                     last_result = new_list;
                 }
                 else
