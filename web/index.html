@@ -92,28 +92,47 @@
 
         .ast-node {
             cursor: pointer;
-            transition: opacity 0.3s, transform 0.3s;
+            transition: opacity 0.3s;
         }
         .ast-node foreignObject {
             overflow: visible;
         }
         .ast-node-card {
+            width: 160px;
+            height: 60px;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             transform-origin: center;
         }
         .ast-node:hover .ast-node-card {
-            transform: scale(1.08);
+            transform: scale(1.05);
             border-color: #6366f1 !important; /* indigo-500 */
             box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
         }
         .ast-node.highlighted .ast-node-card {
+            width: 260px;
+            height: 150px;
             border-color: #4f46e5 !important; /* indigo-600 */
             box-shadow: 0 0 25px rgba(99, 102, 241, 0.6);
-            transform: scale(1.1);
+            transform: none !important;
         }
         .ast-node.muted {
             opacity: 0.15;
+        }
+        .ast-node.muted .ast-node-card {
             transform: scale(0.9);
+        }
+        .ast-node-val {
+            max-height: 16px;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .ast-node.highlighted .ast-node-val {
+            max-height: 90px;
+            white-space: normal;
+            text-overflow: clip;
+            overflow-y: auto;
         }
     </style>
 </head>
@@ -1700,10 +1719,10 @@ cycle x = 0 : 5 {
                     const w = container.clientWidth || 400;
                     const h = container.clientHeight || 500;
 
-                    // Compute translation to center on (nodeData.y, nodeData.x)
+                    // Compute translation to center on (nodeData.x, nodeData.y)
                     const scale = 1.0;
-                    const transX = w / 2 - scale * nodeData.y;
-                    const transY = h / 2 - scale * nodeData.x;
+                    const transX = w / 2 - scale * nodeData.x;
+                    const transY = h / 2 - scale * nodeData.y;
 
                     d3Svg.transition()
                         .duration(750)
@@ -1730,11 +1749,11 @@ cycle x = 0 : 5 {
             currentTraversalIndex = -1;
             highlightCurrentNode(false);
 
-            // Re-center tree layout completely
+            // Re-center tree layout completely (top center for vertical layout)
             if (d3ZoomBehavior && d3Svg) {
                 const container = document.getElementById('edu-ast-tree-container');
-                const height = container.clientHeight || 500;
-                const initialTransform = d3.zoomIdentity.translate(80, height / 2).scale(0.85);
+                const width = container.clientWidth || 400;
+                const initialTransform = d3.zoomIdentity.translate(width / 2, 60).scale(0.85);
 
                 d3Svg.transition()
                     .duration(500)
@@ -1809,12 +1828,12 @@ cycle x = 0 : 5 {
             // Create D3 Hierarchy structure
             const root = d3.hierarchy(simplifiedAst);
 
-            // Compute D3 Tree Layout
-            const treeLayout = d3.tree().nodeSize([90, 240]);
+            // Compute D3 Tree Layout (horizontal separation 220px, vertical separation 140px)
+            const treeLayout = d3.tree().nodeSize([220, 140]);
             treeLayout(root);
 
-            // Center root node initially on the left side
-            const initialTransform = d3.zoomIdentity.translate(80, height / 2).scale(0.85);
+            // Center root node initially at the top center
+            const initialTransform = d3.zoomIdentity.translate(width / 2, 60).scale(0.85);
             svg.call(d3ZoomBehavior.transform, initialTransform);
 
             // Draw links (connector lines)
@@ -1823,9 +1842,9 @@ cycle x = 0 : 5 {
                 .enter()
                 .append("path")
                 .attr("class", "ast-link")
-                .attr("d", d3.linkHorizontal()
-                    .x(d => d.y)
-                    .y(d => d.x)
+                .attr("d", d3.linkVertical()
+                    .x(d => d.x)
+                    .y(d => d.y)
                 )
                 .attr("id", d => `link-${d.source.data.id}-${d.target.data.id}`);
 
@@ -1836,34 +1855,33 @@ cycle x = 0 : 5 {
                 .append("g")
                 .attr("class", "ast-node")
                 .attr("id", d => d.data.id)
-                .attr("transform", d => `translate(${d.y},${d.x})`)
+                .attr("transform", d => `translate(${d.x},${d.y})`)
                 .on("click", (event, d) => {
                     event.stopPropagation();
                     focusNode(d.data.id);
                 });
 
-            // Embedded HTML Card within each node group using foreignObject
-            const cardWidth = 160;
-            const cardHeight = 60;
-
+            // Embedded HTML Card within each node group using foreignObject (bounds expanded to fit 260x150 highlighted cards)
             const fo = nodes.append("foreignObject")
-                .attr("width", cardWidth)
-                .attr("height", cardHeight)
-                .attr("x", -cardWidth / 2)
-                .attr("y", -cardHeight / 2);
+                .attr("width", 280)
+                .attr("height", 180)
+                .attr("x", -140)
+                .attr("y", -90);
 
             fo.html(d => {
-                const label = `<div class="text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-0.5 truncate">${d.data.label || 'NODE'}</div>`;
-                const nodeType = `<div class="text-[11px] font-bold text-indigo-300 font-sans leading-none truncate">${d.data.nodeType.replace("Node", "")}</div>`;
+                const label = `<div class="text-[8px] text-slate-500 font-bold uppercase tracking-wider mb-0.5 truncate">${d.data.label || 'NODE'}</div>`;
+                const nodeType = `<div class="text-[11px] font-bold text-indigo-900 font-sans leading-none truncate">${d.data.nodeType.replace("Node", "")}</div>`;
                 const val = d.data.value;
                 const valText = (val !== null && val !== undefined) ? (typeof val === 'string' ? `"${val}"` : val) : "";
-                const valDiv = valText !== "" ? `<div class="text-[10px] text-emerald-400 font-mono mt-1 truncate leading-tight">${valText}</div>` : "";
+                const valDiv = valText !== "" ? `<div class="ast-node-val text-[10px] text-emerald-800 font-mono mt-1 leading-tight">${valText}</div>` : "";
 
                 return `
-                    <div class="ast-node-card h-full w-full rounded-lg border border-slate-800 bg-slate-900/90 text-left p-2 select-none flex flex-col justify-center border-l-4 border-l-indigo-500 backdrop-blur-sm">
-                        ${label}
-                        ${nodeType}
-                        ${valDiv}
+                    <div class="ast-fo-wrapper w-full h-full flex items-center justify-center">
+                        <div class="ast-node-card rounded-none border border-slate-300 bg-slate-200/95 text-left p-2.5 select-none flex flex-col justify-center backdrop-blur-sm shadow-md">
+                            ${label}
+                            ${nodeType}
+                            ${valDiv}
+                        </div>
                     </div>
                 `;
             });
