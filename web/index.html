@@ -17,6 +17,8 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Load COI Service Worker to enable SharedArrayBuffer -->
     <script src="coi-serviceworker.js"></script>
+    <!-- D3.js library for interactive AST graphs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <!-- Monaco Editor Loader -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs/loader.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -71,6 +73,48 @@
         .animate-shake {
             animation: shake 0.2s ease-in-out 0s 2;
         }
+
+        /* AST Graph and SVG Styles */
+        .ast-link {
+            fill: none;
+            stroke: #334155; /* slate-700 */
+            stroke-width: 2px;
+            transition: stroke 0.3s, stroke-width 0.3s, opacity 0.3s;
+        }
+        .ast-link.highlighted {
+            stroke: #6366f1; /* indigo-500 */
+            stroke-width: 3.5px;
+        }
+        .ast-link.muted {
+            stroke: #1e293b; /* slate-800 */
+            opacity: 0.15;
+        }
+
+        .ast-node {
+            cursor: pointer;
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        .ast-node foreignObject {
+            overflow: visible;
+        }
+        .ast-node-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: center;
+        }
+        .ast-node:hover .ast-node-card {
+            transform: scale(1.08);
+            border-color: #6366f1 !important; /* indigo-500 */
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+        }
+        .ast-node.highlighted .ast-node-card {
+            border-color: #4f46e5 !important; /* indigo-600 */
+            box-shadow: 0 0 25px rgba(99, 102, 241, 0.6);
+            transform: scale(1.1);
+        }
+        .ast-node.muted {
+            opacity: 0.15;
+            transform: scale(0.9);
+        }
     </style>
 </head>
 
@@ -106,7 +150,7 @@
             <a href="#/docs" id="nav-docs"
                 class="px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-gray-900/60 hover:text-indigo-400 text-slate-400">Documentation</a>
             <a href="#/editor" id="nav-editor"
-                class="px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-gray-900/60 hover:text-indigo-400 text-slate-400">Playground</a>
+                class="px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-gray-900/60 hover:text-indigo-400 text-slate-400">Editor</a>
             <a href="#/educational" id="nav-educational"
                 class="px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-gray-900/60 hover:text-indigo-400 text-slate-400">Educational
                 Mode</a>
@@ -130,7 +174,7 @@
                 <div class="flex justify-center space-x-4">
                     <a href="#/editor"
                         class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow-lg shadow-indigo-500/20 transition-all">
-                        Open Playground
+                        Open Editor
                     </a>
                     <a href="#/docs"
                         class="border border-slate-700 bg-slate-800/40 hover:bg-slate-800 text-slate-300 px-6 py-2.5 rounded-lg text-sm font-bold transition-all">
@@ -208,12 +252,7 @@
                             file open</span>
                     </div>
                     <div class="flex items-center space-x-5">
-                        <label
-                            class="flex items-center space-x-2 cursor-pointer select-none text-slate-400 hover:text-slate-200 transition-colors">
-                            <input type="checkbox" id="editor-toggle-clear-terminal"
-                                class="rounded border-slate-800 bg-slate-950 text-indigo-600 focus:ring-indigo-500/50 focus:ring-offset-slate-950 h-4 w-4">
-                            <span class="text-xs font-medium">Clear Terminal upon execution</span>
-                        </label>
+
 
                         <label
                             class="flex items-center space-x-2 cursor-pointer select-none text-slate-400 hover:text-slate-200 transition-colors">
@@ -262,17 +301,25 @@
                         <span
                             class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-2">
                             <i data-lucide="terminal" class="h-4 w-4 text-indigo-400"></i>
-                            <span>Terminal Sandbox IO</span>
+                            <span>IO Window</span>
                         </span>
-                        <button onclick="clearTerminal()"
-                            class="text-xs text-slate-400 hover:text-slate-200 transition-colors flex items-center space-x-1">
-                            <i data-lucide="trash-2" class="h-3 w-3"></i>
-                            <span>Clear</span>
-                        </button>
+                        <div class="flex items-center space-x-4">
+                            <label
+                                class="flex items-center space-x-2 cursor-pointer select-none text-slate-400 hover:text-slate-200 transition-colors">
+                                <input type="checkbox" id="editor-toggle-clear-terminal"
+                                    class="rounded border-slate-800 bg-slate-950 text-indigo-600 focus:ring-indigo-500/50 focus:ring-offset-slate-950 h-3.5 w-3.5">
+                                <span class="text-[11px] font-medium">Clear window upon execution</span>
+                            </label>
+                            <button onclick="clearTerminal()"
+                                class="text-xs text-slate-400 hover:text-slate-200 transition-colors flex items-center space-x-1">
+                                <i data-lucide="trash-2" class="h-3 w-3"></i>
+                                <span>Clear</span>
+                            </button>
+                        </div>
                     </div>
                     <div id="terminal-console"
                         class="flex-1 overflow-y-auto p-5 font-mono text-[12px] space-y-1.5 select-text bg-black text-slate-300">
-                        <div class="text-slate-500">// WASM Interpreter initializing...</div>
+                        <div class="text-slate-500">// Welcome to Sardine!</div>
                     </div>
                     <!-- Writable terminal input prompt -->
                     <div id="terminal-input-row"
@@ -288,12 +335,197 @@
         </div>
 
         <!-- EDUCATIONAL PLAYGROUND VIEW -->
-        <div id="view-educational" class="view-pane hidden absolute inset-0 flex items-center justify-center p-6">
-            <div class="text-center text-slate-400">
-                <i data-lucide="git-merge" class="h-12 w-12 mx-auto text-indigo-500 mb-3 animate-pulse"></i>
-                <h2 class="text-xl font-bold text-white mb-1">Educational Mode</h2>
-                <p class="text-sm">AST visualization interface under construction...</p>
-            </div>
+        <div id="view-educational" class="view-pane hidden absolute inset-0 flex overflow-hidden bg-stone-900">
+            <!-- Sandbox Virtual Files Sidebar -->
+            <aside id="edu-sidebar"
+                class="w-72 border-r border-slate-800/80 bg-zinc-950/45 backdrop-blur-md flex flex-col shrink-0 transition-all duration-300">
+                <!-- COLLAPSED CONTENT STATE -->
+                <div id="edu-sidebar-collapsed-content" class="hidden flex-1 flex flex-col items-center py-4 space-y-4">
+                    <button onclick="toggleSidebar(true)"
+                        class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-900 transition-colors"
+                        title="Expand Files Sidebar">
+                        <i data-lucide="folder" class="h-6 w-6"></i>
+                    </button>
+                </div>
+
+                <!-- EXPANDED CONTENT STATE -->
+                <div id="edu-sidebar-expanded-content" class="flex-1 flex flex-col min-h-0">
+                    <div class="p-4 border-b border-slate-800/60 flex items-center justify-between shrink-0">
+                        <span
+                            class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1.5">
+                            <i data-lucide="folder" class="h-4 w-4 text-slate-400"></i>
+                            <span>Files</span>
+                        </span>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="createNewFilePrompt(true)"
+                                class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold flex items-center space-x-0.5">
+                                <i data-lucide="plus" class="h-3 w-3"></i>
+                                <span>Add</span>
+                            </button>
+                            <button onclick="clearVirtualFiles()"
+                                class="text-[10px] text-rose-400 hover:text-rose-300 transition-colors font-semibold">Clear</button>
+                            <button onclick="toggleSidebar(true)"
+                                class="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-900 transition-colors ml-1"
+                                title="Collapse Sidebar">
+                                <i data-lucide="chevron-left" class="h-3.5 w-3.5"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-3 text-[11px] text-slate-500 border-b border-slate-800/30">
+                        User-created files and files generated by the interpreter. Click a file to open in the editor.
+                    </div>
+                    <div id="edu-virtual-files-list" class="flex-1 overflow-y-auto p-4 space-y-2">
+                        <div class="text-m text-slate-600 italic p-4 text-center rounded-xl">
+                            No files created yet.
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Center Workspace split vertically (Upper Workspace + Console Terminal) -->
+            <main class="flex-1 flex flex-col min-w-0 bg-slate-950/20">
+                <!-- Action Bar -->
+                <div
+                    class="h-14 border-b border-slate-800/80 bg-slate-950/50 backdrop-blur-md px-6 flex items-center justify-between shrink-0">
+                    <div class="flex items-center space-x-2">
+                        <span id="edu-active-filename"
+                            class="bg-slate-900 px-2.5 py-1 rounded text-[11px] font-mono text-indigo-300 border border-slate-800">No
+                            file open</span>
+                    </div>
+                    <div class="flex items-center space-x-5">
+                        <div class="flex items-center space-x-2">
+                            <button id="edu-btn-run" onclick="runCode(true)" disabled
+                                class="flex items-center space-x-1.5 bg-slate-900 border border-slate-800 text-slate-500 px-6 py-2.5 rounded-lg text-xs font-semibold cursor-not-allowed transition-all">
+                                <i data-lucide="play" class="h-3.5 w-3.5"></i>
+                                <span>Run Code</span>
+                            </button>
+                            <button id="edu-btn-stop" onclick="terminateExecution()" disabled
+                                class="flex items-center space-x-1.5 bg-rose-950/30 border border-rose-900/20 text-rose-500/40 px-6 py-2.5 rounded-lg text-xs font-semibold cursor-not-allowed transition-all">
+                                <i data-lucide="square" class="h-3.5 w-3.5"></i>
+                                <span>Stop</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upper Split: Monaco Editor (Left) & Educational Sidebar (Right) -->
+                <div id="edu-workspace" class="flex-1 flex min-h-0 relative bg-slate-950">
+                    <!-- Editor container -->
+                    <div class="flex-1 min-w-0 relative h-full">
+                        <div id="edu-monaco-editor-container" class="absolute inset-0 font-mono"></div>
+                        <!-- Empty state overlay placeholder -->
+                        <div id="edu-editor-empty-state"
+                            class="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0a0a] text-slate-500 z-10">
+                            <i data-lucide="file-code" class="h-12 w-12 text-slate-700 mb-3"></i>
+                            <p class="text-sm font-semibold text-slate-400">Select a file to get started!</p>
+                            <p class="text-xs text-slate-600 mt-1">Create or open a file from the sidebar.</p>
+                        </div>
+                    </div>
+
+                    <!-- Vertical Resize Handle -->
+                    <div id="edu-right-sidebar-resize-handle"
+                        class="w-1.5 cursor-col-resize hover:bg-indigo-500/50 transition-colors z-20 shrink-0 border-l border-slate-850"
+                        title="Drag to resize info panel"></div>
+
+                    <!-- Right Info Sidebar (Tokens / AST View) -->
+                    <aside id="edu-info-sidebar" class="w-96 min-w-[200px] shrink-0 bg-slate-950 flex flex-col border-l border-slate-850/80">
+                        <!-- Glassmorphic Tab Selector -->
+                        <div class="h-14 bg-slate-900/60 backdrop-blur-md px-4 flex items-center justify-between border-b border-slate-800/60 shrink-0">
+                            <div class="flex bg-slate-950/80 p-0.5 rounded-lg border border-slate-800/80 w-full font-sans">
+                                <button id="edu-tab-tokens" onclick="switchEduTab('tokens')"
+                                    class="flex-1 py-1.5 text-xs font-semibold rounded-md transition-all text-white bg-indigo-600/20 text-indigo-400 border border-indigo-500/10">
+                                    Tokens
+                                </button>
+                                <button id="edu-tab-ast" onclick="switchEduTab('ast')"
+                                    class="flex-1 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-400 hover:text-slate-200">
+                                    AST Tree
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Tokens View Tab -->
+                        <div id="edu-tokens-panel" class="flex-1 overflow-y-auto p-4 select-text">
+                            <table class="w-full text-left border-collapse font-sans">
+                                <thead>
+                                    <tr class="border-b border-slate-800/80 text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
+                                        <th class="pb-2 px-2">Type</th>
+                                        <th class="pb-2 px-2">Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="edu-tokens-table-body" class="divide-y divide-slate-900 font-mono text-[10px]">
+                                    <tr>
+                                        <td colspan="2" class="p-4 text-center text-slate-500 italic">// Run code in Educational Mode to populate.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- AST View Tab -->
+                        <div id="edu-ast-panel" class="flex-1 overflow-hidden relative hidden select-none flex flex-col">
+                            <!-- AST Graph Canvas Container -->
+                            <div id="edu-ast-tree-container" class="flex-1 relative bg-slate-950 overflow-hidden">
+                                <div class="absolute inset-0 flex items-center justify-center text-slate-500 italic p-4 text-center" id="edu-ast-placeholder">// Run code in Educational Mode to populate.</div>
+                            </div>
+                            <!-- Traversal controls bar (Floating overlay at bottom) -->
+                            <div id="edu-ast-traversal-bar" class="absolute bottom-4 left-4 right-4 bg-slate-900/90 border border-slate-800 rounded-xl p-3 shadow-2xl backdrop-blur-md hidden flex items-center justify-between z-30 shrink-0 font-sans">
+                                <div class="flex items-center space-x-2 text-xs font-semibold text-indigo-400">
+                                    <i data-lucide="git-merge" class="h-4 w-4"></i>
+                                    <span id="edu-traversal-mode-label">Exploration Mode</span>
+                                </div>
+                                <div class="flex items-center space-x-3">
+                                    <button onclick="stepTraversal(-1)" id="btn-traverse-prev" class="p-1.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer" title="Previous Node (Arrow Left)">
+                                        <i data-lucide="chevron-left" class="h-4 w-4"></i>
+                                    </button>
+                                    <span id="edu-traversal-status" class="text-xs font-mono text-slate-300 select-all font-semibold">Node 0 / 0</span>
+                                    <button onclick="stepTraversal(1)" id="btn-traverse-next" class="p-1.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer" title="Next Node (Arrow Right)">
+                                        <i data-lucide="chevron-right" class="h-4 w-4"></i>
+                                    </button>
+                                </div>
+                                <button onclick="resetTraversal()" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold px-2.5 py-1.5 rounded bg-slate-950 border border-slate-800/80 hover:border-slate-700 transition-all cursor-pointer">
+                                    Reset View
+                                </button>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+
+                <!-- Terminal Output Panel -->
+                <section id="edu-terminal-section"
+                    class="h-72 border-t border-slate-800/80 bg-slate-950 flex flex-col shrink-0 shadow-2xl bg-black relative">
+                    <!-- Resize Handle -->
+                    <div id="edu-terminal-resize-handle"
+                        class="absolute top-0 left-0 right-0 h-1.5 cursor-ns-resize hover:bg-indigo-500/50 transition-colors z-20"
+                        title="Drag to resize terminal"></div>
+                    <div
+                        class="h-11 bg-slate-900/60 backdrop-blur-md px-6 flex items-center justify-between border-b border-slate-800/60 shrink-0">
+                        <span
+                            class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-2">
+                            <i data-lucide="terminal" class="h-4 w-4 text-indigo-400"></i>
+                            <span>IO Window</span>
+                        </span>
+                        <div class="flex items-center space-x-4">
+                            <button onclick="clearTerminal()"
+                                class="text-xs text-slate-400 hover:text-slate-200 transition-colors flex items-center space-x-1">
+                                <i data-lucide="trash-2" class="h-3 w-3"></i>
+                                <span>Clear</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="edu-terminal-console"
+                        class="flex-1 overflow-y-auto p-5 font-mono text-[12px] space-y-1.5 select-text bg-black text-slate-300">
+                        <div class="text-slate-500">// Welcome to Sardine!</div>
+                    </div>
+                    <!-- Writable terminal input prompt -->
+                    <div id="edu-terminal-input-row"
+                        class="h-10 border-t border-slate-900/40 bg-black flex items-center px-6 shrink-0 hidden">
+                        <span class="text-indigo-400 font-mono text-xs mr-2 font-bold">&gt;</span>
+                        <input type="text" id="edu-terminal-stdin"
+                            class="flex-1 bg-transparent border-none outline-none font-mono text-xs text-slate-200"
+                            placeholder="Type input here and press Enter..."
+                            onkeydown="if(event.key === 'Enter') submitTerminalStdin(true)">
+                    </div>
+                </section>
+            </main>
         </div>
 
     </div>
@@ -393,6 +625,9 @@
             if (matchedRoute === '#/editor' && editorInstance) {
                 setTimeout(() => editorInstance.layout(), 50);
             }
+            if (matchedRoute === '#/educational' && eduEditorInstance) {
+                setTimeout(() => eduEditorInstance.layout(), 50);
+            }
         }
 
         window.addEventListener('hashchange', handleRoute);
@@ -420,6 +655,14 @@ cycle x = 0 : 5 {
         let wasmReady = false;
         let isRunning = false;
 
+        // D3 AST Interactive Explorer State Variables
+        let d3ZoomBehavior = null;
+        let d3Svg = null;
+        let d3G = null;
+        let bfsNodesQueue = [];
+        let currentTraversalIndex = -1;
+        let latestAst = null;
+
         // Shared buffer communication variables
         let sharedBuffer = null;
         let sharedInt32 = null;
@@ -429,11 +672,6 @@ cycle x = 0 : 5 {
         function initWasmWorker() {
             if (worker) {
                 worker.terminate();
-            }
-
-            const statusText = document.getElementById('terminal-console');
-            if (statusText) {
-                statusText.innerHTML = `<div class="text-slate-500">// Engine initialization...</div>`;
             }
 
             // Check SharedArrayBuffer capability
@@ -457,13 +695,24 @@ cycle x = 0 : 5 {
 
                 if (type === 'ready') {
                     setWasmReadyState(true);
-                    writeToTerminal("// Sandbox WebAssembly execution engine loaded and ready.");
                 }
                 else if (type === 'stdout') {
                     writeToTerminal(data);
                 }
                 else if (type === 'stderr') {
                     writeToTerminal(data, true);
+                }
+                else if (type === 'educational_json') {
+                    if (data) {
+                        if (data.tokens) {
+                            renderTokensTable(data.tokens);
+                        }
+                        if (data.ast) {
+                            renderAstTree(data.ast);
+                        } else if (data.error) {
+                            renderAstError(data.error);
+                        }
+                    }
                 }
                 else if (type === 'request_input') {
                     showInputPrompt();
@@ -483,6 +732,9 @@ cycle x = 0 : 5 {
                             if (editorInstance && editorInstance.getValue() !== virtualFiles[activeFilename]) {
                                 editorInstance.setValue(virtualFiles[activeFilename]);
                             }
+                            if (eduEditorInstance && eduEditorInstance.getValue() !== virtualFiles[activeFilename]) {
+                                eduEditorInstance.setValue(virtualFiles[activeFilename]);
+                            }
                         }
                     }
                 }
@@ -493,21 +745,23 @@ cycle x = 0 : 5 {
 
         function updateRunButtonState() {
             const runBtn = document.getElementById('editor-btn-run');
-            if (!runBtn) return;
-
+            const eduRunBtn = document.getElementById('edu-btn-run');
             const isSad = activeFilename && activeFilename.endsWith('.sad');
 
-            if (wasmReady && !isRunning && isSad) {
-                runBtn.disabled = false;
-                runBtn.className = "flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-lg text-xs font-bold transition-all shadow-md shadow-indigo-600/10 cursor-pointer";
-            } else {
-                runBtn.disabled = true;
-                if (isRunning) {
-                    runBtn.className = "flex items-center space-x-1.5 bg-slate-900 border border-slate-800 text-slate-600 px-6 py-2.5 rounded-lg text-xs font-semibold cursor-not-allowed";
+            [runBtn, eduRunBtn].forEach(btn => {
+                if (!btn) return;
+                if (wasmReady && !isRunning && isSad) {
+                    btn.disabled = false;
+                    btn.className = "flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-lg text-xs font-bold transition-all shadow-md shadow-indigo-600/10 cursor-pointer";
                 } else {
-                    runBtn.className = "flex items-center space-x-1.5 bg-slate-900 border border-slate-800 text-slate-500 px-6 py-2.5 rounded-lg text-xs font-semibold cursor-not-allowed transition-all";
+                    btn.disabled = true;
+                    if (isRunning) {
+                        btn.className = "flex items-center space-x-1.5 bg-slate-900 border border-slate-800 text-slate-600 px-6 py-2.5 rounded-lg text-xs font-semibold cursor-not-allowed";
+                    } else {
+                        btn.className = "flex items-center space-x-1.5 bg-slate-900 border border-slate-800 text-slate-500 px-6 py-2.5 rounded-lg text-xs font-semibold cursor-not-allowed transition-all";
+                    }
                 }
-            }
+            });
         }
 
         function setWasmReadyState(isReady) {
@@ -520,51 +774,87 @@ cycle x = 0 : 5 {
             updateRunButtonState();
 
             const stopBtn = document.getElementById('editor-btn-stop');
-            if (isRunning) {
-                stopBtn.disabled = false;
-                stopBtn.className = "flex items-center space-x-1.5 bg-rose-600 hover:bg-rose-500 text-white px-6 py-2.5 rounded-lg text-xs font-bold shadow-md shadow-rose-600/10 transition-all cursor-pointer";
-            } else {
-                stopBtn.disabled = true;
-                stopBtn.className = "flex items-center space-x-1.5 bg-rose-950/30 border border-rose-900/20 text-rose-500/40 px-6 py-2.5 rounded-lg text-xs font-semibold cursor-not-allowed transition-all";
-            }
+            const eduStopBtn = document.getElementById('edu-btn-stop');
+
+            [stopBtn, eduStopBtn].forEach(btn => {
+                if (!btn) return;
+                if (isRunning) {
+                    btn.disabled = false;
+                    btn.className = "flex items-center space-x-1.5 bg-rose-600 hover:bg-rose-500 text-white px-6 py-2.5 rounded-lg text-xs font-bold shadow-md shadow-rose-600/10 transition-all cursor-pointer";
+                } else {
+                    btn.disabled = true;
+                    btn.className = "flex items-center space-x-1.5 bg-rose-950/30 border border-rose-900/20 text-rose-500/40 px-6 py-2.5 rounded-lg text-xs font-semibold cursor-not-allowed transition-all";
+                }
+            });
         }
 
         function writeToTerminal(message, isError = false) {
             const consoleEl = document.getElementById('terminal-console');
-            if (!consoleEl) return;
-            const newLine = document.createElement('div');
+            const eduConsoleEl = document.getElementById('edu-terminal-console');
+            
+            [consoleEl, eduConsoleEl].forEach(el => {
+                if (!el) return;
+                const newLine = document.createElement('div');
 
-            if (isError) {
-                newLine.className = "text-rose-400 font-semibold font-mono";
-            } else if (message.startsWith("//") || message.startsWith("[System]")) {
-                newLine.className = "text-slate-500 font-mono";
-            } else {
-                newLine.className = "text-slate-200 font-mono";
-            }
+                if (isError) {
+                    newLine.className = "text-rose-400 font-semibold font-mono";
+                } else if (message.startsWith("//") || message.startsWith("[System]")) {
+                    newLine.className = "text-slate-500 font-mono";
+                } else {
+                    newLine.className = "text-slate-200 font-mono";
+                }
 
-            newLine.innerText = message;
-            consoleEl.appendChild(newLine);
-            consoleEl.scrollTop = consoleEl.scrollHeight;
+                newLine.innerText = message;
+                el.appendChild(newLine);
+                el.scrollTop = el.scrollHeight;
+            });
         }
 
         function clearTerminal() {
             const consoleEl = document.getElementById('terminal-console');
-            if (consoleEl) {
-                consoleEl.innerHTML = "";
+            const eduConsoleEl = document.getElementById('edu-terminal-console');
+            if (consoleEl) consoleEl.innerHTML = "";
+            if (eduConsoleEl) eduConsoleEl.innerHTML = "";
+
+            // Reset AST visualizer state
+            latestAst = null;
+            bfsNodesQueue = [];
+            currentTraversalIndex = -1;
+
+            const tokensTbody = document.getElementById('edu-tokens-table-body');
+            const astContainer = document.getElementById('edu-ast-tree-container');
+            if (tokensTbody) {
+                tokensTbody.innerHTML = '<tr><td colspan="2" class="p-4 text-center text-slate-500 italic">// Run code in Educational Mode to populate.</td></tr>';
+            }
+            if (astContainer) {
+                astContainer.innerHTML = '<div class="text-slate-500 italic p-4 text-center">// Run code in Educational Mode to populate.</div>';
             }
         }
 
         function runCode(educationalMode = false) {
-            if (!editorInstance) return;
+            const currentEditor = educationalMode ? eduEditorInstance : editorInstance;
+            if (!currentEditor) return;
 
             // Save active editor contents to virtualFiles registry
             if (activeFilename) {
-                virtualFiles[activeFilename] = editorInstance.getValue();
+                virtualFiles[activeFilename] = currentEditor.getValue();
             }
 
-            // Clear terminal if "Clear Terminal upon execution" is checked
-            if (document.getElementById('editor-toggle-clear-terminal').checked) {
+            // Clear terminal automatically if in educationalMode, else check toggle
+            if (educationalMode) {
                 clearTerminal();
+                const tokensTbody = document.getElementById('edu-tokens-table-body');
+                const astContainer = document.getElementById('edu-ast-tree-container');
+                if (tokensTbody) {
+                    tokensTbody.innerHTML = '<tr><td colspan="2" class="p-4 text-center text-slate-500 italic animate-pulse">Waiting for tokens...</td></tr>';
+                }
+                if (astContainer) {
+                    astContainer.innerHTML = '<div class="text-slate-500 italic p-4 text-center animate-pulse">Waiting for AST...</div>';
+                }
+            } else {
+                if (document.getElementById('editor-toggle-clear-terminal').checked) {
+                    clearTerminal();
+                }
             }
 
             // Run active file if it is a .sad file, otherwise fall back to main.sad
@@ -580,7 +870,7 @@ cycle x = 0 : 5 {
                 return;
             }
 
-            const unbounded = document.getElementById('editor-toggle-unbounded').checked;
+            const unbounded = educationalMode ? false : document.getElementById('editor-toggle-unbounded').checked;
 
             writeToTerminal("// ------ Execution Start ------");
             setRunningState(true);
@@ -604,28 +894,34 @@ cycle x = 0 : 5 {
             initWasmWorker(); // Spawns a clean background thread
             setRunningState(false);
 
-            // Hide terminal input prompt if active
+            // Hide terminal input prompts if active
             const inputRow = document.getElementById('terminal-input-row');
-            if (inputRow) {
-                inputRow.classList.add('hidden');
-            }
+            const eduInputRow = document.getElementById('edu-terminal-input-row');
+            if (inputRow) inputRow.classList.add('hidden');
+            if (eduInputRow) eduInputRow.classList.add('hidden');
         }
 
         // Interactive terminal input handlers
         function showInputPrompt() {
             const inputRow = document.getElementById('terminal-input-row');
-            if (inputRow) {
-                inputRow.classList.remove('hidden');
-            }
+            const eduInputRow = document.getElementById('edu-terminal-input-row');
+            if (inputRow) inputRow.classList.remove('hidden');
+            if (eduInputRow) eduInputRow.classList.remove('hidden');
+
             const inputEl = document.getElementById('terminal-stdin');
+            const eduInputEl = document.getElementById('edu-terminal-stdin');
             if (inputEl) {
                 inputEl.value = "";
                 inputEl.focus();
             }
+            if (eduInputEl) {
+                eduInputEl.value = "";
+                eduInputEl.focus();
+            }
         }
 
-        function submitTerminalStdin() {
-            const inputEl = document.getElementById('terminal-stdin');
+        function submitTerminalStdin(isEdu = false) {
+            const inputEl = document.getElementById(isEdu ? 'edu-terminal-stdin' : 'terminal-stdin');
             const val = inputEl.value;
 
             // Print the prompt symbol and user response directly into the terminal
@@ -641,16 +937,21 @@ cycle x = 0 : 5 {
             Atomics.notify(sharedInt32, 0, 1);
 
             const inputRow = document.getElementById('terminal-input-row');
-            if (inputRow) {
-                inputRow.classList.add('hidden');
-            }
+            const eduInputRow = document.getElementById('edu-terminal-input-row');
+            if (inputRow) inputRow.classList.add('hidden');
+            if (eduInputRow) eduInputRow.classList.add('hidden');
         }
 
         // Select and display file contents in the main editor
         function selectFile(filename) {
             // Save current editor content to active file before switching, but ONLY if the file still exists in our registry!
-            if (activeFilename && virtualFiles[activeFilename] !== undefined && editorInstance) {
-                virtualFiles[activeFilename] = editorInstance.getValue();
+            if (activeFilename && virtualFiles[activeFilename] !== undefined) {
+                if (editorInstance) {
+                    virtualFiles[activeFilename] = editorInstance.getValue();
+                }
+                if (eduEditorInstance) {
+                    virtualFiles[activeFilename] = eduEditorInstance.getValue();
+                }
             }
 
             activeFilename = filename;
@@ -658,23 +959,35 @@ cycle x = 0 : 5 {
             updateRunButtonState(); // Enable/disable Run Code button based on file extension
 
             const emptyState = document.getElementById('editor-empty-state');
+            const eduEmptyState = document.getElementById('edu-editor-empty-state');
             const activeSpan = document.getElementById('editor-active-filename');
+            const eduActiveSpan = document.getElementById('edu-active-filename');
 
             if (!filename) {
                 // Show empty state overlay, hide editor contents
                 if (emptyState) emptyState.classList.remove('hidden');
+                if (eduEmptyState) eduEmptyState.classList.remove('hidden');
                 if (activeSpan) {
                     activeSpan.innerText = "No file open";
                     activeSpan.className = "bg-slate-900 px-2.5 py-1 rounded text-[11px] font-mono text-slate-500 border border-slate-800";
+                }
+                if (eduActiveSpan) {
+                    eduActiveSpan.innerText = "No file open";
+                    eduActiveSpan.className = "bg-slate-900 px-2.5 py-1 rounded text-[11px] font-mono text-slate-500 border border-slate-800";
                 }
                 return;
             }
 
             // Show file contents
             if (emptyState) emptyState.classList.add('hidden');
+            if (eduEmptyState) eduEmptyState.classList.add('hidden');
             if (activeSpan) {
                 activeSpan.innerText = filename;
                 activeSpan.className = "bg-slate-900 px-2.5 py-1 rounded text-[11px] font-mono text-indigo-300 border border-slate-800";
+            }
+            if (eduActiveSpan) {
+                eduActiveSpan.innerText = filename;
+                eduActiveSpan.className = "bg-slate-900 px-2.5 py-1 rounded text-[11px] font-mono text-indigo-300 border border-slate-800";
             }
 
             if (editorInstance) {
@@ -687,10 +1000,20 @@ cycle x = 0 : 5 {
                 }
                 setTimeout(() => editorInstance.layout(), 50);
             }
+            if (eduEditorInstance) {
+                eduEditorInstance.setValue(virtualFiles[filename]);
+                // Set language syntax highlighting based on extension
+                const isSad = filename.endsWith('.sad');
+                const model = eduEditorInstance.getModel();
+                if (model) {
+                    monaco.editor.setModelLanguage(model, isSad ? 'sardine' : 'plaintext');
+                }
+                setTimeout(() => eduEditorInstance.layout(), 50);
+            }
         }
 
         // Prompt user to create a new file
-        function createNewFilePrompt() {
+        function createNewFilePrompt(isEdu = false) {
             // Check if there's already an active inline input box
             const existingInput = document.getElementById('new-file-inline-input');
             if (existingInput) {
@@ -698,7 +1021,7 @@ cycle x = 0 : 5 {
                 return;
             }
 
-            const container = document.getElementById('virtual-files-list');
+            const container = document.getElementById(isEdu ? 'edu-virtual-files-list' : 'virtual-files-list');
 
             // Remove the empty state message if it is showing
             const emptyState = container.querySelector('.text-slate-600');
@@ -862,49 +1185,55 @@ cycle x = 0 : 5 {
         }
 
         function updateVirtualFilesUI() {
-            const container = document.getElementById('virtual-files-list');
+            const containers = [
+                document.getElementById('virtual-files-list'),
+                document.getElementById('edu-virtual-files-list')
+            ];
             const fileKeys = Object.keys(virtualFiles);
 
-            if (fileKeys.length === 0) {
-                container.innerHTML = `
-                    <div class="text-m text-slate-600 italic p-4 text-center rounded-xl">
-                        No files created yet.
-                    </div>
-                `;
-                return;
-            }
+            containers.forEach(container => {
+                if (!container) return;
+                if (fileKeys.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-m text-slate-600 italic p-4 text-center rounded-xl">
+                            No files created yet.
+                        </div>
+                    `;
+                    return;
+                }
 
-            container.innerHTML = "";
-            fileKeys.forEach(name => {
-                const isSad = name.endsWith('.sad');
-                const isActive = (name === activeFilename);
-                const item = document.createElement('div');
+                container.innerHTML = "";
+                fileKeys.forEach(name => {
+                    const isSad = name.endsWith('.sad');
+                    const isActive = (name === activeFilename);
+                    const item = document.createElement('div');
 
-                item.className = `p-2.5 rounded-lg border flex items-center justify-between text-xs cursor-pointer transition-all group ${isActive
-                    ? 'bg-indigo-600/10 border-indigo-500/30'
-                    : 'bg-slate-900/40 border-slate-800/80 hover:border-indigo-500/30 hover:bg-slate-900/80'
-                    }`;
-                item.setAttribute('onclick', `selectFile("${name}")`);
+                    item.className = `p-2.5 rounded-lg border flex items-center justify-between text-xs cursor-pointer transition-all group ${isActive
+                        ? 'bg-indigo-600/10 border-indigo-500/30'
+                        : 'bg-slate-900/40 border-slate-800/80 hover:border-indigo-500/30 hover:bg-slate-900/80'
+                        }`;
+                    item.setAttribute('onclick', `selectFile("${name}")`);
 
-                // Set icon depending on whether it is a .sad file
-                const iconName = isSad ? 'file-code' : 'file-text';
-                const iconColor = isSad ? 'text-indigo-400' : 'text-slate-400';
+                    // Set icon depending on whether it is a .sad file
+                    const iconName = isSad ? 'file-code' : 'file-text';
+                    const iconColor = isSad ? 'text-indigo-400' : 'text-slate-400';
 
-                item.innerHTML = `
-                    <div class="flex items-center space-x-2 truncate flex-1 mr-2">
-                        <i data-lucide="${iconName}" class="h-3.5 w-3.5 ${iconColor} group-hover:text-indigo-300 shrink-0"></i>
-                        <span class="font-mono text-slate-300 truncate group-hover:text-white">${name}</span>
-                    </div>
-                    <div class="flex items-center space-x-1.5 opacity-40 group-hover:opacity-100 transition-opacity">
-                        <button onclick="downloadFile('${name}', event)" class="p-1 text-slate-400 hover:text-indigo-400 hover:bg-slate-850 rounded" title="Download">
-                            <i data-lucide="download" class="h-3.5 w-3.5"></i>
-                        </button>
-                        <button onclick="deleteFile('${name}', event)" class="p-1 text-slate-400 hover:text-rose-400 hover:bg-slate-850 rounded" title="Delete">
-                            <i data-lucide="trash-2" class="h-3.5 w-3.5"></i>
-                        </button>
-                    </div>
-                `;
-                container.appendChild(item);
+                    item.innerHTML = `
+                        <div class="flex items-center space-x-2 truncate flex-1 mr-2">
+                            <i data-lucide="${iconName}" class="h-3.5 w-3.5 ${iconColor} group-hover:text-indigo-300 shrink-0"></i>
+                            <span class="font-mono text-slate-300 truncate group-hover:text-white">${name}</span>
+                        </div>
+                        <div class="flex items-center space-x-1.5 opacity-40 group-hover:opacity-100 transition-opacity">
+                            <button onclick="downloadFile('${name}', event)" class="p-1 text-slate-400 hover:text-indigo-400 hover:bg-slate-850 rounded" title="Download">
+                                <i data-lucide="download" class="h-3.5 w-3.5"></i>
+                            </button>
+                            <button onclick="deleteFile('${name}', event)" class="p-1 text-slate-400 hover:text-rose-400 hover:bg-slate-850 rounded" title="Delete">
+                                <i data-lucide="trash-2" class="h-3.5 w-3.5"></i>
+                            </button>
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
             });
             lucide.createIcons();
         }
@@ -948,10 +1277,10 @@ cycle x = 0 : 5 {
         }
 
         // Toggle Virtual Files Sidebar (collapsible)
-        function toggleSidebar() {
-            const sidebar = document.getElementById('editor-sidebar');
-            const expanded = document.getElementById('sidebar-expanded-content');
-            const collapsed = document.getElementById('sidebar-collapsed-content');
+        function toggleSidebar(isEdu = false) {
+            const sidebar = document.getElementById(isEdu ? 'edu-sidebar' : 'editor-sidebar');
+            const expanded = document.getElementById(isEdu ? 'edu-sidebar-expanded-content' : 'sidebar-expanded-content');
+            const collapsed = document.getElementById(isEdu ? 'edu-sidebar-collapsed-content' : 'sidebar-collapsed-content');
 
             if (!sidebar || !expanded || !collapsed) return;
 
@@ -970,8 +1299,9 @@ cycle x = 0 : 5 {
             }
 
             // Update Monaco Editor layout dynamically to fit the new width
-            if (editorInstance) {
-                setTimeout(() => editorInstance.layout(), 350); // allow sidebar transition to finish
+            const currentEditor = isEdu ? eduEditorInstance : editorInstance;
+            if (currentEditor) {
+                setTimeout(() => currentEditor.layout(), 350); // allow sidebar transition to finish
             }
         }
 
@@ -1026,6 +1356,551 @@ cycle x = 0 : 5 {
             handle.addEventListener('mousedown', onMouseDown);
         }
 
+        // Adjustable Educational Terminal Height
+        function initEduTerminalResizer() {
+            const handle = document.getElementById('edu-terminal-resize-handle');
+            const terminal = document.getElementById('edu-terminal-section');
+            if (!handle || !terminal) return;
+
+            let startY = 0;
+            let startHeight = 0;
+
+            function onMouseDown(e) {
+                e.preventDefault();
+                startY = e.clientY;
+                startHeight = terminal.offsetHeight;
+
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+
+                document.body.classList.add('cursor-ns-resize', 'select-none');
+            }
+
+            function onMouseMove(e) {
+                const deltaY = e.clientY - startY;
+                let newHeight = startHeight - deltaY;
+
+                // Constraints (min 60px, max 75% window height)
+                const minHeight = 60;
+                const maxHeight = window.innerHeight * 0.75;
+                if (newHeight < minHeight) newHeight = minHeight;
+                if (newHeight > maxHeight) newHeight = maxHeight;
+
+                terminal.style.height = `${newHeight}px`;
+
+                // Update Monaco geometry in real time
+                if (eduEditorInstance) {
+                    eduEditorInstance.layout();
+                }
+            }
+
+            function onMouseUp() {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+                document.body.classList.remove('cursor-ns-resize', 'select-none');
+
+                if (eduEditorInstance) {
+                    eduEditorInstance.layout();
+                }
+            }
+
+            handle.addEventListener('mousedown', onMouseDown);
+        }
+
+        // Adjustable Educational Info Sidebar Width
+        function initEduSidebarResizer() {
+            const handle = document.getElementById('edu-right-sidebar-resize-handle');
+            const sidebar = document.getElementById('edu-info-sidebar');
+            if (!handle || !sidebar) return;
+
+            let startX = 0;
+            let startWidth = 0;
+
+            function onMouseDown(e) {
+                e.preventDefault();
+                startX = e.clientX;
+                startWidth = sidebar.offsetWidth;
+
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+
+                document.body.classList.add('cursor-col-resize', 'select-none');
+            }
+
+            function onMouseMove(e) {
+                const deltaX = startX - e.clientX; // drag left to increase width of right sidebar
+                let newWidth = startWidth + deltaX;
+
+                // Constraints (min 200px, max 60% window width)
+                const minWidth = 200;
+                const maxWidth = window.innerWidth * 0.6;
+                if (newWidth < minWidth) newWidth = minWidth;
+                if (newWidth > maxWidth) newWidth = maxWidth;
+
+                sidebar.style.width = `${newWidth}px`;
+
+                // Update Monaco geometry in real time
+                if (eduEditorInstance) {
+                    eduEditorInstance.layout();
+                }
+            }
+
+            function onMouseUp() {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+                document.body.classList.remove('cursor-col-resize', 'select-none');
+
+                if (eduEditorInstance) {
+                    eduEditorInstance.layout();
+                }
+            }
+
+            handle.addEventListener('mousedown', onMouseDown);
+        }
+
+        function switchEduTab(tabName) {
+            const tokensBtn = document.getElementById('edu-tab-tokens');
+            const astBtn = document.getElementById('edu-tab-ast');
+            const tokensPanel = document.getElementById('edu-tokens-panel');
+            const astPanel = document.getElementById('edu-ast-panel');
+
+            if (tabName === 'tokens') {
+                tokensBtn.className = "flex-1 py-1.5 text-xs font-semibold rounded-md transition-all text-white bg-indigo-600/20 text-indigo-400 border border-indigo-500/10";
+                astBtn.className = "flex-1 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-400 hover:text-slate-200";
+                tokensPanel.classList.remove('hidden');
+                astPanel.classList.add('hidden');
+            } else {
+                astBtn.className = "flex-1 py-1.5 text-xs font-semibold rounded-md transition-all text-white bg-indigo-600/20 text-indigo-400 border border-indigo-500/10";
+                tokensBtn.className = "flex-1 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-400 hover:text-slate-200";
+                astPanel.classList.remove('hidden');
+                tokensPanel.classList.add('hidden');
+
+                // Re-render AST Tree now that the container is visible and size can be resolved
+                if (latestAst) {
+                    renderAstTree(latestAst);
+                }
+            }
+        }
+
+        const TOKEN_LITERALS = {
+            "PLUS": "+",
+            "MINUS": "-",
+            "MUL": "*",
+            "DIV": "/",
+            "MOD": "%",
+            "FLOOR": "//",
+            "EXP": "**",
+            "EQUAL": "=",
+            "PLUSEQUAL": "+=",
+            "MINUSEQUAL": "-=",
+            "MULEQUAL": "*=",
+            "DIVIDEEQUAL": "/=",
+            "MODULUSEQUAL": "%=",
+            "FLOOREQUAL": "//=",
+            "EXPEQUAL": "**=",
+            "BITAND": "&",
+            "BITANDEQUAL": "&=",
+            "BITXOR": "^",
+            "BITXOREQUAL": "^=",
+            "BITOR": "|",
+            "BITOREQUAL": "|=",
+            "BITNOT": "~",
+            "LSHIFT": "<<",
+            "LSHIFTEQUAL": "<<=",
+            "RSHIFT": ">>",
+            "RSHIFTEQUAL": ">>=",
+            "ARROW": "->",
+            "LARROW": "<-",
+            "NOTEQUAL": "!=",
+            "DOUBLEEQUAL": "==",
+            "LESSTHAN": "<",
+            "GREATERTHAN": ">",
+            "LESSERTHANEQUAL": "<=",
+            "GREATERTHANEQUAL": ">=",
+            "LPAREN": "(",
+            "RPAREN": ")",
+            "LPAREN2": "[",
+            "RPAREN2": "]",
+            "LPAREN3": "{",
+            "RPAREN3": "}",
+            "COLON": ":",
+            "QUESTION": "?",
+            "COMMA": ",",
+            "DOT": ".",
+            "NEWLINE": "\\n",
+            "EOF": "EOF"
+        };
+
+        function renderTokensTable(tokens) {
+            const tbody = document.getElementById('edu-tokens-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            if (!tokens || tokens.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="2" class="p-4 text-center text-slate-500 italic">No tokens found.</td></tr>';
+                return;
+            }
+
+            tokens.forEach(tok => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-900/60 transition-colors";
+
+                const tdType = document.createElement('td');
+                tdType.className = "py-2 px-2 text-indigo-400 font-medium font-mono text-[10px]";
+                tdType.innerText = tok.type || '';
+
+                const tdValue = document.createElement('td');
+                tdValue.className = "py-2 px-2 text-slate-300 font-mono text-[10px]";
+                
+                let val = tok.value;
+                if (val === null || val === undefined) {
+                    val = TOKEN_LITERALS[tok.type] || '';
+                } else if (typeof val === 'string') {
+                    val = `"${val}"`;
+                }
+                tdValue.innerText = val;
+
+                tr.appendChild(tdType);
+                tr.appendChild(tdValue);
+                tbody.appendChild(tr);
+            });
+        }
+
+        function extractAstNode(obj) {
+            if (!obj || typeof obj !== 'object') return null;
+
+            let nodeType = obj.node_type || 'Node';
+            let value = null;
+            let children = [];
+
+            // Extract values from token wrapper structures, fallback to mapped literals if value is empty/null
+            if (obj.token && obj.token.value !== undefined) {
+                value = obj.token.value !== null ? obj.token.value : (TOKEN_LITERALS[obj.token.type] || null);
+            } else if (obj.operator && obj.operator.value !== undefined) {
+                value = obj.operator.value !== null ? obj.operator.value : (TOKEN_LITERALS[obj.operator.type] || null);
+            } else if (obj.var_name_tok && obj.var_name_tok.value !== undefined) {
+                value = obj.var_name_tok.value !== null ? obj.var_name_tok.value : (TOKEN_LITERALS[obj.var_name_tok.type] || null);
+            } else if (obj.module_tok && obj.module_tok.value !== undefined) {
+                value = obj.module_tok.value !== null ? obj.module_tok.value : (TOKEN_LITERALS[obj.module_tok.type] || null);
+            } else if (obj.name_tok && obj.name_tok.value !== undefined) {
+                value = obj.name_tok.value !== null ? obj.name_tok.value : (TOKEN_LITERALS[obj.name_tok.type] || null);
+            } else if (obj.value !== undefined && typeof obj.value !== 'object') {
+                value = obj.value;
+            }
+
+            // Recursively extract AST sub-nodes
+            Object.keys(obj).forEach(key => {
+                if (key === 'node_type' || key === 'token' || key === 'operator' || key === 'var_name_tok' || key === 'module_tok' || key === 'name_tok') {
+                    return;
+                }
+                
+                const val = obj[key];
+                if (!val) return;
+
+                if (typeof val === 'object') {
+                    if (Array.isArray(val)) {
+                        val.forEach(item => {
+                            let child = extractAstNode(item);
+                            if (child) {
+                                child.label = key;
+                                children.push(child);
+                            }
+                        });
+                    } else {
+                        let child = extractAstNode(val);
+                        if (child) {
+                            child.label = key;
+                            children.push(child);
+                        }
+                    }
+                }
+            });
+
+            return { nodeType, value, children };
+        }
+
+        // BFS traversal extraction
+        function buildBfsQueue(simplifiedAst) {
+            const queue = [];
+            const result = [];
+            if (!simplifiedAst) return result;
+            
+            queue.push(simplifiedAst);
+            simplifiedAst.id = "ast-node-0";
+            let idCounter = 1;
+
+            while (queue.length > 0) {
+                const current = queue.shift();
+                result.push(current);
+
+                if (current.children && current.children.length > 0) {
+                    current.children.forEach(child => {
+                        child.id = "ast-node-" + (idCounter++);
+                        queue.push(child);
+                    });
+                }
+            }
+            return result;
+        }
+
+        function focusNode(nodeId) {
+            if (!nodeId) return;
+
+            // Find the node index in the BFS queue
+            const index = bfsNodesQueue.findIndex(n => n.id === nodeId);
+            if (index !== -1) {
+                currentTraversalIndex = index;
+                highlightCurrentNode(true);
+            }
+        }
+
+        function highlightCurrentNode(centerViewport = true) {
+            if (!d3Svg) return;
+
+            if (currentTraversalIndex < 0 || currentTraversalIndex >= bfsNodesQueue.length) {
+                // If nothing highlighted, clear all muting
+                d3Svg.selectAll(".ast-node").classed("highlighted", false).classed("muted", false);
+                d3Svg.selectAll(".ast-link").classed("highlighted", false).classed("muted", false);
+                updateTraversalBarUI();
+                return;
+            }
+
+            const activeNode = bfsNodesQueue[currentTraversalIndex];
+            const activeId = activeNode.id;
+
+            // Apply SVG node classes
+            d3Svg.selectAll(".ast-node").each(function(d) {
+                const nodeElement = d3.select(this);
+                if (d.data.id === activeId) {
+                    nodeElement.classed("highlighted", true).classed("muted", false);
+                } else {
+                    nodeElement.classed("muted", true).classed("highlighted", false);
+                }
+            });
+
+            // Apply SVG link classes (highlight paths directly connected to the active node)
+            d3Svg.selectAll(".ast-link").each(function(d) {
+                const linkElement = d3.select(this);
+                const isConnected = (d.source.data.id === activeId || d.target.data.id === activeId);
+                if (isConnected) {
+                    linkElement.classed("highlighted", true).classed("muted", false);
+                } else {
+                    linkElement.classed("muted", true).classed("highlighted", false);
+                }
+            });
+
+            updateTraversalBarUI();
+
+            // Perform smooth viewport transition to center the highlighted node
+            if (centerViewport && d3ZoomBehavior && d3Svg) {
+                // Find node's position inside D3 coordinate space
+                const nodeData = d3Svg.selectAll(".ast-node").filter(d => d.data.id === activeId).datum();
+                if (nodeData) {
+                    const container = document.getElementById('edu-ast-tree-container');
+                    const w = container.clientWidth || 400;
+                    const h = container.clientHeight || 500;
+
+                    // Compute translation to center on (nodeData.y, nodeData.x)
+                    const scale = 1.0;
+                    const transX = w / 2 - scale * nodeData.y;
+                    const transY = h / 2 - scale * nodeData.x;
+
+                    d3Svg.transition()
+                        .duration(750)
+                        .ease(d3.easeCubicOut)
+                        .call(d3ZoomBehavior.transform, d3.zoomIdentity.translate(transX, transY).scale(scale));
+                }
+            }
+        }
+
+        function stepTraversal(direction) {
+            if (bfsNodesQueue.length === 0) return;
+
+            currentTraversalIndex += direction;
+            if (currentTraversalIndex < 0) {
+                currentTraversalIndex = 0;
+            } else if (currentTraversalIndex >= bfsNodesQueue.length) {
+                currentTraversalIndex = bfsNodesQueue.length - 1;
+            }
+
+            highlightCurrentNode(true);
+        }
+
+        function resetTraversal() {
+            currentTraversalIndex = -1;
+            highlightCurrentNode(false);
+
+            // Re-center tree layout completely
+            if (d3ZoomBehavior && d3Svg) {
+                const container = document.getElementById('edu-ast-tree-container');
+                const height = container.clientHeight || 500;
+                const initialTransform = d3.zoomIdentity.translate(80, height / 2).scale(0.85);
+
+                d3Svg.transition()
+                    .duration(500)
+                    .call(d3ZoomBehavior.transform, initialTransform);
+            }
+        }
+
+        function updateTraversalBarUI() {
+            const label = document.getElementById('edu-traversal-mode-label');
+            const status = document.getElementById('edu-traversal-status');
+
+            if (currentTraversalIndex === -1) {
+                if (label) label.innerText = "Exploration Mode";
+                if (status) status.innerText = `0 / ${bfsNodesQueue.length} nodes`;
+            } else {
+                if (label) label.innerText = "Traversal Mode (BFS)";
+                if (status) status.innerText = `${currentTraversalIndex + 1} / ${bfsNodesQueue.length} nodes`;
+            }
+        }
+
+        function renderAstTree(astObj) {
+            latestAst = astObj;
+            const container = document.getElementById('edu-ast-tree-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const placeholder = document.getElementById('edu-ast-placeholder');
+            if (placeholder) placeholder.classList.add('hidden');
+
+            const traversalBar = document.getElementById('edu-ast-traversal-bar');
+            if (traversalBar) traversalBar.classList.remove('hidden');
+
+            if (!astObj) {
+                container.innerHTML = '<div class="text-slate-500 italic p-4 text-center">// No AST available.</div>';
+                if (traversalBar) traversalBar.classList.add('hidden');
+                return;
+            }
+
+            const simplifiedAst = extractAstNode(astObj);
+            
+            // Build BFS Queue
+            bfsNodesQueue = buildBfsQueue(simplifiedAst);
+            currentTraversalIndex = -1;
+            updateTraversalBarUI();
+
+            // Set up SVG container dimensions
+            const width = container.clientWidth || 400;
+            const height = container.clientHeight || 500;
+
+            // Create SVG element
+            const svg = d3.select(container)
+                .append("svg")
+                .attr("width", "100%")
+                .attr("height", "100%")
+                .attr("class", "w-full h-full relative");
+
+            d3Svg = svg;
+
+            // Create main container group for pan and zoom
+            const g = svg.append("g");
+            d3G = g;
+
+            // Define Zoom behavior
+            d3ZoomBehavior = d3.zoom()
+                .scaleExtent([0.1, 3])
+                .on("zoom", (event) => {
+                    g.attr("transform", event.transform);
+                });
+
+            svg.call(d3ZoomBehavior);
+
+            // Create D3 Hierarchy structure
+            const root = d3.hierarchy(simplifiedAst);
+
+            // Compute D3 Tree Layout
+            const treeLayout = d3.tree().nodeSize([90, 240]);
+            treeLayout(root);
+
+            // Center root node initially on the left side
+            const initialTransform = d3.zoomIdentity.translate(80, height / 2).scale(0.85);
+            svg.call(d3ZoomBehavior.transform, initialTransform);
+
+            // Draw links (connector lines)
+            const links = g.selectAll(".ast-link")
+                .data(root.links())
+                .enter()
+                .append("path")
+                .attr("class", "ast-link")
+                .attr("d", d3.linkHorizontal()
+                    .x(d => d.y)
+                    .y(d => d.x)
+                )
+                .attr("id", d => `link-${d.source.data.id}-${d.target.data.id}`);
+
+            // Draw nodes
+            const nodes = g.selectAll(".ast-node")
+                .data(root.descendants())
+                .enter()
+                .append("g")
+                .attr("class", "ast-node")
+                .attr("id", d => d.data.id)
+                .attr("transform", d => `translate(${d.y},${d.x})`)
+                .on("click", (event, d) => {
+                    event.stopPropagation();
+                    focusNode(d.data.id);
+                });
+
+            // Embedded HTML Card within each node group using foreignObject
+            const cardWidth = 160;
+            const cardHeight = 60;
+
+            const fo = nodes.append("foreignObject")
+                .attr("width", cardWidth)
+                .attr("height", cardHeight)
+                .attr("x", -cardWidth / 2)
+                .attr("y", -cardHeight / 2);
+
+            fo.html(d => {
+                const label = `<div class="text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-0.5 truncate">${d.data.label || 'NODE'}</div>`;
+                const nodeType = `<div class="text-[11px] font-bold text-indigo-300 font-sans leading-none truncate">${d.data.nodeType.replace("Node", "")}</div>`;
+                const val = d.data.value;
+                const valText = (val !== null && val !== undefined) ? (typeof val === 'string' ? `"${val}"` : val) : "";
+                const valDiv = valText !== "" ? `<div class="text-[10px] text-emerald-400 font-mono mt-1 truncate leading-tight">${valText}</div>` : "";
+
+                return `
+                    <div class="ast-node-card h-full w-full rounded-lg border border-slate-800 bg-slate-900/90 text-left p-2 select-none flex flex-col justify-center border-l-4 border-l-indigo-500 backdrop-blur-sm">
+                        ${label}
+                        ${nodeType}
+                        ${valDiv}
+                    </div>
+                `;
+            });
+
+            // Clicking outside on the canvas resets highlight/muting
+            svg.on("click", () => {
+                resetTraversal();
+            });
+
+            // Create SVG Icons via Lucide in foreignObjects
+            setTimeout(() => {
+                lucide.createIcons();
+            }, 10);
+        }
+
+        function renderAstError(err) {
+            latestAst = null;
+            const container = document.getElementById('edu-ast-tree-container');
+            if (!container) return;
+
+            const traversalBar = document.getElementById('edu-ast-traversal-bar');
+            if (traversalBar) traversalBar.classList.add('hidden');
+
+            container.innerHTML = `
+                <div class="p-3 rounded-lg bg-rose-950/30 border border-rose-900/50 text-rose-300 font-sans text-xs">
+                    <div class="font-bold uppercase tracking-wider flex items-center space-x-1.5 text-rose-400">
+                        <i data-lucide="alert-triangle" class="h-4 w-4"></i>
+                        <span>Parser / Lexer Error</span>
+                    </div>
+                    <div class="mt-2 font-mono text-[11px] font-semibold">${err.type || 'Error'}</div>
+                    <div class="mt-1 text-slate-300">${err.details || ''}</div>
+                    ${err.pos_start ? `<div class="mt-2 text-[10px] text-rose-400/80 font-mono">Line ${err.pos_start.line}, Col ${err.pos_start.col}</div>` : ''}
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
         // Global page loading overlay controller
         function hideLoadingOverlay() {
             const overlay = document.getElementById('page-loading-overlay');
@@ -1045,6 +1920,19 @@ cycle x = 0 : 5 {
             initWasmWorker();
             updateVirtualFilesUI();
             initTerminalResizer();
+            initEduTerminalResizer();
+            initEduSidebarResizer();
+
+            // Bind wheel event to AST tree container to scroll horizontally
+            const astContainer = document.getElementById('edu-ast-tree-container');
+            if (astContainer) {
+                astContainer.addEventListener('wheel', function(e) {
+                    if (e.deltaY !== 0) {
+                        e.preventDefault();
+                        astContainer.scrollLeft += e.deltaY;
+                    }
+                });
+            }
 
             // Fail-safe: hide overlay after 3 seconds if Monaco/worker loads too slow
             setTimeout(hideLoadingOverlay, 3000);
@@ -1069,10 +1957,37 @@ cycle x = 0 : 5 {
                 if (e.key === 'Escape') {
                     if (deleteModal && !deleteModal.classList.contains('hidden')) {
                         closeDeleteModal();
+                        return;
                     }
                     const viewerModal = document.getElementById('file-viewer-modal');
                     if (viewerModal && !viewerModal.classList.contains('hidden')) {
                         closeFileViewer();
+                        return;
+                    }
+                }
+
+                // Educational mode AST navigation key listeners
+                if (window.location.hash.startsWith('#/educational')) {
+                    const astPanel = document.getElementById('edu-ast-panel');
+                    if (astPanel && !astPanel.classList.contains('hidden')) {
+                        // Check if focus is inside any text fields (input, textarea, Monaco editors)
+                        const active = document.activeElement;
+                        if (active) {
+                            const tagName = active.tagName.toLowerCase();
+                            const isInput = tagName === 'input' || tagName === 'textarea' || active.isContentEditable || active.closest('.monaco-editor');
+                            if (isInput) return;
+                        }
+
+                        if (e.key === 'ArrowRight') {
+                            e.preventDefault();
+                            stepTraversal(1);
+                        } else if (e.key === 'ArrowLeft') {
+                            e.preventDefault();
+                            stepTraversal(-1);
+                        } else if (e.key === 'Escape') {
+                            e.preventDefault();
+                            resetTraversal();
+                        }
                     }
                 }
             });
@@ -1082,6 +1997,7 @@ cycle x = 0 : 5 {
     <!-- Monaco Editor Configuration Script -->
     <script>
         let editorInstance = null;
+        let eduEditorInstance = null;
 
         // Load Monaco files via loader.js
         require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs' } });
@@ -1208,6 +2124,19 @@ cycle x = 0 : 5 {
                 tabSize: 4
             });
 
+            // Create Monaco educational editor instance
+            eduEditorInstance = monaco.editor.create(document.getElementById('edu-monaco-editor-container'), {
+                value: "",
+                language: 'sardine',
+                theme: 'sardine-dark',
+                fontSize: 14,
+                lineHeight: 22,
+                fontFamily: 'Consolas, "Courier New", Courier, monospace',
+                minimap: { enabled: true },
+                automaticLayout: true,
+                tabSize: 4
+            });
+
             // Auto-save changes back to our virtual files registry
             editorInstance.onDidChangeModelContent(() => {
                 if (activeFilename) {
@@ -1215,17 +2144,29 @@ cycle x = 0 : 5 {
                 }
             });
 
+            eduEditorInstance.onDidChangeModelContent(() => {
+                if (activeFilename) {
+                    virtualFiles[activeFilename] = eduEditorInstance.getValue();
+                }
+            });
+
             // Select main.sad by default
             selectFile('main.sad');
 
             // Let layout adjust itself initially
-            setTimeout(() => editorInstance.layout(), 100);
+            setTimeout(() => {
+                if (editorInstance) editorInstance.layout();
+                if (eduEditorInstance) eduEditorInstance.layout();
+            }, 100);
 
             // Redraw Monaco once fonts are fully loaded to prevent cursor alignment offset bugs
             if (document.fonts) {
                 document.fonts.ready.then(function () {
                     if (editorInstance) {
                         editorInstance.layout();
+                    }
+                    if (eduEditorInstance) {
+                        eduEditorInstance.layout();
                     }
                 });
             }
