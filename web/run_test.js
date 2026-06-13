@@ -92,9 +92,10 @@ global.Module = {
             global.Module.ccall("run_interpreter", null, ["string", "string", "number", "number"], [testCode, relativeTestPath, 0, 0]);
         } catch (e) {
             console.error("Runtime error:", e);
-            process.exit(1);
+            setTimeout(() => { process.exit(1); }, 10);
+            return;
         }
-        process.exit(0);
+        setTimeout(() => { process.exit(0); }, 10);
     }
 };
 
