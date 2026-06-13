@@ -32,7 +32,7 @@
         }
 
         .font-mono {
-            font-family: Consolas, "Courier New", Courier, monospace;
+            font-family: 'JetBrains Mono', Consolas, "Courier New", Courier, monospace;
         }
 
         /* Custom glassmorphism scrollbar */
@@ -77,62 +77,106 @@
         /* AST Graph and SVG Styles */
         .ast-link {
             fill: none;
-            stroke: #334155; /* slate-700 */
+            stroke: rgba(99, 102, 241, 0.25);
             stroke-width: 2px;
-            transition: stroke 0.3s, stroke-width 0.3s, opacity 0.3s;
+            transition: all 0.3s ease, opacity 0.3s;
         }
+
         .ast-link.highlighted {
-            stroke: #6366f1; /* indigo-500 */
+            stroke: #818cf8;
+            /* indigo-400 */
             stroke-width: 3.5px;
+            filter: drop-shadow(0 0 6px rgba(129, 140, 248, 0.7));
         }
+
         .ast-link.muted {
-            stroke: #1e293b; /* slate-800 */
-            opacity: 0.15;
+            stroke: #1e293b;
+            opacity: 0.1;
         }
 
         .ast-node {
             cursor: pointer;
-            transition: opacity 0.3s;
+            transition: all 0.3s ease, opacity 0.3s;
         }
+
         .ast-node foreignObject {
             overflow: visible;
         }
+
         .ast-node-card {
-            width: 160px;
-            height: 60px;
+            width: 280px;
+            height: 110px;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             transform-origin: center;
+            background: rgba(24, 24, 37, 0.85);
+            border: 1px solid rgba(137, 180, 250, 0.15);
+            backdrop-filter: blur(12px);
+            border-radius: 14px;
         }
+
+        .ast-node-card:focus {
+            outline: none;
+        }
+
         .ast-node:hover .ast-node-card {
-            transform: scale(1.05);
-            border-color: #6366f1 !important; /* indigo-500 */
-            box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+            transform: scale(1.04);
+            border-color: rgba(137, 180, 250, 0.5);
+            box-shadow: 0 10px 25px -5px rgba(137, 180, 250, 0.3), 0 0 15px rgba(137, 180, 250, 0.1);
         }
+
         .ast-node.highlighted .ast-node-card {
-            width: 260px;
-            height: 150px;
-            border-color: #4f46e5 !important; /* indigo-600 */
-            box-shadow: 0 0 25px rgba(99, 102, 241, 0.6);
-            transform: none !important;
+            width: 380px;
+            height: 220px;
+            border-color: #cba6f7 !important;
+            box-shadow: 0 0 35px rgba(203, 166, 247, 0.45), 0 0 15px rgba(203, 166, 247, 0.15);
+            background: rgba(17, 17, 27, 0.98) !important;
+            transform: scale(1.02);
         }
+
         .ast-node.muted {
-            opacity: 0.15;
+            opacity: 0.25;
         }
+
         .ast-node.muted .ast-node-card {
-            transform: scale(0.9);
+            transform: scale(0.92);
+            filter: grayscale(40%);
         }
+
         .ast-node-val {
-            max-height: 16px;
+            max-height: 28px;
             white-space: nowrap;
             text-overflow: ellipsis;
             overflow: hidden;
             transition: max-height 0.3s ease;
         }
+
         .ast-node.highlighted .ast-node-val {
             max-height: 90px;
             white-space: normal;
             text-overflow: clip;
             overflow-y: auto;
+        }
+
+        .ast-node-details {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .ast-node.highlighted .ast-node-details {
+            display: block;
+            opacity: 1;
+        }
+
+        /* Monaco Highlight Decoration */
+        .monaco-ast-node-highlight {
+            background-color: rgba(99, 102, 241, 0.2);
+            border-bottom: 2px solid #818cf8;
+            border-radius: 2px;
+        }
+
+        .monaco-ast-node-line-highlight {
+            background-color: rgba(99, 102, 241, 0.05);
         }
     </style>
 </head>
@@ -155,23 +199,29 @@
 
     <!-- Global Header Navigation -->
     <header
-        class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md px-6 py-4 flex items-center justify-between z-30 shrink-0">
+        class="border-b border-slate-850 bg-slate-950 px-6 py-3.5 flex items-center justify-between z-30 shrink-0 shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
         <div class="flex items-center space-x-3">
             <a href="#/" class="flex items-center space-x-3 group">
                 <img src="media/v0.3d-cropped.png" alt="Sardine Logo"
-                    class="h-9 w-auto transition-transform group-hover:scale-105">
+                    class="h-9 w-auto transition-transform group-hover:rotate-6">
+                <div class="flex flex-col">
+                    <span
+                        class="text-lg font-black tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 font-sans leading-none select-none">SARDINE</span>
+                    <span class="text-[9px] text-indigo-400/80 font-mono tracking-widest mt-0.5 select-none">PLAYGROUND
+                        v0.3d</span>
+                </div>
             </a>
         </div>
 
-        <nav class="flex items-center space-x-1">
+        <nav class="flex items-center space-x-1.5 bg-slate-900/60 p-1 rounded-xl border border-slate-800/80">
             <a href="#/" id="nav-home"
-                class="px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-gray-900/60 hover:text-indigo-400 text-slate-400">Home</a>
+                class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all hover:text-indigo-400 text-slate-400">Home</a>
             <a href="#/docs" id="nav-docs"
-                class="px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-gray-900/60 hover:text-indigo-400 text-slate-400">Documentation</a>
+                class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all hover:text-indigo-400 text-slate-400">Documentation</a>
             <a href="#/editor" id="nav-editor"
-                class="px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-gray-900/60 hover:text-indigo-400 text-slate-400">Editor</a>
+                class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all hover:text-indigo-400 text-slate-400">Editor</a>
             <a href="#/educational" id="nav-educational"
-                class="px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-gray-900/60 hover:text-indigo-400 text-slate-400">Educational
+                class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all hover:text-indigo-400 text-slate-400">Educational
                 Mode</a>
         </nav>
     </header>
@@ -183,21 +233,34 @@
         <div id="view-home"
             class="view-pane hidden absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
             <div
-                class="max-w-2xl bg-slate-900/40 border border-slate-800/80 p-8 rounded-2xl backdrop-blur-md shadow-2xl">
-                <img src="media/v0.3d-cropped.png" class="h-24 mx-auto mb-6 opacity-90" alt="Logo">
-                <h2 class="text-3xl font-extrabold text-white mb-2">Welcome to Sardine</h2>
-                <p class="text-slate-400 mb-6 leading-relaxed">
+                class="max-w-2xl bg-gradient-to-br from-indigo-950/20 via-slate-900/40 to-purple-950/20 border-2 border-indigo-500/30 p-10 rounded-3xl backdrop-blur-lg shadow-[0_0_50px_rgba(99,102,241,0.15)] flex flex-col items-center text-center relative overflow-hidden">
+                <span
+                    class="absolute top-0 px-6 py-1 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-[9px] font-black tracking-widest uppercase rounded-b-xl shadow-md shadow-indigo-500/10 select-none">SYSTEM
+                    ACCESS</span>
+
+                <div class="relative mt-2 mb-6">
+                    <div class="absolute inset-0 bg-indigo-500/10 rounded-full blur-xl animate-pulse"></div>
+                    <img src="media/v0.3d-cropped.png"
+                        class="h-28 mx-auto relative z-10 filter drop-shadow-[0_0_15px_rgba(99,102,241,0.25)] transition-transform hover:rotate-3 hover:scale-105"
+                        alt="Logo">
+                </div>
+
+                <h2 class="text-4xl font-black tracking-tight text-white mb-3 leading-none select-none font-sans">
+                    Welcome to <span
+                        class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">SARDINE</span>
+                </h2>
+                <p class="text-slate-400 mb-8 leading-relaxed text-sm max-w-lg font-sans">
                     Sardine is a dynamic programming language built in C++17 and compiled to WebAssembly. Explore
                     syntax, access advanced debugging tools, and run sandboxed code directly in your browser.
                 </p>
                 <div class="flex justify-center space-x-4">
                     <a href="#/editor"
-                        class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow-lg shadow-indigo-500/20 transition-all">
-                        Open Editor
+                        class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 border border-indigo-500/30 text-white px-8 py-3.5 rounded-xl text-xs font-black tracking-wider transition-all shadow-[0_0_15px_rgba(99,102,241,0.25)] hover:scale-[1.03] active:scale-95 cursor-pointer">
+                        OPEN PLAYGROUND
                     </a>
                     <a href="#/docs"
-                        class="border border-slate-700 bg-slate-800/40 hover:bg-slate-800 text-slate-300 px-6 py-2.5 rounded-lg text-sm font-bold transition-all">
-                        Read User Guide
+                        class="bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 px-8 py-3.5 rounded-xl text-xs font-black tracking-wider transition-all hover:scale-[1.03] active:scale-95 cursor-pointer">
+                        USER GUIDE
                     </a>
                 </div>
             </div>
@@ -228,22 +291,27 @@
 
                 <!-- EXPANDED CONTENT STATE -->
                 <div id="sidebar-expanded-content" class="flex-1 flex flex-col min-h-0">
-                    <div class="p-4 border-b border-slate-800/60 flex items-center justify-between shrink-0">
+                    <div
+                        class="p-4 border-b border-slate-800/60 flex items-center justify-between shrink-0 bg-slate-950/40">
                         <span
-                            class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1.5">
-                            <i data-lucide="folder" class="h-4 w-4 text-slate-400"></i>
-                            <span>Files</span>
+                            class="text-[10px] font-black text-indigo-450 text-indigo-400 uppercase tracking-widest flex items-center space-x-1.5 select-none font-sans">
+                            <i data-lucide="folder" class="h-4 w-4 text-indigo-400"></i>
+                            <span>FILE INVENTORY</span>
                         </span>
-                        <div class="flex items-center space-x-2">
+                        <div class="flex items-center space-x-1.5">
                             <button onclick="createNewFilePrompt()"
-                                class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold flex items-center space-x-0.5">
+                                class="flex items-center space-x-0.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 hover:border-indigo-400 text-indigo-400 hover:text-white px-2 py-1 rounded-lg text-[10px] font-bold transition-all shadow-[0_0_10px_rgba(99,102,241,0.05)] active:scale-95"
+                                title="Create new file">
                                 <i data-lucide="plus" class="h-3 w-3"></i>
-                                <span>Add</span>
+                                <span>SUMMON</span>
                             </button>
                             <button onclick="clearVirtualFiles()"
-                                class="text-[10px] text-rose-400 hover:text-rose-300 transition-colors font-semibold">Clear</button>
+                                class="flex items-center bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 hover:border-rose-400 text-rose-400 hover:text-white px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all shadow-[0_0_10px_rgba(239,68,68,0.05)] active:scale-95"
+                                title="Clear all virtual files">
+                                <span>PURGE</span>
+                            </button>
                             <button onclick="toggleSidebar()"
-                                class="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-900 transition-colors ml-1"
+                                class="p-1 text-slate-405 text-slate-400 hover:text-white rounded hover:bg-slate-900 transition-colors ml-0.5"
                                 title="Collapse Sidebar">
                                 <i data-lucide="chevron-left" class="h-3.5 w-3.5"></i>
                             </button>
@@ -272,6 +340,21 @@
                     </div>
                     <div class="flex items-center space-x-5">
 
+
+                        <!-- Font Size Settings -->
+                        <div
+                            class="flex items-center space-x-2 bg-slate-900/80 border border-slate-800/80 rounded-lg px-2.5 py-1 text-xs">
+                            <i data-lucide="settings" class="h-3.5 w-3.5 text-slate-400"></i>
+                            <span class="text-slate-400 font-medium font-sans">Font:</span>
+                            <select id="editor-font-size-select" onchange="changeFontSize(this.value)"
+                                class="bg-slate-950 border border-slate-800 rounded px-1.5 py-0.5 text-xs text-indigo-400 font-bold focus:outline-none focus:ring-0">
+                                <option value="12">12px</option>
+                                <option value="14" selected>14px</option>
+                                <option value="16">16px</option>
+                                <option value="18">18px</option>
+                                <option value="20">20px</option>
+                            </select>
+                        </div>
 
                         <label
                             class="flex items-center space-x-2 cursor-pointer select-none text-slate-400 hover:text-slate-200 transition-colors">
@@ -317,11 +400,18 @@
                         title="Drag to resize terminal"></div>
                     <div
                         class="h-11 bg-slate-900/60 backdrop-blur-md px-6 flex items-center justify-between border-b border-slate-800/60 shrink-0">
-                        <span
-                            class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-2">
-                            <i data-lucide="terminal" class="h-4 w-4 text-indigo-400"></i>
-                            <span>IO Window</span>
-                        </span>
+                        <div class="flex items-center space-x-2">
+                            <button id="terminal-toggle-btn" onclick="toggleTerminal(false)"
+                                class="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors"
+                                title="Toggle Terminal">
+                                <i data-lucide="chevron-down" class="h-4 w-4"></i>
+                            </button>
+                            <span
+                                class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-2">
+                                <i data-lucide="terminal" class="h-4 w-4 text-indigo-400"></i>
+                                <span>IO Window</span>
+                            </span>
+                        </div>
                         <div class="flex items-center space-x-4">
                             <label
                                 class="flex items-center space-x-2 cursor-pointer select-none text-slate-400 hover:text-slate-200 transition-colors">
@@ -369,22 +459,27 @@
 
                 <!-- EXPANDED CONTENT STATE -->
                 <div id="edu-sidebar-expanded-content" class="flex-1 flex flex-col min-h-0">
-                    <div class="p-4 border-b border-slate-800/60 flex items-center justify-between shrink-0">
+                    <div
+                        class="p-4 border-b border-slate-800/60 flex items-center justify-between shrink-0 bg-slate-950/40">
                         <span
-                            class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1.5">
-                            <i data-lucide="folder" class="h-4 w-4 text-slate-400"></i>
-                            <span>Files</span>
+                            class="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center space-x-1.5 select-none font-sans">
+                            <i data-lucide="folder" class="h-4 w-4 text-indigo-400"></i>
+                            <span>FILE INVENTORY</span>
                         </span>
-                        <div class="flex items-center space-x-2">
+                        <div class="flex items-center space-x-1.5">
                             <button onclick="createNewFilePrompt(true)"
-                                class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold flex items-center space-x-0.5">
+                                class="flex items-center space-x-0.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 hover:border-indigo-400 text-indigo-400 hover:text-white px-2 py-1 rounded-lg text-[10px] font-bold transition-all shadow-[0_0_10px_rgba(99,102,241,0.05)] active:scale-95"
+                                title="Create new file">
                                 <i data-lucide="plus" class="h-3 w-3"></i>
-                                <span>Add</span>
+                                <span>SUMMON</span>
                             </button>
                             <button onclick="clearVirtualFiles()"
-                                class="text-[10px] text-rose-400 hover:text-rose-300 transition-colors font-semibold">Clear</button>
+                                class="flex items-center bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 hover:border-rose-400 text-rose-400 hover:text-white px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all shadow-[0_0_10px_rgba(239,68,68,0.05)] active:scale-95"
+                                title="Clear all virtual files">
+                                <span>PURGE</span>
+                            </button>
                             <button onclick="toggleSidebar(true)"
-                                class="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-900 transition-colors ml-1"
+                                class="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-900 transition-colors ml-0.5"
                                 title="Collapse Sidebar">
                                 <i data-lucide="chevron-left" class="h-3.5 w-3.5"></i>
                             </button>
@@ -412,6 +507,20 @@
                             file open</span>
                     </div>
                     <div class="flex items-center space-x-5">
+                        <!-- Font Size Settings -->
+                        <div
+                            class="flex items-center space-x-2 bg-slate-900/80 border border-slate-800/80 rounded-lg px-2.5 py-1 text-xs">
+                            <i data-lucide="settings" class="h-3.5 w-3.5 text-slate-400"></i>
+                            <span class="text-slate-400 font-medium font-sans">Font:</span>
+                            <select id="edu-editor-font-size-select" onchange="changeFontSize(this.value)"
+                                class="bg-slate-950 border border-slate-800 rounded px-1.5 py-0.5 text-xs text-indigo-400 font-bold focus:outline-none focus:ring-0">
+                                <option value="12">12px</option>
+                                <option value="14" selected>14px</option>
+                                <option value="16">16px</option>
+                                <option value="18">18px</option>
+                                <option value="20">20px</option>
+                            </select>
+                        </div>
                         <div class="flex items-center space-x-2">
                             <button id="edu-btn-run" onclick="runCode(true)" disabled
                                 class="flex items-center space-x-1.5 bg-slate-900 border border-slate-800 text-slate-500 px-6 py-2.5 rounded-lg text-xs font-semibold cursor-not-allowed transition-all">
@@ -447,10 +556,13 @@
                         title="Drag to resize info panel"></div>
 
                     <!-- Right Info Sidebar (Tokens / AST View) -->
-                    <aside id="edu-info-sidebar" class="w-96 min-w-[200px] shrink-0 bg-slate-950 flex flex-col border-l border-slate-850/80">
+                    <aside id="edu-info-sidebar"
+                        class="w-96 min-w-[200px] shrink-0 bg-slate-950 flex flex-col border-l border-slate-850/80">
                         <!-- Glassmorphic Tab Selector -->
-                        <div class="h-14 bg-slate-900/60 backdrop-blur-md px-4 flex items-center justify-between border-b border-slate-800/60 shrink-0">
-                            <div class="flex bg-slate-950/80 p-0.5 rounded-lg border border-slate-800/80 w-full font-sans">
+                        <div
+                            class="h-14 bg-slate-900/60 backdrop-blur-md px-4 flex items-center justify-between border-b border-slate-800/60 shrink-0">
+                            <div
+                                class="flex bg-slate-950/80 p-0.5 rounded-lg border border-slate-800/80 w-full font-sans">
                                 <button id="edu-tab-tokens" onclick="switchEduTab('tokens')"
                                     class="flex-1 py-1.5 text-xs font-semibold rounded-md transition-all text-white bg-indigo-600/20 text-indigo-400 border border-indigo-500/10">
                                     Tokens
@@ -466,41 +578,54 @@
                         <div id="edu-tokens-panel" class="flex-1 overflow-y-auto p-4 select-text">
                             <table class="w-full text-left border-collapse font-sans">
                                 <thead>
-                                    <tr class="border-b border-slate-800/80 text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
+                                    <tr
+                                        class="border-b border-slate-800/80 text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
                                         <th class="pb-2 px-2">Type</th>
                                         <th class="pb-2 px-2">Value</th>
                                     </tr>
                                 </thead>
-                                <tbody id="edu-tokens-table-body" class="divide-y divide-slate-900 font-mono text-[10px]">
+                                <tbody id="edu-tokens-table-body"
+                                    class="divide-y divide-slate-900 font-mono text-[10px]">
                                     <tr>
-                                        <td colspan="2" class="p-4 text-center text-slate-500 italic">// Run code in Educational Mode to populate.</td>
+                                        <td colspan="2" class="p-4 text-center text-slate-500 italic">// Run code in
+                                            Educational Mode to populate.</td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
 
                         <!-- AST View Tab -->
-                        <div id="edu-ast-panel" class="flex-1 overflow-hidden relative hidden select-none flex flex-col">
+                        <div id="edu-ast-panel"
+                            class="flex-1 overflow-hidden relative hidden select-none flex flex-col">
                             <!-- AST Graph Canvas Container -->
                             <div id="edu-ast-tree-container" class="flex-1 relative bg-slate-950 overflow-hidden">
-                                <div class="absolute inset-0 flex items-center justify-center text-slate-500 italic p-4 text-center" id="edu-ast-placeholder">// Run code in Educational Mode to populate.</div>
+                                <div class="absolute inset-0 flex items-center justify-center text-slate-500 italic p-4 text-center"
+                                    id="edu-ast-placeholder">// Run code in Educational Mode to populate.</div>
                             </div>
                             <!-- Traversal controls bar (Floating overlay at bottom) -->
-                            <div id="edu-ast-traversal-bar" class="absolute bottom-4 left-4 right-4 bg-slate-900/90 border border-slate-800 rounded-xl p-3 shadow-2xl backdrop-blur-md hidden flex items-center justify-between z-30 shrink-0 font-sans">
+                            <div id="edu-ast-traversal-bar"
+                                class="absolute bottom-4 left-4 right-4 bg-slate-900/90 border border-slate-800 rounded-xl p-3 shadow-2xl backdrop-blur-md hidden flex items-center justify-between z-30 shrink-0 font-sans">
                                 <div class="flex items-center space-x-2 text-xs font-semibold text-indigo-400">
                                     <i data-lucide="git-merge" class="h-4 w-4"></i>
                                     <span id="edu-traversal-mode-label">Exploration Mode</span>
                                 </div>
                                 <div class="flex items-center space-x-3">
-                                    <button onclick="stepTraversal(-1)" id="btn-traverse-prev" class="p-1.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer" title="Previous Node (Arrow Left)">
+                                    <button onclick="stepTraversal(-1)" id="btn-traverse-prev"
+                                        class="p-1.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                                        title="Previous Node (Arrow Left)">
                                         <i data-lucide="chevron-left" class="h-4 w-4"></i>
                                     </button>
-                                    <span id="edu-traversal-status" class="text-xs font-mono text-slate-300 select-all font-semibold">Node 0 / 0</span>
-                                    <button onclick="stepTraversal(1)" id="btn-traverse-next" class="p-1.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer" title="Next Node (Arrow Right)">
+                                    <span id="edu-traversal-status"
+                                        class="text-xs font-mono text-slate-300 select-all font-semibold">Node 0 /
+                                        0</span>
+                                    <button onclick="stepTraversal(1)" id="btn-traverse-next"
+                                        class="p-1.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                                        title="Next Node (Arrow Right)">
                                         <i data-lucide="chevron-right" class="h-4 w-4"></i>
                                     </button>
                                 </div>
-                                <button onclick="resetTraversal()" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold px-2.5 py-1.5 rounded bg-slate-950 border border-slate-800/80 hover:border-slate-700 transition-all cursor-pointer">
+                                <button onclick="resetTraversal()"
+                                    class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold px-2.5 py-1.5 rounded bg-slate-950 border border-slate-800/80 hover:border-slate-700 transition-all cursor-pointer">
                                     Reset View
                                 </button>
                             </div>
@@ -517,11 +642,18 @@
                         title="Drag to resize terminal"></div>
                     <div
                         class="h-11 bg-slate-900/60 backdrop-blur-md px-6 flex items-center justify-between border-b border-slate-800/60 shrink-0">
-                        <span
-                            class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-2">
-                            <i data-lucide="terminal" class="h-4 w-4 text-indigo-400"></i>
-                            <span>IO Window</span>
-                        </span>
+                        <div class="flex items-center space-x-2">
+                            <button id="edu-terminal-toggle-btn" onclick="toggleTerminal(true)"
+                                class="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors"
+                                title="Toggle Terminal">
+                                <i data-lucide="chevron-down" class="h-4 w-4"></i>
+                            </button>
+                            <span
+                                class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-2">
+                                <i data-lucide="terminal" class="h-4 w-4 text-indigo-400"></i>
+                                <span>IO Window</span>
+                            </span>
+                        </div>
                         <div class="flex items-center space-x-4">
                             <button onclick="clearTerminal()"
                                 class="text-xs text-slate-400 hover:text-slate-200 transition-colors flex items-center space-x-1">
@@ -634,9 +766,9 @@
             document.querySelectorAll('nav a').forEach(el => {
                 const href = el.getAttribute('href');
                 if (href === matchedRoute) {
-                    el.className = "px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-indigo-600/10 text-indigo-400 shadow-sm border border-indigo-500/10";
+                    el.className = "px-4 py-1.5 rounded-lg text-xs font-extrabold transition-all bg-indigo-500/15 text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.15)] border border-indigo-500/30";
                 } else {
-                    el.className = "px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-slate-900/60 hover:text-indigo-400 text-slate-400";
+                    el.className = "px-4 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-slate-800/40 hover:text-slate-200 text-slate-400";
                 }
             });
 
@@ -678,9 +810,11 @@ cycle x = 0 : 5 {
         let d3ZoomBehavior = null;
         let d3Svg = null;
         let d3G = null;
-        let bfsNodesQueue = [];
+        let dfsNodesQueue = [];
         let currentTraversalIndex = -1;
         let latestAst = null;
+        let d3NodeCoords = {};  // maps nodeId -> {x, y} in D3 tree coordinate space
+        window.eduEditorDecorations = [];
 
         // Shared buffer communication variables
         let sharedBuffer = null;
@@ -761,7 +895,6 @@ cycle x = 0 : 5 {
 
             worker.postMessage({ type: 'load' });
         }
-
         function updateRunButtonState() {
             const runBtn = document.getElementById('editor-btn-run');
             const eduRunBtn = document.getElementById('edu-btn-run');
@@ -771,13 +904,13 @@ cycle x = 0 : 5 {
                 if (!btn) return;
                 if (wasmReady && !isRunning && isSad) {
                     btn.disabled = false;
-                    btn.className = "flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-lg text-xs font-bold transition-all shadow-md shadow-indigo-600/10 cursor-pointer";
+                    btn.className = "flex items-center space-x-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 border border-indigo-500/30 hover:border-indigo-400 text-white px-6 py-2.5 rounded-xl text-xs font-black tracking-wider transition-all shadow-[0_0_15px_rgba(99,102,241,0.25)] hover:scale-[1.03] active:scale-95 cursor-pointer";
                 } else {
                     btn.disabled = true;
                     if (isRunning) {
-                        btn.className = "flex items-center space-x-1.5 bg-slate-900 border border-slate-800 text-slate-600 px-6 py-2.5 rounded-lg text-xs font-semibold cursor-not-allowed";
+                        btn.className = "flex items-center space-x-1.5 bg-slate-900/60 border border-slate-800/80 text-slate-650 text-slate-600 px-6 py-2.5 rounded-xl text-xs font-bold cursor-not-allowed";
                     } else {
-                        btn.className = "flex items-center space-x-1.5 bg-slate-900 border border-slate-800 text-slate-500 px-6 py-2.5 rounded-lg text-xs font-semibold cursor-not-allowed transition-all";
+                        btn.className = "flex items-center space-x-1.5 bg-slate-900/40 border border-slate-800/40 text-slate-600 px-6 py-2.5 rounded-xl text-xs font-bold cursor-not-allowed transition-all";
                     }
                 }
             });
@@ -799,18 +932,17 @@ cycle x = 0 : 5 {
                 if (!btn) return;
                 if (isRunning) {
                     btn.disabled = false;
-                    btn.className = "flex items-center space-x-1.5 bg-rose-600 hover:bg-rose-500 text-white px-6 py-2.5 rounded-lg text-xs font-bold shadow-md shadow-rose-600/10 transition-all cursor-pointer";
+                    btn.className = "flex items-center space-x-1.5 bg-gradient-to-r from-rose-600 to-pink-650 to-pink-600 hover:from-rose-500 hover:to-pink-500 border border-rose-500/30 hover:border-rose-400 text-white px-6 py-2.5 rounded-xl text-xs font-black tracking-wider transition-all shadow-[0_0_15px_rgba(239,68,68,0.25)] hover:scale-[1.03] active:scale-95 cursor-pointer";
                 } else {
                     btn.disabled = true;
-                    btn.className = "flex items-center space-x-1.5 bg-rose-950/30 border border-rose-900/20 text-rose-500/40 px-6 py-2.5 rounded-lg text-xs font-semibold cursor-not-allowed transition-all";
+                    btn.className = "flex items-center space-x-1.5 bg-rose-950/10 border border-rose-900/10 text-rose-500/30 px-6 py-2.5 rounded-xl text-xs font-bold cursor-not-allowed transition-all";
                 }
             });
         }
-
         function writeToTerminal(message, isError = false) {
             const consoleEl = document.getElementById('terminal-console');
             const eduConsoleEl = document.getElementById('edu-terminal-console');
-            
+
             [consoleEl, eduConsoleEl].forEach(el => {
                 if (!el) return;
                 const newLine = document.createElement('div');
@@ -837,8 +969,13 @@ cycle x = 0 : 5 {
 
             // Reset AST visualizer state
             latestAst = null;
-            bfsNodesQueue = [];
+            dfsNodesQueue = [];
             currentTraversalIndex = -1;
+
+            // Clear Monaco range highlights
+            if (eduEditorInstance && window.eduEditorDecorations) {
+                window.eduEditorDecorations = eduEditorInstance.deltaDecorations(window.eduEditorDecorations, []);
+            }
 
             const tokensTbody = document.getElementById('edu-tokens-table-body');
             const astContainer = document.getElementById('edu-ast-tree-container');
@@ -988,11 +1125,11 @@ cycle x = 0 : 5 {
                 if (eduEmptyState) eduEmptyState.classList.remove('hidden');
                 if (activeSpan) {
                     activeSpan.innerText = "No file open";
-                    activeSpan.className = "bg-slate-900 px-2.5 py-1 rounded text-[11px] font-mono text-slate-500 border border-slate-800";
+                    activeSpan.className = "bg-slate-900/40 border border-slate-800/80 rounded-lg px-2.5 py-1 text-[11px] font-mono text-slate-500 select-none";
                 }
                 if (eduActiveSpan) {
                     eduActiveSpan.innerText = "No file open";
-                    eduActiveSpan.className = "bg-slate-900 px-2.5 py-1 rounded text-[11px] font-mono text-slate-500 border border-slate-800";
+                    eduActiveSpan.className = "bg-slate-900/40 border border-slate-800/80 rounded-lg px-2.5 py-1 text-[11px] font-mono text-slate-500 select-none";
                 }
                 return;
             }
@@ -1002,11 +1139,11 @@ cycle x = 0 : 5 {
             if (eduEmptyState) eduEmptyState.classList.add('hidden');
             if (activeSpan) {
                 activeSpan.innerText = filename;
-                activeSpan.className = "bg-slate-900 px-2.5 py-1 rounded text-[11px] font-mono text-indigo-300 border border-slate-800";
+                activeSpan.className = "bg-gradient-to-r from-indigo-500/20 to-purple-500/10 border border-indigo-500/35 px-3 py-1 rounded-lg text-xs font-mono text-indigo-300 font-bold tracking-wide select-all shadow-[0_0_10px_rgba(99,102,241,0.1)]";
             }
             if (eduActiveSpan) {
                 eduActiveSpan.innerText = filename;
-                eduActiveSpan.className = "bg-slate-900 px-2.5 py-1 rounded text-[11px] font-mono text-indigo-300 border border-slate-800";
+                eduActiveSpan.className = "bg-gradient-to-r from-indigo-500/20 to-purple-500/10 border border-indigo-500/35 px-3 py-1 rounded-lg text-xs font-mono text-indigo-300 font-bold tracking-wide select-all shadow-[0_0_10px_rgba(99,102,241,0.1)]";
             }
 
             if (editorInstance) {
@@ -1214,8 +1351,12 @@ cycle x = 0 : 5 {
                 if (!container) return;
                 if (fileKeys.length === 0) {
                     container.innerHTML = `
-                        <div class="text-m text-slate-600 italic p-4 text-center rounded-xl">
-                            No files created yet.
+                        <div class="text-slate-500 italic p-6 text-center border border-dashed border-slate-800/60 rounded-xl flex flex-col items-center justify-center space-y-2 bg-slate-950/20 backdrop-blur-sm">
+                            <i data-lucide="archive" class="h-6 w-6 text-slate-600 animate-pulse"></i>
+                            <div class="flex flex-col space-y-0.5">
+                                <p class="text-xs font-bold text-slate-400 font-sans tracking-wide">FILE INVENTORY EMPTY</p>
+                                <p class="text-[10px] text-slate-500 font-sans">Summon a file to begin your quest.</p>
+                            </div>
                         </div>
                     `;
                     return;
@@ -1227,22 +1368,40 @@ cycle x = 0 : 5 {
                     const isActive = (name === activeFilename);
                     const item = document.createElement('div');
 
-                    item.className = `p-2.5 rounded-lg border flex items-center justify-between text-xs cursor-pointer transition-all group ${isActive
-                        ? 'bg-indigo-600/10 border-indigo-500/30'
-                        : 'bg-slate-900/40 border-slate-800/80 hover:border-indigo-500/30 hover:bg-slate-900/80'
-                        }`;
+                    const activeClass = 'bg-gradient-to-r from-indigo-500/15 via-purple-500/10 to-indigo-500/5 border-indigo-500/50 border-l-4 border-l-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.15)] translate-x-1';
+                    const inactiveClass = 'bg-slate-900/40 border-slate-800/80 hover:border-indigo-500/40 hover:bg-slate-950/60 hover:translate-x-1';
+
+                    item.className = `p-2.5 rounded-xl border flex items-center justify-between text-xs cursor-pointer transition-all duration-300 group ${isActive ? activeClass : inactiveClass}`;
                     item.setAttribute('onclick', `selectFile("${name}")`);
 
                     // Set icon depending on whether it is a .sad file
                     const iconName = isSad ? 'file-code' : 'file-text';
                     const iconColor = isSad ? 'text-indigo-400' : 'text-slate-400';
+                    const nameColor = isActive ? 'text-white font-bold' : 'text-slate-400 group-hover:text-slate-200';
+                    const btnOpacityClass = isActive ? 'opacity-80 hover:opacity-100' : 'opacity-0 group-hover:opacity-100';
+
+                    // Equipped status element
+                    const statusDot = isActive
+                        ? `
+                        <span class="flex h-2 w-2 relative shrink-0">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                        </span>
+                        `
+                        : '';
+
+                    const badge = isActive
+                        ? `<span class="text-[8px] font-black uppercase text-indigo-400 bg-indigo-950/80 px-1.5 py-0.5 rounded border border-indigo-500/30 font-sans tracking-wide leading-none select-none shrink-0">EQUIPPED</span>`
+                        : '';
 
                     item.innerHTML = `
                         <div class="flex items-center space-x-2 truncate flex-1 mr-2">
-                            <i data-lucide="${iconName}" class="h-3.5 w-3.5 ${iconColor} group-hover:text-indigo-300 shrink-0"></i>
-                            <span class="font-mono text-slate-300 truncate group-hover:text-white">${name}</span>
+                            ${statusDot}
+                            <i data-lucide="${iconName}" class="h-3.5 w-3.5 ${iconColor} shrink-0"></i>
+                            <span class="font-mono ${nameColor} truncate">${name}</span>
+                            ${badge}
                         </div>
-                        <div class="flex items-center space-x-1.5 opacity-40 group-hover:opacity-100 transition-opacity">
+                        <div class="flex items-center space-x-1 ${btnOpacityClass} transition-opacity duration-200">
                             <button onclick="downloadFile('${name}', event)" class="p-1 text-slate-400 hover:text-indigo-400 hover:bg-slate-850 rounded" title="Download">
                                 <i data-lucide="download" class="h-3.5 w-3.5"></i>
                             </button>
@@ -1324,6 +1483,68 @@ cycle x = 0 : 5 {
             }
         }
 
+        function changeFontSize(size) {
+            const sizeNum = parseInt(size);
+            if (editorInstance) {
+                editorInstance.updateOptions({ fontSize: sizeNum, lineHeight: Math.round(sizeNum * 1.5) });
+            }
+            if (eduEditorInstance) {
+                eduEditorInstance.updateOptions({ fontSize: sizeNum, lineHeight: Math.round(sizeNum * 1.5) });
+            }
+            // Sync drop-down selectors
+            const sel1 = document.getElementById('editor-font-size-select');
+            const sel2 = document.getElementById('edu-editor-font-size-select');
+            if (sel1 && sel1.value !== size) sel1.value = size;
+            if (sel2 && sel2.value !== size) sel2.value = size;
+        }
+
+        // Collapsable Terminal Controller
+        let terminalHeights = { regular: 288, edu: 288 };
+        let terminalCollapsed = { regular: false, edu: false };
+
+        function toggleTerminal(isEdu = false) {
+            const key = isEdu ? 'edu' : 'regular';
+            const terminal = document.getElementById(isEdu ? 'edu-terminal-section' : 'terminal-section');
+            const consoleEl = document.getElementById(isEdu ? 'edu-terminal-console' : 'terminal-console');
+            const inputRow = document.getElementById(isEdu ? 'edu-terminal-input-row' : 'terminal-input-row');
+            const resizeHandle = document.getElementById(isEdu ? 'edu-terminal-resize-handle' : 'terminal-resize-handle');
+            const toggleBtn = document.getElementById(isEdu ? 'edu-terminal-toggle-btn' : 'terminal-toggle-btn');
+
+            if (!terminal) return;
+
+            if (!terminalCollapsed[key]) {
+                // Collapse terminal
+                terminalHeights[key] = terminal.offsetHeight;
+                terminal.style.height = '44px'; // Header height only
+                if (consoleEl) consoleEl.classList.add('hidden');
+                if (inputRow) inputRow.classList.add('hidden');
+                if (resizeHandle) resizeHandle.style.display = 'none';
+                terminalCollapsed[key] = true;
+
+                if (toggleBtn) {
+                    toggleBtn.innerHTML = `<i data-lucide="chevron-up" class="h-4 w-4"></i>`;
+                    lucide.createIcons();
+                }
+            } else {
+                // Expand terminal
+                terminal.style.height = `${terminalHeights[key]}px`;
+                if (consoleEl) consoleEl.classList.remove('hidden');
+                if (resizeHandle) resizeHandle.style.display = 'block';
+                terminalCollapsed[key] = false;
+
+                if (toggleBtn) {
+                    toggleBtn.innerHTML = `<i data-lucide="chevron-down" class="h-4 w-4"></i>`;
+                    lucide.createIcons();
+                }
+            }
+
+            // Recalculate editor geometry
+            const currentEditor = isEdu ? eduEditorInstance : editorInstance;
+            if (currentEditor) {
+                setTimeout(() => currentEditor.layout(), 50);
+            }
+        }
+
         // Adjustable Terminal Height
         function initTerminalResizer() {
             const handle = document.getElementById('terminal-resize-handle');
@@ -1355,6 +1576,7 @@ cycle x = 0 : 5 {
                 if (newHeight > maxHeight) newHeight = maxHeight;
 
                 terminal.style.height = `${newHeight}px`;
+                terminalHeights.regular = newHeight; // Store dragged height
 
                 // Update Monaco geometry in real time
                 if (editorInstance) {
@@ -1406,6 +1628,7 @@ cycle x = 0 : 5 {
                 if (newHeight > maxHeight) newHeight = maxHeight;
 
                 terminal.style.height = `${newHeight}px`;
+                terminalHeights.edu = newHeight; // Store dragged height
 
                 // Update Monaco geometry in real time
                 if (eduEditorInstance) {
@@ -1550,34 +1773,97 @@ cycle x = 0 : 5 {
             "EOF": "EOF"
         };
 
+        function escapeHtml(text) {
+            if (typeof text !== 'string') return text;
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function minPosition(p1, p2) {
+            if (!p1) return p2;
+            if (!p2) return p1;
+            return p1.index <= p2.index ? p1 : p2;
+        }
+
+        function maxPosition(p1, p2) {
+            if (!p1) return p2;
+            if (!p2) return p1;
+            return p1.index >= p2.index ? p1 : p2;
+        }
+
+        function getTokenBadgeHTML(type, value) {
+            let classes = "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wide border transition-all";
+            if (type === "KEYWORD") {
+                classes += " bg-fuchsia-500/15 text-fuchsia-400 border-fuchsia-500/30 shadow-[0_0_6px_rgba(217,70,239,0.15)]";
+            } else if (type === "INT" || type === "FLOAT") {
+                classes += " bg-amber-500/15 text-amber-400 border-amber-500/30 shadow-[0_0_6px_rgba(245,158,11,0.15)]";
+            } else if (type === "STRING" || type === "FSTRING") {
+                classes += " bg-emerald-500/15 text-emerald-400 border-emerald-500/30 shadow-[0_0_6px_rgba(16,185,129,0.15)]";
+            } else if (type === "IDENTIFIER") {
+                classes += " bg-blue-500/15 text-blue-400 border-blue-500/30 shadow-[0_0_6px_rgba(59,130,246,0.15)]";
+            } else if (type === "NEWLINE") {
+                classes += " bg-slate-800/50 text-slate-400 border-slate-700/40";
+            } else if (type === "EOF") {
+                classes += " bg-rose-500/15 text-rose-400 border-rose-500/30 shadow-[0_0_6px_rgba(239,68,68,0.15)]";
+            } else {
+                const bracketTypes = [
+                    'LPAREN', 'RPAREN', 'LPAREN2', 'RPAREN2', 'LPAREN3', 'RPAREN3', 'COMMA', 'DOT'
+                ];
+                if (bracketTypes.includes(type)) {
+                    classes += " bg-teal-500/15 text-teal-400 border-teal-500/30 shadow-[0_0_6px_rgba(20,184,166,0.15)]";
+                } else {
+                    classes += " bg-pink-500/15 text-pink-400 border-pink-500/30 shadow-[0_0_6px_rgba(236,72,153,0.15)]";
+                }
+            }
+            return `<span class="${classes}">${type}</span>`;
+        }
+
         function renderTokensTable(tokens) {
             const tbody = document.getElementById('edu-tokens-table-body');
             if (!tbody) return;
             tbody.innerHTML = '';
 
             if (!tokens || tokens.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="2" class="p-4 text-center text-slate-500 italic">No tokens found.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="2" class="p-4 text-center text-slate-500 italic">// No tokens found.</td></tr>';
                 return;
             }
 
             tokens.forEach(tok => {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-900/60 transition-colors";
+                tr.className = "hover:bg-slate-900/60 border-b border-slate-900/60 transition-all duration-200 group hover:translate-x-1";
 
                 const tdType = document.createElement('td');
-                tdType.className = "py-2 px-2 text-indigo-400 font-medium font-mono text-[10px]";
-                tdType.innerText = tok.type || '';
+                tdType.className = "py-2.5 px-3 font-mono align-middle";
+                tdType.innerHTML = getTokenBadgeHTML(tok.type, tok.value);
 
                 const tdValue = document.createElement('td');
-                tdValue.className = "py-2 px-2 text-slate-300 font-mono text-[10px]";
-                
+                tdValue.className = "py-2.5 px-3 font-mono text-xs align-middle";
+
                 let val = tok.value;
                 if (val === null || val === undefined) {
                     val = TOKEN_LITERALS[tok.type] || '';
-                } else if (typeof val === 'string') {
-                    val = `"${val}"`;
                 }
-                tdValue.innerText = val;
+
+                let valHTML = '';
+                if (tok.type === 'STRING' || tok.type === 'FSTRING') {
+                    valHTML = `<span class="text-emerald-400 font-semibold">"${escapeHtml(val)}"</span>`;
+                } else if (tok.type === 'INT' || tok.type === 'FLOAT') {
+                    valHTML = `<span class="text-amber-400 font-semibold">${val}</span>`;
+                } else if (tok.type === 'KEYWORD') {
+                    valHTML = `<span class="text-indigo-300 font-bold font-sans">${val}</span>`;
+                } else if (tok.type === 'IDENTIFIER') {
+                    valHTML = `<span class="text-cyan-300 font-medium">${val}</span>`;
+                } else if (TOKEN_LITERALS[tok.type]) {
+                    valHTML = `<span class="text-pink-400 font-bold">${escapeHtml(val)}</span>`;
+                } else {
+                    valHTML = `<span class="text-slate-300">${escapeHtml(val)}</span>`;
+                }
+
+                tdValue.innerHTML = valHTML;
 
                 tr.appendChild(tdType);
                 tr.appendChild(tdValue);
@@ -1607,12 +1893,23 @@ cycle x = 0 : 5 {
                 value = obj.value;
             }
 
+            // Find direct positions on this object's fields
+            let pos_start = null;
+            let pos_end = null;
+            Object.keys(obj).forEach(key => {
+                const val = obj[key];
+                if (val && typeof val === 'object' && val.pos_start !== undefined && val.pos_end !== undefined) {
+                    pos_start = minPosition(pos_start, val.pos_start);
+                    pos_end = maxPosition(pos_end, val.pos_end);
+                }
+            });
+
             // Recursively extract AST sub-nodes
             Object.keys(obj).forEach(key => {
                 if (key === 'node_type' || key === 'token' || key === 'operator' || key === 'var_name_tok' || key === 'module_tok' || key === 'name_tok') {
                     return;
                 }
-                
+
                 const val = obj[key];
                 if (!val) return;
 
@@ -1623,6 +1920,8 @@ cycle x = 0 : 5 {
                             if (child) {
                                 child.label = key;
                                 children.push(child);
+                                pos_start = minPosition(pos_start, child.pos_start);
+                                pos_end = maxPosition(pos_end, child.pos_end);
                             }
                         });
                     } else {
@@ -1630,43 +1929,44 @@ cycle x = 0 : 5 {
                         if (child) {
                             child.label = key;
                             children.push(child);
+                            pos_start = minPosition(pos_start, child.pos_start);
+                            pos_end = maxPosition(pos_end, child.pos_end);
                         }
                     }
                 }
             });
 
-            return { nodeType, value, children };
+            return { nodeType, value, children, pos_start, pos_end };
         }
 
-        // BFS traversal extraction
-        function buildBfsQueue(simplifiedAst) {
-            const queue = [];
+        // DFS pre-order traversal extraction
+        function buildDfsQueue(simplifiedAst) {
             const result = [];
             if (!simplifiedAst) return result;
-            
-            queue.push(simplifiedAst);
-            simplifiedAst.id = "ast-node-0";
-            let idCounter = 1;
 
-            while (queue.length > 0) {
-                const current = queue.shift();
-                result.push(current);
+            let idCounter = 0;
+            function traverse(node) {
+                if (!node) return;
+                node.id = "ast-node-" + idCounter;
+                node.dfsIndex = idCounter;
+                idCounter++;
+                result.push(node);
 
-                if (current.children && current.children.length > 0) {
-                    current.children.forEach(child => {
-                        child.id = "ast-node-" + (idCounter++);
-                        queue.push(child);
+                if (node.children && node.children.length > 0) {
+                    node.children.forEach(child => {
+                        traverse(child);
                     });
                 }
             }
+            traverse(simplifiedAst);
             return result;
         }
 
         function focusNode(nodeId) {
             if (!nodeId) return;
 
-            // Find the node index in the BFS queue
-            const index = bfsNodesQueue.findIndex(n => n.id === nodeId);
+            // Find the node index in the DFS queue
+            const index = dfsNodesQueue.findIndex(n => n.id === nodeId);
             if (index !== -1) {
                 currentTraversalIndex = index;
                 highlightCurrentNode(true);
@@ -1676,70 +1976,170 @@ cycle x = 0 : 5 {
         function highlightCurrentNode(centerViewport = true) {
             if (!d3Svg) return;
 
-            if (currentTraversalIndex < 0 || currentTraversalIndex >= bfsNodesQueue.length) {
-                // If nothing highlighted, clear all muting
-                d3Svg.selectAll(".ast-node").classed("highlighted", false).classed("muted", false);
-                d3Svg.selectAll(".ast-link").classed("highlighted", false).classed("muted", false);
+            if (currentTraversalIndex < 0 || currentTraversalIndex >= dfsNodesQueue.length) {
+                // If nothing highlighted (exploration mode), clear all muting and show everything
+                d3Svg.selectAll(".ast-node")
+                    .style("pointer-events", "auto")
+                    .classed("highlighted", false)
+                    .classed("muted", false)
+                    .transition()
+                    .duration(300)
+                    .style("opacity", 1);
+
+                d3Svg.selectAll(".ast-link")
+                    .classed("highlighted", false)
+                    .classed("muted", false)
+                    .transition()
+                    .duration(300)
+                    .style("opacity", 1);
+
+                // Clear editor decorations
+                if (eduEditorInstance && window.eduEditorDecorations) {
+                    window.eduEditorDecorations = eduEditorInstance.deltaDecorations(window.eduEditorDecorations, []);
+                }
+
                 updateTraversalBarUI();
                 return;
             }
 
-            const activeNode = bfsNodesQueue[currentTraversalIndex];
+            const activeNode = dfsNodesQueue[currentTraversalIndex];
             const activeId = activeNode.id;
 
-            // Apply SVG node classes
-            d3Svg.selectAll(".ast-node").each(function(d) {
+            // Apply SVG node visibility and styles based on DFS index
+            d3Svg.selectAll(".ast-node").each(function (d) {
                 const nodeElement = d3.select(this);
-                if (d.data.id === activeId) {
-                    nodeElement.classed("highlighted", true).classed("muted", false);
+                const nodeDfsIndex = d.data.dfsIndex;
+                const isVisible = (currentTraversalIndex === -1 || nodeDfsIndex <= currentTraversalIndex);
+
+                if (isVisible) {
+                    nodeElement
+                        .style("pointer-events", "auto")
+                        .transition()
+                        .duration(300)
+                        .style("opacity", 1);
+
+                    if (d.data.id === activeId) {
+                        nodeElement.classed("highlighted", true).classed("muted", false);
+                    } else {
+                        nodeElement.classed("muted", true).classed("highlighted", false);
+                    }
                 } else {
-                    nodeElement.classed("muted", true).classed("highlighted", false);
+                    nodeElement
+                        .style("pointer-events", "none")
+                        .transition()
+                        .duration(200)
+                        .style("opacity", 0);
+                    nodeElement.classed("highlighted", false).classed("muted", false);
                 }
             });
 
-            // Apply SVG link classes (highlight paths directly connected to the active node)
-            d3Svg.selectAll(".ast-link").each(function(d) {
+            // Apply SVG link visibility and styles based on DFS target index
+            d3Svg.selectAll(".ast-link").each(function (d) {
                 const linkElement = d3.select(this);
-                const isConnected = (d.source.data.id === activeId || d.target.data.id === activeId);
-                if (isConnected) {
-                    linkElement.classed("highlighted", true).classed("muted", false);
+                const targetDfsIndex = d.target.data.dfsIndex;
+                const isVisible = (currentTraversalIndex === -1 || targetDfsIndex <= currentTraversalIndex);
+
+                if (isVisible) {
+                    linkElement
+                        .transition()
+                        .duration(300)
+                        .style("opacity", 1);
+
+                    const isConnected = (d.source.data.id === activeId || d.target.data.id === activeId);
+                    if (isConnected) {
+                        linkElement.classed("highlighted", true).classed("muted", false);
+                    } else {
+                        linkElement.classed("muted", true).classed("highlighted", false);
+                    }
                 } else {
-                    linkElement.classed("muted", true).classed("highlighted", false);
+                    linkElement
+                        .transition()
+                        .duration(200)
+                        .style("opacity", 0);
+                    linkElement.classed("highlighted", false).classed("muted", false);
                 }
             });
 
             updateTraversalBarUI();
 
-            // Perform smooth viewport transition to center the highlighted node
-            if (centerViewport && d3ZoomBehavior && d3Svg) {
-                // Find node's position inside D3 coordinate space
-                const nodeData = d3Svg.selectAll(".ast-node").filter(d => d.data.id === activeId).datum();
-                if (nodeData) {
-                    const container = document.getElementById('edu-ast-tree-container');
-                    const w = container.clientWidth || 400;
-                    const h = container.clientHeight || 500;
+            // Highlight corresponding range in Monaco Editor
+            if (eduEditorInstance) {
+                if (!window.eduEditorDecorations) {
+                    window.eduEditorDecorations = [];
+                }
+                if (activeNode.pos_start && activeNode.pos_end) {
+                    const startLine = activeNode.pos_start.line + 1;
+                    const startCol = activeNode.pos_start.col + 1;
+                    const endLine = activeNode.pos_end.line + 1;
+                    const endCol = activeNode.pos_end.col + 1;
 
-                    // Compute translation to center on (nodeData.x, nodeData.y)
-                    const scale = 1.0;
-                    const transX = w / 2 - scale * nodeData.x;
-                    const transY = h / 2 - scale * nodeData.y;
+                    if (startLine && startCol && endLine && endCol) {
+                        window.eduEditorDecorations = eduEditorInstance.deltaDecorations(window.eduEditorDecorations, [
+                            {
+                                range: new monaco.Range(startLine, startCol, endLine, endCol),
+                                options: {
+                                    inlineClassName: 'monaco-ast-node-highlight',
+                                    className: 'monaco-ast-node-line-highlight',
+                                    isWholeLine: false,
+                                    hoverMessage: { value: `**AST Node**: ${activeNode.nodeType.replace("Node", "")}` }
+                                }
+                            }
+                        ]);
 
-                    d3Svg.transition()
-                        .duration(750)
-                        .ease(d3.easeCubicOut)
-                        .call(d3ZoomBehavior.transform, d3.zoomIdentity.translate(transX, transY).scale(scale));
+                        if (centerViewport) {
+                            eduEditorInstance.revealRangeInCenterIfOutside(new monaco.Range(startLine, startCol, endLine, endCol));
+                        }
+                    } else {
+                        window.eduEditorDecorations = eduEditorInstance.deltaDecorations(window.eduEditorDecorations, []);
+                    }
+                } else {
+                    window.eduEditorDecorations = eduEditorInstance.deltaDecorations(window.eduEditorDecorations, []);
                 }
             }
+
+            // Auto-focus: pan viewport so the active node is visible/centered
+            if (d3ZoomBehavior && d3Svg) {
+                const coords = d3NodeCoords[activeId];
+                if (coords) {
+                    const container = document.getElementById('edu-ast-tree-container');
+                    if (container) {
+                        const W = container.clientWidth || 400;
+                        const H = container.clientHeight || 500;
+
+                        if (centerViewport) {
+                            const k = 0.85; // Use fixed clean layout scale 0.85
+                            const tx = W / 2 - k * coords.x;
+                            const ty = H / 2 - k * coords.y;
+
+                            console.log("Auto-centering active node:", activeId, "Coords:", coords, "Viewport:", W, "x", H, "target_tx:", tx, "target_ty:", ty);
+
+                            d3Svg.transition()
+                                .duration(500)
+                                .ease(d3.easeCubicOut)
+                                .call(d3ZoomBehavior.transform, d3.zoomIdentity.translate(tx, ty).scale(k));
+                        }
+                    }
+                }
+            }
+
+            // Set active focus programmatically to the node card
+            // Use setTimeout to ensure the element is rendered and has bounds before focusing
+            setTimeout(() => {
+                const cardEl = document.getElementById(`card-${activeId}`);
+                if (cardEl) {
+                    cardEl.focus({ preventScroll: true });
+                }
+            }, 50);
         }
 
         function stepTraversal(direction) {
-            if (bfsNodesQueue.length === 0) return;
+            if (dfsNodesQueue.length === 0) return;
 
             currentTraversalIndex += direction;
             if (currentTraversalIndex < 0) {
                 currentTraversalIndex = 0;
-            } else if (currentTraversalIndex >= bfsNodesQueue.length) {
-                currentTraversalIndex = bfsNodesQueue.length - 1;
+            } else if (currentTraversalIndex >= dfsNodesQueue.length) {
+                currentTraversalIndex = dfsNodesQueue.length - 1;
             }
 
             highlightCurrentNode(true);
@@ -1767,12 +2167,42 @@ cycle x = 0 : 5 {
 
             if (currentTraversalIndex === -1) {
                 if (label) label.innerText = "Exploration Mode";
-                if (status) status.innerText = `0 / ${bfsNodesQueue.length} nodes`;
+                if (status) status.innerText = `0 / ${dfsNodesQueue.length} nodes`;
             } else {
-                if (label) label.innerText = "Traversal Mode (BFS)";
-                if (status) status.innerText = `${currentTraversalIndex + 1} / ${bfsNodesQueue.length} nodes`;
+                if (label) label.innerText = "Traversal Mode (DFS)";
+                if (status) status.innerText = `${currentTraversalIndex + 1} / ${dfsNodesQueue.length} nodes`;
             }
         }
+
+        const NODE_TYPE_STYLING = {
+            'NumberNode': { icon: 'hash', color: 'text-amber-400', name: 'Number', border: 'border-amber-500/30', bg: 'bg-amber-500/5' },
+            'StringNode': { icon: 'type', color: 'text-emerald-400', name: 'String', border: 'border-emerald-500/30', bg: 'bg-emerald-500/5' },
+            'FStringNode': { icon: 'type', color: 'text-emerald-400', name: 'F-String', border: 'border-emerald-500/30', bg: 'bg-emerald-500/5' },
+            'VariableUseNode': { icon: 'user', color: 'text-cyan-400', name: 'Variable', border: 'border-cyan-500/30', bg: 'bg-cyan-500/5' },
+            'VariableAssignNode': { icon: 'edit-3', color: 'text-indigo-400', name: 'Assign', border: 'border-indigo-500/30', bg: 'bg-indigo-500/5' },
+            'BinaryOperationNode': { icon: 'git-commit', color: 'text-pink-400', name: 'Binary Op', border: 'border-pink-500/30', bg: 'bg-pink-500/5' },
+            'UnaryOperationNode': { icon: 'minus-circle', color: 'text-rose-400', name: 'Unary Op', border: 'border-rose-500/30', bg: 'bg-rose-500/5' },
+            'TernaryOperationNode': { icon: 'help-circle', color: 'text-purple-400', name: 'Ternary Op', border: 'border-purple-500/30', bg: 'bg-purple-500/5' },
+            'IndexAccessNode': { icon: 'key', color: 'text-yellow-400', name: 'Index Access', border: 'border-yellow-500/30', bg: 'bg-yellow-500/5' },
+            'ListNode': { icon: 'list', color: 'text-sky-400', name: 'List', border: 'border-sky-500/30', bg: 'bg-sky-500/5' },
+            'DictNode': { icon: 'database', color: 'text-teal-400', name: 'Dictionary', border: 'border-teal-500/30', bg: 'bg-teal-500/5' },
+            'IfNode': { icon: 'git-branch', color: 'text-orange-400', name: 'If', border: 'border-orange-500/30', bg: 'bg-orange-500/5' },
+            'SwitchNode': { icon: 'git-pull-request', color: 'text-orange-400', name: 'Switch', border: 'border-orange-500/30', bg: 'bg-orange-500/5' },
+            'ForNode': { icon: 'repeat', color: 'text-indigo-400', name: 'For Loop', border: 'border-indigo-500/30', bg: 'bg-indigo-500/5' },
+            'WhileNode': { icon: 'repeat', color: 'text-indigo-400', name: 'While Loop', border: 'border-indigo-500/30', bg: 'bg-indigo-500/5' },
+            'ForEachLoopNode': { icon: 'repeat', color: 'text-indigo-400', name: 'ForEach Loop', border: 'border-indigo-500/30', bg: 'bg-indigo-500/5' },
+            'FunctionCallNode': { icon: 'play-circle', color: 'text-violet-400', name: 'Call', border: 'border-violet-500/30', bg: 'bg-violet-500/5' },
+            'ReturnNode': { icon: 'corner-down-left', color: 'text-red-400', name: 'Return', border: 'border-red-500/30', bg: 'bg-red-500/5' },
+            'TryNode': { icon: 'shield-alert', color: 'text-amber-500', name: 'Try', border: 'border-amber-500/30', bg: 'bg-amber-500/5' },
+            'FinallyNode': { icon: 'shield-check', color: 'text-emerald-500', name: 'Finally', border: 'border-emerald-500/30', bg: 'bg-emerald-500/5' },
+            'AttrAccessNode': { icon: 'link', color: 'text-cyan-400', name: 'Attr Access', border: 'border-cyan-500/30', bg: 'bg-cyan-500/5' },
+            'AttrAssignNode': { icon: 'link-2', color: 'text-cyan-400', name: 'Attr Assign', border: 'border-cyan-500/30', bg: 'bg-cyan-500/5' },
+            'ClassNode': { icon: 'box', color: 'text-blue-400', name: 'Class', border: 'border-blue-500/30', bg: 'bg-blue-500/5' },
+            'FunctionDefinitionNode': { icon: 'code', color: 'text-violet-400', name: 'Function', border: 'border-violet-500/30', bg: 'bg-violet-500/5' },
+            'MethodDefinitionNode': { icon: 'code-2', color: 'text-violet-400', name: 'Method', border: 'border-violet-500/30', bg: 'bg-violet-500/5' },
+            'SummonNode': { icon: 'download-cloud', color: 'text-pink-400', name: 'Summon', border: 'border-pink-500/30', bg: 'bg-pink-500/5' },
+            'ListComprehensionNode': { icon: 'layers', color: 'text-sky-400', name: 'Comprehension', border: 'border-sky-500/30', bg: 'bg-sky-500/5' }
+        };
 
         function renderAstTree(astObj) {
             latestAst = astObj;
@@ -1793,9 +2223,9 @@ cycle x = 0 : 5 {
             }
 
             const simplifiedAst = extractAstNode(astObj);
-            
-            // Build BFS Queue
-            bfsNodesQueue = buildBfsQueue(simplifiedAst);
+
+            // Build DFS Queue
+            dfsNodesQueue = buildDfsQueue(simplifiedAst);
             currentTraversalIndex = -1;
             updateTraversalBarUI();
 
@@ -1828,9 +2258,15 @@ cycle x = 0 : 5 {
             // Create D3 Hierarchy structure
             const root = d3.hierarchy(simplifiedAst);
 
-            // Compute D3 Tree Layout (horizontal separation 220px, vertical separation 140px)
-            const treeLayout = d3.tree().nodeSize([220, 140]);
+            // Compute D3 Tree Layout (horizontal separation 360px, vertical separation 240px)
+            const treeLayout = d3.tree().nodeSize([360, 240]);
             treeLayout(root);
+
+            // Store each node's D3 layout coordinates indexed by node id
+            d3NodeCoords = {};
+            root.descendants().forEach(d => {
+                d3NodeCoords[d.data.id] = { x: d.x, y: d.y };
+            });
 
             // Center root node initially at the top center
             const initialTransform = d3.zoomIdentity.translate(width / 2, 60).scale(0.85);
@@ -1861,26 +2297,57 @@ cycle x = 0 : 5 {
                     focusNode(d.data.id);
                 });
 
-            // Embedded HTML Card within each node group using foreignObject (bounds expanded to fit 260x150 highlighted cards)
+            // Embedded HTML Card within each node group using foreignObject (bounds expanded to fit 380x220 highlighted cards)
             const fo = nodes.append("foreignObject")
-                .attr("width", 280)
-                .attr("height", 180)
-                .attr("x", -140)
-                .attr("y", -90);
+                .attr("width", 420)
+                .attr("height", 260)
+                .attr("x", -210)
+                .attr("y", -130);
 
             fo.html(d => {
-                const label = `<div class="text-[8px] text-slate-500 font-bold uppercase tracking-wider mb-0.5 truncate">${d.data.label || 'NODE'}</div>`;
-                const nodeType = `<div class="text-[11px] font-bold text-indigo-900 font-sans leading-none truncate">${d.data.nodeType.replace("Node", "")}</div>`;
+                const style = NODE_TYPE_STYLING[d.data.nodeType] || {
+                    icon: 'help-circle',
+                    color: 'text-indigo-400',
+                    name: d.data.nodeType.replace("Node", ""),
+                    border: 'border-indigo-500/20',
+                    bg: 'bg-indigo-500/5'
+                };
+
+                const parentLabel = d.data.label
+                    ? `<span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-slate-900/90 text-indigo-300 border border-slate-800 w-max leading-none select-none">${d.data.label}</span>`
+                    : '';
+
                 const val = d.data.value;
                 const valText = (val !== null && val !== undefined) ? (typeof val === 'string' ? `"${val}"` : val) : "";
-                const valDiv = valText !== "" ? `<div class="ast-node-val text-[10px] text-emerald-800 font-mono mt-1 leading-tight">${valText}</div>` : "";
+                const valDiv = valText !== ""
+                    ? `<div class="ast-node-val text-xs text-emerald-400 font-mono mt-2 px-2.5 py-1.5 rounded-lg bg-slate-950/60 border border-emerald-500/20 truncate select-all">${escapeHtml(valText)}</div>`
+                    : "";
+
+                const detailContent = `
+                    <div class="mt-2.5 text-xs text-slate-400 border-t border-slate-800/80 pt-2.5 flex flex-col space-y-1.5 overflow-y-auto max-h-[110px] font-sans">
+                        <div class="flex justify-between items-center"><span class="font-bold text-slate-400">Node Class:</span> <span class="font-mono text-indigo-300 font-semibold bg-indigo-950/30 px-1.5 py-0.5 rounded border border-indigo-900/40">${d.data.nodeType}</span></div>
+                        ${d.data.pos_start ? `<div class="flex justify-between items-center"><span class="font-bold text-slate-400">Code Range:</span> <span class="font-mono text-slate-350 text-slate-300 bg-slate-900/60 px-1.5 py-0.5 rounded border border-slate-800/80">L${d.data.pos_start.line + 1}:${d.data.pos_start.col + 1} - L${d.data.pos_end.line + 1}:${d.data.pos_end.col + 1}</span></div>` : ''}
+                        ${valText !== "" ? `<div class="flex justify-between items-center"><span class="font-bold text-slate-400">Value:</span> <span class="font-mono text-emerald-400 bg-emerald-950/20 px-1.5 py-0.5 rounded border border-emerald-900/30 truncate max-w-[180px]">${escapeHtml(valText)}</span></div>` : ''}
+                        <div class="flex justify-between items-center"><span class="font-bold text-slate-400">Children:</span> <span class="font-semibold text-slate-200 bg-slate-900/60 px-1.5 py-0.5 rounded border border-slate-800/80">${d.data.children ? d.data.children.length : 0}</span></div>
+                    </div>
+                `;
 
                 return `
-                    <div class="ast-fo-wrapper w-full h-full flex items-center justify-center">
-                        <div class="ast-node-card rounded-none border border-slate-300 bg-slate-200/95 text-left p-2.5 select-none flex flex-col justify-center backdrop-blur-sm shadow-md">
-                            ${label}
-                            ${nodeType}
+                    <div class="ast-fo-wrapper w-full h-full flex items-center justify-center pointer-events-none">
+                        <div class="ast-node-card pointer-events-auto rounded-xl border ${style.border} ${style.bg} text-left p-3.5 select-none flex flex-col justify-start backdrop-blur-md shadow-lg transition-all" tabindex="-1" id="card-${d.data.id}">
+                            <div class="flex items-center justify-between w-full">
+                                <div class="flex items-center space-x-2 truncate">
+                                    <i data-lucide="${style.icon}" class="h-5 w-5 ${style.color} shrink-0"></i>
+                                    <span class="text-sm font-bold text-slate-100 truncate font-sans">${style.name}</span>
+                                </div>
+                                ${parentLabel}
+                            </div>
+                            
                             ${valDiv}
+                            
+                            <div class="ast-node-details">
+                                ${detailContent}
+                            </div>
                         </div>
                     </div>
                 `;
@@ -1941,14 +2408,12 @@ cycle x = 0 : 5 {
             initEduTerminalResizer();
             initEduSidebarResizer();
 
-            // Bind wheel event to AST tree container to scroll horizontally
+            // Lock native scroll offsets to 0 to prevent browser auto-scroll on element focus from shifting coordinates
             const astContainer = document.getElementById('edu-ast-tree-container');
             if (astContainer) {
-                astContainer.addEventListener('wheel', function(e) {
-                    if (e.deltaY !== 0) {
-                        e.preventDefault();
-                        astContainer.scrollLeft += e.deltaY;
-                    }
+                astContainer.addEventListener('scroll', () => {
+                    astContainer.scrollTop = 0;
+                    astContainer.scrollLeft = 0;
                 });
             }
 
@@ -2021,25 +2486,36 @@ cycle x = 0 : 5 {
         require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs' } });
         require(['vs/editor/editor.main'], function () {
 
-            // Define custom editor color theme. Change the hex values below to customize syntax colors!
+            // Define custom editor color theme (Catppuccin Mocha)
             monaco.editor.defineTheme('sardine-dark', {
                 base: 'vs-dark',
                 inherit: true,
                 rules: [
-                    { token: 'keyword', foreground: '818cf8', fontStyle: 'bold' }, // Indigo-400 (model, init, yield, etc.)
-                    { token: 'type', foreground: '34d399' },                      // Emerald-400 (Integer, String, etc.)
-                    { token: 'operator', foreground: 'f472b6' },                   // Pink-400 (+, -, *, ==, etc.)
-                    { token: 'identifier', foreground: '91bfb8' },                 // Bluish-White
-                    { token: 'number', foreground: 'fbbf24' },                     // Amber-400
-                    { token: 'string', foreground: '38bdf8' },                     // Sky-400
-                    { token: 'comment', foreground: '64748b', fontStyle: 'italic' } // Slate-500
+                    { token: 'keyword', foreground: 'cba6f7', fontStyle: 'bold' }, // Mauve
+                    { token: 'type', foreground: 'f9e2af', fontStyle: 'italic' },  // Yellow
+                    { token: 'operator', foreground: '89dceb' },                  // Sky
+                    { token: 'identifier', foreground: 'cdd6f4' },                // Text
+                    { token: 'number', foreground: 'fab387' },                    // Peach
+                    { token: 'string', foreground: 'a6e3a1' },                    // Green
+                    { token: 'comment', foreground: '6c7086', fontStyle: 'italic' }, // Overlay1
+                    { token: 'delimiter', foreground: '94e2d5' }                  // Teal
                 ],
                 colors: {
-                    'editor.background': '#0a0a0a',              // Slate-955
-                    'editor.foreground': '#94a3b8',              // Slate-400 (Muted color for punctuation/braces)
-                    'editorLineNumber.foreground': '#475569',    // Slate-600
-                    'editorLineNumber.activeForeground': '#818cf8', // Indigo-400
-                    'editor.lineHighlightBackground': '#0f172a',  // Slate-900
+                    'editor.background': '#1e1e2e',                 // Mocha Base
+                    'editor.foreground': '#cdd6f4',                 // Mocha Text
+                    'editorLineNumber.foreground': '#585b70',       // Mocha Overlay0
+                    'editorLineNumber.activeForeground': '#cba6f7',  // Mocha Mauve
+                    'editor.lineHighlightBackground': '#313244',     // Mocha Surface0
+                    'editor.lineHighlightBorder': '#31324400',
+                    'editor.selectionBackground': '#585b7050',       // Selected text background
+                    'editor.inactiveSelectionBackground': '#45475a50',
+                    'editorGutter.background': '#1e1e2e',
+                    'scrollbarSlider.background': '#31324480',
+                    'scrollbarSlider.hoverBackground': '#585b70a0',
+                    'scrollbarSlider.activeBackground': '#cba6f780',
+                    'editorCursor.foreground': '#f5e0dc',            // Rosewater
+                    'editorWidget.background': '#181825',           // Mantle
+                    'editorWidget.border': '#313244',
                 }
             });
 
@@ -2136,7 +2612,7 @@ cycle x = 0 : 5 {
                 theme: 'sardine-dark',
                 fontSize: 14,
                 lineHeight: 22,
-                fontFamily: 'Consolas, "Courier New", Courier, monospace',
+                fontFamily: "'JetBrains Mono', Consolas, monospace",
                 minimap: { enabled: true },
                 automaticLayout: true,
                 tabSize: 4
@@ -2149,7 +2625,7 @@ cycle x = 0 : 5 {
                 theme: 'sardine-dark',
                 fontSize: 14,
                 lineHeight: 22,
-                fontFamily: 'Consolas, "Courier New", Courier, monospace',
+                fontFamily: "'JetBrains Mono', Consolas, monospace",
                 minimap: { enabled: true },
                 automaticLayout: true,
                 tabSize: 4
