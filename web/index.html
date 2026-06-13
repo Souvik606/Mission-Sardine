@@ -2301,7 +2301,7 @@ cycle x = 0 : 5 {
                         ]);
 
                         if (centerViewport) {
-                            eduEditorInstance.revealRangeInCenterIfOutside(new monaco.Range(startLine, startCol, endLine, endCol));
+                            eduEditorInstance.revealRangeInCenterIfOutsideViewport(new monaco.Range(startLine, startCol, endLine, endCol));
                         }
                     } else {
                         window.eduEditorDecorations = eduEditorInstance.deltaDecorations(window.eduEditorDecorations, []);
@@ -2336,14 +2336,6 @@ cycle x = 0 : 5 {
                 }
             }
 
-            // Set active focus programmatically to the node card
-            // Use setTimeout to ensure the element is rendered and has bounds before focusing
-            setTimeout(() => {
-                const cardEl = document.getElementById(`card-${activeId}`);
-                if (cardEl) {
-                    cardEl.focus({ preventScroll: true });
-                }
-            }, 50);
         }
 
         function stepTraversal(direction) {
@@ -2551,7 +2543,7 @@ cycle x = 0 : 5 {
 
                 return `
                     <div class="ast-fo-wrapper w-full h-full flex items-center justify-center pointer-events-none">
-                        <div class="ast-node-card pointer-events-auto rounded-xl border ${style.border} ${style.bg} text-left p-3.5 select-none flex flex-col justify-start backdrop-blur-md shadow-lg transition-all" tabindex="-1" id="card-${d.data.id}">
+                        <div class="ast-node-card pointer-events-auto rounded-xl border ${style.border} ${style.bg} text-left p-3.5 select-none flex flex-col justify-start backdrop-blur-md shadow-lg transition-all">
                             <div class="flex items-center justify-between w-full">
                                 <div class="flex items-center space-x-2 truncate">
                                     <i data-lucide="${style.icon}" class="h-5 w-5 ${style.color} shrink-0"></i>
@@ -2624,15 +2616,6 @@ cycle x = 0 : 5 {
             initTerminalResizer();
             initEduTerminalResizer();
             initEduSidebarResizer();
-
-            // Lock native scroll offsets to 0 to prevent browser auto-scroll on element focus from shifting coordinates
-            const astContainer = document.getElementById('edu-ast-tree-container');
-            if (astContainer) {
-                astContainer.addEventListener('scroll', () => {
-                    astContainer.scrollTop = 0;
-                    astContainer.scrollLeft = 0;
-                });
-            }
 
             // Fail-safe: hide overlay after 3 seconds if Monaco/worker loads too slow
             setTimeout(hideLoadingOverlay, 3000);
