@@ -954,11 +954,12 @@ private:
         return res.success(make_shared<FunctionDefinitionNode>(var_name_tok, arg_nodes, body_node, true, access_mod));
     }
 
-    ParseResult parse_arguments(vector<shared_ptr<Node>>& positional_args, vector<pair<Token, shared_ptr<Node>>>& keyword_args)
+    ParseResult parse_arguments(vector<shared_ptr<Node>>& positional_args, vector<pair<Token, shared_ptr<Node>>>& keyword_args, optional<Position>& out_rparen_pos)
     {
         ParseResult res;
         positional_args.clear();
         keyword_args.clear();
+        out_rparen_pos = nullopt;
 
         if (!current_tok.has_value() || current_tok->type != T_LPAREN)
         {
@@ -972,6 +973,7 @@ private:
 
         if (current_tok.has_value() && current_tok->type == T_RPAREN)
         {
+            out_rparen_pos = current_tok->pos_end;
             res.register_advancement();
             advance(); // consume ')'
             return res.success(nullptr);
@@ -1035,6 +1037,7 @@ private:
                 current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
                 "Expected ',' or ')'"));
         }
+        out_rparen_pos = current_tok->pos_end;
         res.register_advancement();
         advance(); // consume ')'
 
@@ -1064,14 +1067,12 @@ private:
                 "Expected identifier"));
         }
 
+        optional<Position> rparen_pos = nullopt;
+        res.register_node(parse_arguments(pos_args, kw_args, rparen_pos));
         if (res.error)
             return res;
 
-        res.register_node(parse_arguments(pos_args, kw_args));
-        if (res.error)
-            return res;
-
-        return res.success(make_shared<FunctionCallNode>(call_node, pos_args, kw_args));
+        return res.success(make_shared<FunctionCallNode>(call_node, pos_args, kw_args, rparen_pos));
     }
 
     ParseResult switch_statement()
@@ -3052,10 +3053,11 @@ private:
             {
                 vector<shared_ptr<Node>> pos_args;
                 vector<pair<Token, shared_ptr<Node>>> kw_args;
-                res.register_node(parse_arguments(pos_args, kw_args));
+                optional<Position> rparen_pos = nullopt;
+                res.register_node(parse_arguments(pos_args, kw_args, rparen_pos));
                 if (res.error)
                     return obj_node;
-                obj_node = make_shared<FunctionCallNode>(obj_node, pos_args, kw_args);
+                obj_node = make_shared<FunctionCallNode>(obj_node, pos_args, kw_args, rparen_pos);
             }
             else if (current_tok->type == T_DOT)
             {
@@ -3146,10 +3148,11 @@ private:
                 auto attr_access = make_shared<AttrAccessNode>(obj_node, attr_tok);
                 vector<shared_ptr<Node>> pos_args;
                 vector<pair<Token, shared_ptr<Node>>> kw_args;
-                res.register_node(parse_arguments(pos_args, kw_args));
+                optional<Position> rparen_pos = nullopt;
+                res.register_node(parse_arguments(pos_args, kw_args, rparen_pos));
                 if (res.error)
                     return res;
-                obj_node = make_shared<FunctionCallNode>(attr_access, pos_args, kw_args);
+                obj_node = make_shared<FunctionCallNode>(attr_access, pos_args, kw_args, rparen_pos);
             }
             else if (current_tok.has_value() && !has_more_dot &&
                      (current_tok->type == T_EQ ||

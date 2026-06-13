@@ -1871,10 +1871,179 @@ cycle x = 0 : 5 {
             });
         }
 
+        function getPositionAtIndex(sourceCode, index) {
+            let line = 0;
+            let col = 0;
+            for (let i = 0; i < index; i++) {
+                if (sourceCode[i] === '\n') {
+                    line++;
+                    col = 0;
+                } else {
+                    col++;
+                }
+            }
+            return { index, line, col };
+        }
+
+        function skipWhitespaceAndComments(sourceCode, index) {
+            let i = index;
+            while (i < sourceCode.length) {
+                let c = sourceCode[i];
+                if (c === ' ' || c === '\t' || c === '\r' || c === '\n') {
+                    i++;
+                } else if (c === '#') {
+                    if (i + 1 < sourceCode.length && sourceCode[i + 1] === '*') {
+                        i += 2;
+                        while (i < sourceCode.length) {
+                            if (sourceCode[i] === '*' && i + 1 < sourceCode.length && sourceCode[i + 1] === '#') {
+                                i += 2;
+                                break;
+                            }
+                            i++;
+                        }
+                    } else {
+                        while (i < sourceCode.length && sourceCode[i] !== '\n') {
+                            i++;
+                        }
+                    }
+                } else {
+                    break;
+                }
+            }
+            return i;
+        }
+
+        function scanBackwardToChar(sourceCode, index, charToFind) {
+            let i = index;
+            while (i >= 0) {
+                if (sourceCode[i] === charToFind) {
+                    return i;
+                }
+                i--;
+            }
+            return -1;
+        }
+
+        function findMatchingClosing(sourceCode, startIdx, openChar, closeChar) {
+            let depth = 1;
+            let i = startIdx;
+            while (i < sourceCode.length) {
+                let c = sourceCode[i];
+                if (c === '"') {
+                    i++;
+                    while (i < sourceCode.length) {
+                        if (sourceCode[i] === '"' && sourceCode[i - 1] !== '\\') {
+                            break;
+                        }
+                        i++;
+                    }
+                } else if (c === openChar) {
+                    depth++;
+                } else if (c === closeChar) {
+                    depth--;
+                    if (depth === 0) {
+                        return i;
+                    }
+                }
+                i++;
+            }
+            return -1;
+        }
+
+        function adjustFunctionCallPosition(sourceCode, pos_start, pos_end) {
+            if (!sourceCode || !pos_start || !pos_end) return { pos_start, pos_end };
+            let idx = pos_end.index;
+            idx = skipWhitespaceAndComments(sourceCode, idx);
+            if (idx < sourceCode.length && sourceCode[idx] === '(') {
+                idx++;
+                let matchIdx = findMatchingClosing(sourceCode, idx, '(', ')');
+                if (matchIdx !== -1) {
+                    return { pos_start, pos_end: getPositionAtIndex(sourceCode, matchIdx) };
+                }
+            } else if (idx < sourceCode.length && sourceCode[idx] === ')') {
+                return { pos_start, pos_end: getPositionAtIndex(sourceCode, idx) };
+            }
+            return { pos_start, pos_end };
+        }
+
+        function adjustListPosition(sourceCode, pos_start, pos_end) {
+            if (!sourceCode || !pos_start || !pos_end) return { pos_start, pos_end };
+            let startIdx = pos_start.index;
+            startIdx = scanBackwardToChar(sourceCode, startIdx, '[');
+            let new_pos_start = startIdx !== -1 ? getPositionAtIndex(sourceCode, startIdx) : pos_start;
+
+            let idx = pos_end.index;
+            idx = skipWhitespaceAndComments(sourceCode, idx);
+            if (idx < sourceCode.length && sourceCode[idx] === ']') {
+                return { pos_start: new_pos_start, pos_end: getPositionAtIndex(sourceCode, idx) };
+            }
+            return { pos_start: new_pos_start, pos_end };
+        }
+
+        function adjustDictPosition(sourceCode, pos_start, pos_end) {
+            if (!sourceCode || !pos_start || !pos_end) return { pos_start, pos_end };
+            let startIdx = pos_start.index;
+            startIdx = scanBackwardToChar(sourceCode, startIdx, '{');
+            let new_pos_start = startIdx !== -1 ? getPositionAtIndex(sourceCode, startIdx) : pos_start;
+
+            let idx = pos_end.index;
+            idx = skipWhitespaceAndComments(sourceCode, idx);
+            if (idx < sourceCode.length && sourceCode[idx] === '}') {
+                return { pos_start: new_pos_start, pos_end: getPositionAtIndex(sourceCode, idx) };
+            }
+            return { pos_start: new_pos_start, pos_end };
+        }
+
+        function adjustKeywordNodeStart(sourceCode, pos_start, keyword) {
+            if (!sourceCode || !pos_start || !keyword) return pos_start;
+            let idx = pos_start.index;
+            while (idx > 0 && /\s/.test(sourceCode[idx - 1])) {
+                idx--;
+            }
+            if (idx >= keyword.length) {
+                let potentialKeyword = sourceCode.slice(idx - keyword.length, idx);
+                if (potentialKeyword === keyword) {
+                    if (idx - keyword.length === 0 || !/[a-zA-Z0-9_]/.test(sourceCode[idx - keyword.length - 1])) {
+                        return getPositionAtIndex(sourceCode, idx - keyword.length);
+                    }
+                }
+            }
+            return pos_start;
+        }
+
         function extractAstNode(obj) {
             if (!obj || typeof obj !== 'object') return null;
 
+            // Assign custom virtual node types to case structures for clean rendering
+            if (!obj.node_type) {
+                if (obj.condition !== undefined && obj.body !== undefined) {
+                    obj.node_type = 'IfCaseNode';
+                } else if (obj.value !== undefined && obj.body !== undefined) {
+                    obj.node_type = 'SwitchCaseNode';
+                } else if (obj.body !== undefined && obj.condition === undefined && obj.value === undefined) {
+                    obj.node_type = 'ElseCaseNode';
+                }
+            }
+
             let nodeType = obj.node_type || 'Node';
+
+            // Intercept and simplify FStringNode format from WASM on the fly
+            if (nodeType === 'FStringNode' && obj.parts) {
+                let template = "";
+                let expressions = [];
+                obj.parts.forEach(part => {
+                    if (part.kind === 'literal') {
+                        template += part.value;
+                    } else if (part.kind === 'expr' && part.value) {
+                        template += "{...}";
+                        expressions.push(part.value);
+                    }
+                });
+                delete obj.parts;
+                obj.template = template;
+                obj.expressions = expressions;
+            }
+
             let value = null;
             let children = [];
 
@@ -1889,24 +2058,29 @@ cycle x = 0 : 5 {
                 value = obj.module_tok.value !== null ? obj.module_tok.value : (TOKEN_LITERALS[obj.module_tok.type] || null);
             } else if (obj.name_tok && obj.name_tok.value !== undefined) {
                 value = obj.name_tok.value !== null ? obj.name_tok.value : (TOKEN_LITERALS[obj.name_tok.type] || null);
+            } else if (obj.template !== undefined) {
+                value = obj.template;
             } else if (obj.value !== undefined && typeof obj.value !== 'object') {
                 value = obj.value;
             }
 
             // Find direct positions on this object's fields
-            let pos_start = null;
-            let pos_end = null;
-            Object.keys(obj).forEach(key => {
-                const val = obj[key];
-                if (val && typeof val === 'object' && val.pos_start !== undefined && val.pos_end !== undefined) {
-                    pos_start = minPosition(pos_start, val.pos_start);
-                    pos_end = maxPosition(pos_end, val.pos_end);
-                }
-            });
+            let pos_start = obj.pos_start || null;
+            let pos_end = obj.pos_end || null;
+
+            if (!pos_start || !pos_end) {
+                Object.keys(obj).forEach(key => {
+                    const val = obj[key];
+                    if (val && typeof val === 'object' && val.pos_start !== undefined && val.pos_end !== undefined) {
+                        pos_start = minPosition(pos_start, val.pos_start);
+                        pos_end = maxPosition(pos_end, val.pos_end);
+                    }
+                });
+            }
 
             // Recursively extract AST sub-nodes
             Object.keys(obj).forEach(key => {
-                if (key === 'node_type' || key === 'token' || key === 'operator' || key === 'var_name_tok' || key === 'module_tok' || key === 'name_tok') {
+                if (key === 'node_type' || key === 'token' || key === 'operator' || key === 'var_name_tok' || key === 'module_tok' || key === 'name_tok' || key === 'pos_start' || key === 'pos_end') {
                     return;
                 }
 
@@ -1920,8 +2094,10 @@ cycle x = 0 : 5 {
                             if (child) {
                                 child.label = key;
                                 children.push(child);
-                                pos_start = minPosition(pos_start, child.pos_start);
-                                pos_end = maxPosition(pos_end, child.pos_end);
+                                if (!obj.pos_start || !obj.pos_end) {
+                                    pos_start = minPosition(pos_start, child.pos_start);
+                                    pos_end = maxPosition(pos_end, child.pos_end);
+                                }
                             }
                         });
                     } else {
@@ -1929,12 +2105,50 @@ cycle x = 0 : 5 {
                         if (child) {
                             child.label = key;
                             children.push(child);
-                            pos_start = minPosition(pos_start, child.pos_start);
-                            pos_end = maxPosition(pos_end, child.pos_end);
+                            if (!obj.pos_start || !obj.pos_end) {
+                                pos_start = minPosition(pos_start, child.pos_start);
+                                pos_end = maxPosition(pos_end, child.pos_end);
+                            }
                         }
                     }
                 }
             });
+
+            // Let's get the active file source code
+            let sourceCode = (activeFilename && virtualFiles[activeFilename]) || "";
+
+            // Adjust positions based on nodeType and sourceCode content
+            if (sourceCode && pos_start && pos_end) {
+                if (nodeType === 'FunctionCallNode') {
+                    const adjusted = adjustFunctionCallPosition(sourceCode, pos_start, pos_end);
+                    pos_start = adjusted.pos_start;
+                    pos_end = adjusted.pos_end;
+                } else if (nodeType === 'ListNode' || nodeType === 'ListComprehensionNode') {
+                    const adjusted = adjustListPosition(sourceCode, pos_start, pos_end);
+                    pos_start = adjusted.pos_start;
+                    pos_end = adjusted.pos_end;
+                } else if (nodeType === 'DictNode' || nodeType === 'DictComprehensionNode') {
+                    const adjusted = adjustDictPosition(sourceCode, pos_start, pos_end);
+                    pos_start = adjusted.pos_start;
+                    pos_end = adjusted.pos_end;
+                } else if (nodeType === 'ForNode') {
+                    pos_start = adjustKeywordNodeStart(sourceCode, pos_start, "cycle");
+                } else if (nodeType === 'WhileNode') {
+                    pos_start = adjustKeywordNodeStart(sourceCode, pos_start, "during");
+                } else if (nodeType === 'FunctionDefinitionNode') {
+                    pos_start = adjustKeywordNodeStart(sourceCode, pos_start, "method");
+                } else if (nodeType === 'TryNode') {
+                    pos_start = adjustKeywordNodeStart(sourceCode, pos_start, "risk");
+                } else if (nodeType === 'CatchNode') {
+                    pos_start = adjustKeywordNodeStart(sourceCode, pos_start, "trap");
+                } else if (nodeType === 'FinallyNode') {
+                    pos_start = adjustKeywordNodeStart(sourceCode, pos_start, "clean");
+                } else if (nodeType === 'ModelNode') {
+                    pos_start = adjustKeywordNodeStart(sourceCode, pos_start, "model");
+                } else if (nodeType === 'IfNode') {
+                    pos_start = adjustKeywordNodeStart(sourceCode, pos_start, "when");
+                }
+            }
 
             return { nodeType, value, children, pos_start, pos_end };
         }
@@ -2175,6 +2389,9 @@ cycle x = 0 : 5 {
         }
 
         const NODE_TYPE_STYLING = {
+            'IfCaseNode': { icon: 'git-commit', color: 'text-orange-400', name: 'When Branch', border: 'border-orange-500/30', bg: 'bg-orange-500/5' },
+            'SwitchCaseNode': { icon: 'git-commit', color: 'text-orange-400', name: 'Choice Branch', border: 'border-orange-500/30', bg: 'bg-orange-500/5' },
+            'ElseCaseNode': { icon: 'git-commit', color: 'text-orange-400', name: 'Fallback Branch', border: 'border-orange-500/30', bg: 'bg-orange-500/5' },
             'NumberNode': { icon: 'hash', color: 'text-amber-400', name: 'Number', border: 'border-amber-500/30', bg: 'bg-amber-500/5' },
             'StringNode': { icon: 'type', color: 'text-emerald-400', name: 'String', border: 'border-emerald-500/30', bg: 'bg-emerald-500/5' },
             'FStringNode': { icon: 'type', color: 'text-emerald-400', name: 'F-String', border: 'border-emerald-500/30', bg: 'bg-emerald-500/5' },

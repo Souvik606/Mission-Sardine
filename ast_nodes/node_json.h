@@ -52,6 +52,12 @@ inline string position_to_json(const optional<Position>& pos) {
     return position_to_json(*pos);
 }
 
+// Emit pos_start and pos_end from a Node's base class fields
+inline string node_positions_json(const shared_ptr<Node>& node) {
+    return "\"pos_start\":" + position_to_json(node->pos_start) +
+           ",\"pos_end\":" + position_to_json(node->pos_end);
+}
+
 inline string token_to_json(const Token& token) {
     string val_str = "null";
     if (token.value.has_value()) {
@@ -112,40 +118,52 @@ inline string token_vector_to_json(const vector<Token>& tokens) {
 inline string node_to_json(const shared_ptr<Node>& node) {
     if (!node) return "null";
 
+    // All nodes now include pos_start/pos_end from the base Node class
+    // This ensures the frontend always has accurate position info from the C++ AST
+
     if (auto n = dynamic_pointer_cast<NumberNode>(node)) {
-        return "{\"node_type\":\"NumberNode\",\"token\":" + token_to_json(n->token) + "}";
+        return "{\"node_type\":\"NumberNode\"," + node_positions_json(n) +
+               ",\"token\":" + token_to_json(n->token) + "}";
     }
     if (auto n = dynamic_pointer_cast<StringNode>(node)) {
-        return "{\"node_type\":\"StringNode\",\"token\":" + token_to_json(n->token) + "}";
+        return "{\"node_type\":\"StringNode\"," + node_positions_json(n) +
+               ",\"token\":" + token_to_json(n->token) + "}";
     }
     if (auto n = dynamic_pointer_cast<UnaryOperationNode>(node)) {
-        return "{\"node_type\":\"UnaryOperationNode\",\"operator\":" + token_to_json(n->operator_token) +
+        return "{\"node_type\":\"UnaryOperationNode\"," + node_positions_json(n) +
+               ",\"operator\":" + token_to_json(n->operator_token) +
                ",\"node\":" + node_to_json(n->node) + "}";
     }
     if (auto n = dynamic_pointer_cast<BinaryOperationNode>(node)) {
-        return "{\"node_type\":\"BinaryOperationNode\",\"left\":" + node_to_json(n->left_node) +
+        return "{\"node_type\":\"BinaryOperationNode\"," + node_positions_json(n) +
+               ",\"left\":" + node_to_json(n->left_node) +
                ",\"operator\":" + token_to_json(n->operator_token) +
                ",\"right\":" + node_to_json(n->right_node) + "}";
     }
     if (auto n = dynamic_pointer_cast<TernaryOperationNode>(node)) {
-        return "{\"node_type\":\"TernaryOperationNode\",\"condition\":" + node_to_json(n->comp_node) +
+        return "{\"node_type\":\"TernaryOperationNode\"," + node_positions_json(n) +
+               ",\"condition\":" + node_to_json(n->comp_node) +
                ",\"true_branch\":" + node_to_json(n->true_node) +
                ",\"false_branch\":" + node_to_json(n->false_node) + "}";
     }
     if (auto n = dynamic_pointer_cast<VariableUseNode>(node)) {
-        return "{\"node_type\":\"VariableUseNode\",\"var_name_tok\":" + token_to_json(n->var_name_tok) +
+        return "{\"node_type\":\"VariableUseNode\"," + node_positions_json(n) +
+               ",\"var_name_tok\":" + token_to_json(n->var_name_tok) +
                ",\"index_node\":" + node_vector_to_json(n->index_node) + "}";
     }
     if (auto n = dynamic_pointer_cast<VariableAssignNode>(node)) {
-        return "{\"node_type\":\"VariableAssignNode\",\"left_nodes\":" + node_vector_to_json(n->left_nodes) +
+        return "{\"node_type\":\"VariableAssignNode\"," + node_positions_json(n) +
+               ",\"left_nodes\":" + node_vector_to_json(n->left_nodes) +
                ",\"value_nodes\":" + node_vector_to_json(n->value_nodes) + "}";
     }
     if (auto n = dynamic_pointer_cast<IndexAccessNode>(node)) {
-        return "{\"node_type\":\"IndexAccessNode\",\"object_node\":" + node_to_json(n->object_node) +
+        return "{\"node_type\":\"IndexAccessNode\"," + node_positions_json(n) +
+               ",\"object_node\":" + node_to_json(n->object_node) +
                ",\"index_node\":" + node_to_json(n->index_node) + "}";
     }
     if (auto n = dynamic_pointer_cast<ListNode>(node)) {
-        return "{\"node_type\":\"ListNode\",\"element_nodes\":" + node_vector_to_json(n->element_nodes) + "}";
+        return "{\"node_type\":\"ListNode\"," + node_positions_json(n) +
+               ",\"element_nodes\":" + node_vector_to_json(n->element_nodes) + "}";
     }
     if (auto n = dynamic_pointer_cast<DictNode>(node)) {
         string pairs = "[";
@@ -155,23 +173,23 @@ inline string node_to_json(const shared_ptr<Node>& node) {
                      ",\"value\":" + node_to_json(n->keyval_nodes[i].second) + "}";
         }
         pairs += "]";
-        return "{\"node_type\":\"DictNode\",\"keyval_nodes\":" + pairs + "}";
+        return "{\"node_type\":\"DictNode\"," + node_positions_json(n) +
+               ",\"keyval_nodes\":" + pairs + "}";
     }
     if (auto n = dynamic_pointer_cast<IfNode>(node)) {
         string cases_str = "[";
         for (size_t i = 0; i < n->cases.size(); ++i) {
             if (i > 0) cases_str += ",";
             cases_str += "{\"condition\":" + node_to_json(get<0>(n->cases[i])) +
-                         ",\"body\":" + node_to_json(get<1>(n->cases[i])) +
-                         ",\"return_null\":" + (get<2>(n->cases[i]) ? "true" : "false") + "}";
+                         ",\"body\":" + node_to_json(get<1>(n->cases[i])) + "}";
         }
         cases_str += "]";
         string else_str = "null";
         if (n->else_case) {
-            else_str = "{\"body\":" + node_to_json(n->else_case->first) +
-                       ",\"return_null\":" + (n->else_case->second ? "true" : "false") + "}";
+            else_str = "{\"body\":" + node_to_json(n->else_case->first) + "}";
         }
-        return "{\"node_type\":\"IfNode\",\"cases\":" + cases_str +
+        return "{\"node_type\":\"IfNode\"," + node_positions_json(n) +
+               ",\"cases\":" + cases_str +
                ",\"else_case\":" + else_str + "}";
     }
     if (auto n = dynamic_pointer_cast<SwitchNode>(node)) {
@@ -180,31 +198,31 @@ inline string node_to_json(const shared_ptr<Node>& node) {
             if (i > 0) cases_str += ",";
             string val_str = n->cases[i]->value ? node_to_json(n->cases[i]->value) : "null";
             cases_str += "{\"value\":" + val_str +
-                         ",\"body\":" + node_to_json(n->cases[i]->body) +
-                         ",\"return_null\":" + (n->cases[i]->return_null ? "true" : "false") + "}";
+                         ",\"body\":" + node_to_json(n->cases[i]->body) + "}";
         }
         cases_str += "]";
-        return "{\"node_type\":\"SwitchNode\",\"switch_value\":" + node_to_json(n->switch_value) +
-               ",\"cases\":" + cases_str +
-               ",\"return_null\":" + (n->return_null ? "true" : "false") + "}";
+        return "{\"node_type\":\"SwitchNode\"," + node_positions_json(n) +
+               ",\"switch_value\":" + node_to_json(n->switch_value) +
+               ",\"cases\":" + cases_str + "}";
     }
     if (auto n = dynamic_pointer_cast<ForNode>(node)) {
-        return "{\"node_type\":\"ForNode\",\"var_name_tok\":" + token_to_json(n->var_name_tok) +
+        return "{\"node_type\":\"ForNode\"," + node_positions_json(n) +
+               ",\"var_name_tok\":" + token_to_json(n->var_name_tok) +
                ",\"start_value_node\":" + node_to_json(n->start_value_node) +
                ",\"end_value_node\":" + node_to_json(n->end_value_node) +
-               ",\"step_value_node\":" + node_to_json(n->step_value_node) +
-               ",\"body_node\":" + node_to_json(n->body_node) +
-               ",\"return_null\":" + (n->return_null ? "true" : "false") + "}";
+               (n->step_value_node ? (",\"step_value_node\":" + node_to_json(n->step_value_node)) : "") +
+               ",\"body_node\":" + node_to_json(n->body_node) + "}";
     }
     if (auto n = dynamic_pointer_cast<ForEachLoopNode>(node)) {
-        return "{\"node_type\":\"ForEachLoopNode\",\"var_name_tokens\":" + token_vector_to_json(n->var_name_tokens) +
+        return "{\"node_type\":\"ForEachLoopNode\"," + node_positions_json(n) +
+               ",\"var_name_tokens\":" + token_vector_to_json(n->var_name_tokens) +
                ",\"collection_node\":" + node_to_json(n->collection_node) +
                ",\"body_node\":" + node_to_json(n->body_node) + "}";
     }
     if (auto n = dynamic_pointer_cast<WhileNode>(node)) {
-        return "{\"node_type\":\"WhileNode\",\"condition_node\":" + node_to_json(n->condition_node) +
-               ",\"body_node\":" + node_to_json(n->body_node) +
-               ",\"return_null\":" + (n->return_null ? "true" : "false") + "}";
+        return "{\"node_type\":\"WhileNode\"," + node_positions_json(n) +
+               ",\"condition_node\":" + node_to_json(n->condition_node) +
+               ",\"body_node\":" + node_to_json(n->body_node) + "}";
     }
     if (auto n = dynamic_pointer_cast<FunctionDefinitionNode>(node)) {
         string args_str = "[";
@@ -215,11 +233,10 @@ inline string node_to_json(const shared_ptr<Node>& node) {
                         ",\"default\":" + default_val + "}";
         }
         args_str += "]";
-        return "{\"node_type\":\"FunctionDefinitionNode\",\"var_name_tok\":" + token_to_json(n->var_name_tok) +
+        return "{\"node_type\":\"FunctionDefinitionNode\"," + node_positions_json(n) +
+               ",\"var_name_tok\":" + token_to_json(n->var_name_tok) +
                ",\"arg_nodes\":" + args_str +
-               ",\"body_node\":" + node_to_json(n->body_node) +
-               ",\"return_null\":" + (n->return_null ? "true" : "false") +
-               ",\"access_modifier\":\"" + escape_json_string(n->access_modifier) + "\"}";
+               ",\"body_node\":" + node_to_json(n->body_node) + "}";
     }
     if (auto n = dynamic_pointer_cast<FunctionCallNode>(node)) {
         string kw_args_str = "[";
@@ -229,18 +246,20 @@ inline string node_to_json(const shared_ptr<Node>& node) {
                            ",\"value\":" + node_to_json(n->keyword_arg_nodes[i].second) + "}";
         }
         kw_args_str += "]";
-        return "{\"node_type\":\"FunctionCallNode\",\"call_node\":" + node_to_json(n->call_node) +
+        return "{\"node_type\":\"FunctionCallNode\"," + node_positions_json(n) +
+               ",\"call_node\":" + node_to_json(n->call_node) +
                ",\"positional_arg_nodes\":" + node_vector_to_json(n->positional_arg_nodes) +
                ",\"keyword_arg_nodes\":" + kw_args_str + "}";
     }
     if (auto n = dynamic_pointer_cast<ReturnNode>(node)) {
-        return "{\"node_type\":\"ReturnNode\",\"node_to_return\":" + node_to_json(n->node_to_return) + "}";
+        return "{\"node_type\":\"ReturnNode\"," + node_positions_json(n) +
+               ",\"node_to_return\":" + node_to_json(n->node_to_return) + "}";
     }
     if (auto n = dynamic_pointer_cast<ContinueNode>(node)) {
-        return "{\"node_type\":\"ContinueNode\"}";
+        return "{\"node_type\":\"ContinueNode\"," + node_positions_json(n) + "}";
     }
     if (auto n = dynamic_pointer_cast<BreakNode>(node)) {
-        return "{\"node_type\":\"BreakNode\"}";
+        return "{\"node_type\":\"BreakNode\"," + node_positions_json(n) + "}";
     }
     if (auto n = dynamic_pointer_cast<TryNode>(node)) {
         string trap_str = "[";
@@ -249,20 +268,24 @@ inline string node_to_json(const shared_ptr<Node>& node) {
             trap_str += node_to_json(n->trap_nodes[i]);
         }
         trap_str += "]";
-        return "{\"node_type\":\"TryNode\",\"body_node\":" + node_to_json(n->body_node) +
+        return "{\"node_type\":\"TryNode\"," + node_positions_json(n) +
+               ",\"body_node\":" + node_to_json(n->body_node) +
                ",\"trap_nodes\":" + trap_str +
                ",\"clean_node\":" + node_to_json(n->clean_node) + "}";
     }
     if (auto n = dynamic_pointer_cast<CatchNode>(node)) {
-        return "{\"node_type\":\"CatchNode\",\"error_type\":" + token_to_json(n->error_type) +
+        return "{\"node_type\":\"CatchNode\"," + node_positions_json(n) +
+               ",\"error_type\":" + token_to_json(n->error_type) +
                ",\"error_name\":" + token_to_json(n->error_name) +
                ",\"body_node\":" + node_to_json(n->body_node) + "}";
     }
     if (auto n = dynamic_pointer_cast<FinallyNode>(node)) {
-        return "{\"node_type\":\"FinallyNode\",\"body_node\":" + node_to_json(n->body_node) + "}";
+        return "{\"node_type\":\"FinallyNode\"," + node_positions_json(n) +
+               ",\"body_node\":" + node_to_json(n->body_node) + "}";
     }
     if (auto n = dynamic_pointer_cast<ModelNode>(node)) {
-        return "{\"node_type\":\"ModelNode\",\"name_tok\":" + token_to_json(n->name_tok) +
+        return "{\"node_type\":\"ModelNode\"," + node_positions_json(n) +
+               ",\"name_tok\":" + token_to_json(n->name_tok) +
                ",\"parent_name_toks\":" + token_vector_to_json(n->parent_name_toks) +
                ",\"body_nodes\":" + node_vector_to_json(n->body_nodes) + "}";
     }
@@ -274,8 +297,9 @@ inline string node_to_json(const shared_ptr<Node>& node) {
                         ",\"value\":" + node_to_json(n->declarations[i].second) + "}";
         }
         decl_str += "]";
-        return "{\"node_type\":\"AttrNode\",\"declarations\":" + decl_str +
-               ",\"access_modifier\":\"" + escape_json_string(n->access_modifier) + "\"}";
+        return "{\"node_type\":\"AttrNode\"," + node_positions_json(n) +
+               ",\"access_modifier\":\"" + escape_json_string(n->access_modifier) + "\"" +
+               ",\"declarations\":" + decl_str + "}";
     }
     if (auto n = dynamic_pointer_cast<InitNode>(node)) {
         string params_str = "[";
@@ -286,34 +310,41 @@ inline string node_to_json(const shared_ptr<Node>& node) {
                           ",\"default\":" + default_val + "}";
         }
         params_str += "]";
-        return "{\"node_type\":\"InitNode\",\"param_nodes\":" + params_str +
+        return "{\"node_type\":\"InitNode\"," + node_positions_json(n) +
+               ",\"param_nodes\":" + params_str +
                ",\"body_node\":" + node_to_json(n->body_node) + "}";
     }
     if (auto n = dynamic_pointer_cast<AttrAccessNode>(node)) {
-        return "{\"node_type\":\"AttrAccessNode\",\"object_node\":" + node_to_json(n->object_node) +
+        return "{\"node_type\":\"AttrAccessNode\"," + node_positions_json(n) +
+               ",\"object_node\":" + node_to_json(n->object_node) +
                ",\"attr_name_tok\":" + token_to_json(n->attr_name_tok) + "}";
     }
     if (auto n = dynamic_pointer_cast<AttrAssignNode>(node)) {
-        return "{\"node_type\":\"AttrAssignNode\",\"object_node\":" + node_to_json(n->object_node) +
+        return "{\"node_type\":\"AttrAssignNode\"," + node_positions_json(n) +
+               ",\"object_node\":" + node_to_json(n->object_node) +
                ",\"attr_name_tok\":" + token_to_json(n->attr_name_tok) +
                ",\"value_node\":" + node_to_json(n->value_node) + "}";
     }
     if (auto n = dynamic_pointer_cast<FStringNode>(node)) {
-        string parts_str = "[";
+        // Simplified FString: show the literal text and expression sub-nodes only
+        // Collect the full literal template as a single string for display
+        string template_str = "";
+        string expr_nodes_str = "[";
+        bool first_expr = true;
         for (size_t i = 0; i < n->parts.size(); ++i) {
-            if (i > 0) parts_str += ",";
-            string val_str;
             if (n->parts[i].first == "literal") {
-                val_str = "\"" + escape_json_string(any_cast<string>(n->parts[i].second)) + "\"";
+                template_str += any_cast<string>(n->parts[i].second);
             } else if (n->parts[i].first == "expr") {
-                val_str = node_to_json(any_cast<shared_ptr<Node>>(n->parts[i].second));
-            } else {
-                val_str = "null";
+                if (!first_expr) expr_nodes_str += ",";
+                expr_nodes_str += node_to_json(any_cast<shared_ptr<Node>>(n->parts[i].second));
+                first_expr = false;
+                template_str += "{...}";
             }
-            parts_str += "{\"kind\":\"" + n->parts[i].first + "\",\"value\":" + val_str + "}";
         }
-        parts_str += "]";
-        return "{\"node_type\":\"FStringNode\",\"parts\":" + parts_str + "}";
+        expr_nodes_str += "]";
+        return "{\"node_type\":\"FStringNode\"," + node_positions_json(n) +
+               ",\"template\":\"" + escape_json_string(template_str) + "\"" +
+               ",\"expressions\":" + expr_nodes_str + "}";
     }
     if (auto n = dynamic_pointer_cast<SummonNode>(node)) {
         string names_str = "[";
@@ -324,13 +355,15 @@ inline string node_to_json(const shared_ptr<Node>& node) {
                          ",\"alias\":" + alias_str + "}";
         }
         names_str += "]";
-        return "{\"node_type\":\"SummonNode\",\"module_tok\":" + token_to_json(n->module_tok) +
+        return "{\"node_type\":\"SummonNode\"," + node_positions_json(n) +
+               ",\"module_tok\":" + token_to_json(n->module_tok) +
                ",\"names\":" + names_str +
                ",\"module_alias\":" + token_to_json(n->module_alias) +
                ",\"wildcard\":" + (n->wildcard ? "true" : "false") + "}";
     }
     if (auto n = dynamic_pointer_cast<ListComprehensionNode>(node)) {
-        return "{\"node_type\":\"ListComprehensionNode\",\"expr_node\":" + node_to_json(n->expr_node) +
+        return "{\"node_type\":\"ListComprehensionNode\"," + node_positions_json(n) +
+               ",\"expr_node\":" + node_to_json(n->expr_node) +
                ",\"loop_type\":\"" + escape_json_string(n->loop_type) + "\"" +
                ",\"var_name_tok\":" + token_to_json(n->var_name_tok) +
                ",\"start_node\":" + node_to_json(n->start_node) +
@@ -341,7 +374,8 @@ inline string node_to_json(const shared_ptr<Node>& node) {
                ",\"condition_node\":" + node_to_json(n->condition_node) + "}";
     }
     if (auto n = dynamic_pointer_cast<DictComprehensionNode>(node)) {
-        return "{\"node_type\":\"DictComprehensionNode\",\"key_node\":" + node_to_json(n->key_node) +
+        return "{\"node_type\":\"DictComprehensionNode\"," + node_positions_json(n) +
+               ",\"key_node\":" + node_to_json(n->key_node) +
                ",\"val_node\":" + node_to_json(n->val_node) +
                ",\"loop_type\":\"" + escape_json_string(n->loop_type) + "\"" +
                ",\"var_name_tok\":" + token_to_json(n->var_name_tok) +
