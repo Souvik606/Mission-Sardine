@@ -712,9 +712,9 @@ private:
 
         if (current_tok.has_value() && current_tok->type == T_RPAREN3)
         {
+            pos_end = current_tok->pos_end;
             res.register_advancement();
             advance();
-            pos_end = current_tok.has_value() ? current_tok->pos_end : Position();
         }
         else
         {
@@ -751,9 +751,9 @@ private:
                     "Expected ',' or ']'", "Did you forget a comma ',' between list elements?"));
             }
 
+            pos_end = current_tok->pos_end;
             res.register_advancement();
             advance();
-            pos_end = current_tok.has_value() ? current_tok->pos_end : Position();
         }
 
         return res.success(make_shared<ListNode>(element_nodes, pos_start, pos_end));
@@ -939,7 +939,7 @@ private:
             }
         }
 
-        auto body_node = make_shared<ListNode>(body_nodes, pos_start, current_tok.has_value() ? current_tok->pos_end : nullopt);
+        auto body_node = make_body_node(body_nodes, pos_start);
 
         if (!current_tok.has_value() || current_tok->type != T_RPAREN2)
         {
@@ -951,7 +951,9 @@ private:
         res.register_advancement();
         advance();
 
-        return res.success(make_shared<FunctionDefinitionNode>(var_name_tok, arg_nodes, body_node, true, access_mod));
+        auto node = make_shared<FunctionDefinitionNode>(var_name_tok, arg_nodes, body_node, true, access_mod);
+        node->pos_end = get_last_parsed_pos_end();
+        return res.success(node);
     }
 
     ParseResult parse_arguments(vector<shared_ptr<Node>>& positional_args, vector<pair<Token, shared_ptr<Node>>>& keyword_args, optional<Position>& out_rparen_pos)
@@ -1173,7 +1175,9 @@ private:
         res.register_advancement();
         advance();
 
-        return res.success(make_shared<SwitchNode>(selection, cases, false));
+        auto node = make_shared<SwitchNode>(selection, cases, false);
+        node->pos_end = get_last_parsed_pos_end();
+        return res.success(node);
     }
 
     ParseResult case_statement()
@@ -1270,8 +1274,7 @@ private:
             }
         }
 
-        optional<Position> pos_end = current_tok.has_value() ? current_tok->pos_end : nullopt;
-        auto body_node = make_shared<ListNode>(body_nodes, pos_start, pos_end);
+        auto body_node = make_body_node(body_nodes, pos_start);
 
         if (!current_tok.has_value() || current_tok->type != T_RPAREN2)
         {
@@ -1283,7 +1286,9 @@ private:
         res.register_advancement();
         advance();
 
-        return res.success(make_shared<SwitchCaseNode>(choice_val, body_node, true));
+        auto node = make_shared<SwitchCaseNode>(choice_val, body_node, true);
+        node->pos_end = get_last_parsed_pos_end();
+        return res.success(node);
     }
 
     ParseResult default_statement()
@@ -1368,8 +1373,7 @@ private:
             }
         }
 
-        optional<Position> pos_end = current_tok.has_value() ? current_tok->pos_end : nullopt;
-        auto body_node = make_shared<ListNode>(body_nodes, pos_start, pos_end);
+        auto body_node = make_body_node(body_nodes, pos_start);
 
         if (!current_tok.has_value() || current_tok->type != T_RPAREN2)
         {
@@ -1381,7 +1385,9 @@ private:
         res.register_advancement();
         advance();
 
-        return res.success(make_shared<SwitchCaseNode>(nullptr, body_node, true));
+        auto node = make_shared<SwitchCaseNode>(nullptr, body_node, true);
+        node->pos_end = get_last_parsed_pos_end();
+        return res.success(node);
     }
 
     ParseResult while_expression()
@@ -1474,7 +1480,7 @@ private:
             }
         }
 
-        auto body_node = make_shared<ListNode>(body_nodes, pos_start, current_tok.has_value() ? current_tok->pos_end : nullopt);
+        auto body_node = make_body_node(body_nodes, pos_start);
 
         if (!current_tok.has_value() || current_tok->type != T_RPAREN2)
         {
@@ -1487,7 +1493,9 @@ private:
         res.register_advancement();
         advance();
 
-        return res.success(make_shared<WhileNode>(condition, body_node, false));
+        auto node = make_shared<WhileNode>(condition, body_node, false);
+        node->pos_end = get_last_parsed_pos_end();
+        return res.success(node);
     }
 
     ParseResult for_expression()
@@ -1611,7 +1619,7 @@ private:
             }
         }
 
-        auto body_node = make_shared<ListNode>(body_nodes, pos_start, current_tok.has_value() ? current_tok->pos_end : nullopt);
+        auto body_node = make_body_node(body_nodes, pos_start);
 
         if (!current_tok.has_value() || current_tok->type != T_RPAREN2)
         {
@@ -1623,7 +1631,9 @@ private:
         res.register_advancement();
         advance();
 
-        return res.success(make_shared<ForNode>(var_name, start_value, end_value, step_value, body_node, false));
+        auto node = make_shared<ForNode>(var_name, start_value, end_value, step_value, body_node, false);
+        node->pos_end = get_last_parsed_pos_end();
+        return res.success(node);
     }
 
     ParseResult if_expression()
@@ -1718,7 +1728,7 @@ private:
             }
         }
 
-        auto body_node = make_shared<ListNode>(body_nodes, pos_start, current_tok.has_value() ? current_tok->pos_end : nullopt);
+        auto body_node = make_body_node(body_nodes, pos_start);
 
         if (!current_tok.has_value() || current_tok->type != T_RPAREN2)
         {
@@ -1744,7 +1754,9 @@ private:
             else_case = elif_result->else_case;
         }
 
-        return res.success(make_shared<IfNode>(cases, else_case));
+        auto node = make_shared<IfNode>(cases, else_case);
+        node->pos_end = get_last_parsed_pos_end();
+        return res.success(node);
     }
 
     ParseResult elif_or_else_expression()
@@ -1876,7 +1888,7 @@ private:
             }
         }
 
-        auto body_node = make_shared<ListNode>(body_nodes, pos_start, current_tok.has_value() ? current_tok->pos_end : nullopt);
+        auto body_node = make_body_node(body_nodes, pos_start);
 
         if (!current_tok.has_value() || current_tok->type != T_RPAREN2)
         {
@@ -1972,7 +1984,7 @@ private:
                 }
             }
 
-            auto body_node = make_shared<ListNode>(body_nodes, pos_start, current_tok.has_value() ? current_tok->pos_end : nullopt);
+            auto body_node = make_body_node(body_nodes, pos_start);
 
             if (!current_tok.has_value() || current_tok->type != T_RPAREN2)
             {
@@ -2380,17 +2392,19 @@ private:
         if (any_cast<string>(current_tok->value) == "proceed")
         {
             auto start_pos = current_tok->pos_start.value_or(Position());
+            auto end_pos = current_tok->pos_end.value_or(Position());
             res.register_advancement();
             advance();
-            return res.success(make_shared<ContinueNode>(start_pos, start_pos));
+            return res.success(make_shared<ContinueNode>(start_pos, end_pos));
         }
 
         if (any_cast<string>(current_tok->value) == "escape")
         {
             auto start_pos = current_tok->pos_start.value_or(Position());
+            auto end_pos = current_tok->pos_end.value_or(Position());
             res.register_advancement();
             advance();
-            return res.success(make_shared<BreakNode>(start_pos, start_pos));
+            return res.success(make_shared<BreakNode>(start_pos, end_pos));
         }
 
         if (any_cast<string>(current_tok->value) == "yield")
@@ -2404,6 +2418,7 @@ private:
                 ));
             }
             auto start_pos = current_tok->pos_start.value_or(Position());
+            auto yield_end_pos = current_tok->pos_end.value_or(Position());
             res.register_advancement();
             advance();
 
@@ -2411,7 +2426,7 @@ private:
             if (!expr)
             {
                 reverse(res.to_reverse_count);
-                return res.success(make_shared<ReturnNode>(nullptr, start_pos, start_pos));
+                return res.success(make_shared<ReturnNode>(nullptr, start_pos, yield_end_pos));
             }
 
             if (current_tok.has_value() && current_tok->type == T_COMMA)
@@ -2756,46 +2771,14 @@ private:
 
         if (current_tok.has_value() && current_tok->type == T_RPAREN2)
         {
+            auto pos_end = current_tok->pos_end.value_or(Position());
             res.register_advancement();
             advance();
-            return res.success(make_shared<DictNode>(keyval_nodes, pos_start, current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position()));
+            return res.success(make_shared<DictNode>(keyval_nodes, pos_start, pos_end));
         }
-
-        auto first_key = res.register_node(expression());
-        if (res.error)
-            return res;
-
-        if (!current_tok.has_value() || current_tok->type != T_COLON)
+        else
         {
-            return res.failure(InvalidSyntaxError(current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(), current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(), "Expected ':'"));
-        }
-        res.register_advancement();
-        advance();
-
-        auto first_val = res.register_node(expression());
-        if (res.error)
-            return res;
-
-        // ── Dict comprehension with cycle ──────────────────────────────
-        if (current_tok.has_value() && current_tok->type == T_KEYWORD && any_cast<string>(current_tok->value) == "cycle")
-        {
-            return _parse_dict_comp_cycle(res, first_key, first_val, pos_start);
-        }
-
-        // ── Dict comprehension with trace ──────────────────────────────
-        if (current_tok.has_value() && current_tok->type == T_KEYWORD && any_cast<string>(current_tok->value) == "trace")
-        {
-            return _parse_dict_comp_trace(res, first_key, first_val, pos_start);
-        }
-
-        keyval_nodes.push_back({first_key, first_val});
-
-        while (current_tok.has_value() && current_tok->type == T_COMMA)
-        {
-            res.register_advancement();
-            advance();
-
-            auto key_node = res.register_node(expression());
+            auto first_key = res.register_node(expression());
             if (res.error)
                 return res;
 
@@ -2806,21 +2789,57 @@ private:
             res.register_advancement();
             advance();
 
-            auto value_node = res.register_node(expression());
+            auto first_val = res.register_node(expression());
             if (res.error)
                 return res;
 
-            keyval_nodes.push_back({key_node, value_node});
-        }
+            // ── Dict comprehension with cycle ──────────────────────────────
+            if (current_tok.has_value() && current_tok->type == T_KEYWORD && any_cast<string>(current_tok->value) == "cycle")
+            {
+                return _parse_dict_comp_cycle(res, first_key, first_val, pos_start);
+            }
 
-        if (!current_tok.has_value() || current_tok->type != T_RPAREN2)
-        {
-            return res.failure(InvalidSyntaxError(current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(), current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(), "Expected ',' or '}'", "Did you forget a comma ',' between dictionary entries?"));
-        }
-        res.register_advancement();
-        advance();
+            // ── Dict comprehension with trace ──────────────────────────────
+            if (current_tok.has_value() && current_tok->type == T_KEYWORD && any_cast<string>(current_tok->value) == "trace")
+            {
+                return _parse_dict_comp_trace(res, first_key, first_val, pos_start);
+            }
 
-        return res.success(make_shared<DictNode>(keyval_nodes, pos_start, current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position()));
+            keyval_nodes.push_back({first_key, first_val});
+
+            while (current_tok.has_value() && current_tok->type == T_COMMA)
+            {
+                res.register_advancement();
+                advance();
+
+                auto key_node = res.register_node(expression());
+                if (res.error)
+                    return res;
+
+                if (!current_tok.has_value() || current_tok->type != T_COLON)
+                {
+                    return res.failure(InvalidSyntaxError(current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(), current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(), "Expected ':'"));
+                }
+                res.register_advancement();
+                advance();
+
+                auto value_node = res.register_node(expression());
+                if (res.error)
+                    return res;
+
+                keyval_nodes.push_back({key_node, value_node});
+            }
+
+            if (!current_tok.has_value() || current_tok->type != T_RPAREN2)
+            {
+                return res.failure(InvalidSyntaxError(current_tok.has_value() ? current_tok->pos_start.value_or(Position()) : Position(), current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(), "Expected ',' or '}'", "Did you forget a comma ',' between dictionary entries?"));
+            }
+            auto pos_end = current_tok->pos_end.value_or(Position());
+            res.register_advancement();
+            advance();
+
+            return res.success(make_shared<DictNode>(keyval_nodes, pos_start, pos_end));
+        }
     }
 
     ParseResult parse_block()
@@ -2874,7 +2893,7 @@ private:
             }
         }
 
-        auto body_node = make_shared<ListNode>(body_nodes, pos_start, current_tok.has_value() ? current_tok->pos_end : nullopt);
+        auto body_node = make_body_node(body_nodes, pos_start);
         return res.success(body_node);
     }
 
@@ -2922,7 +2941,9 @@ private:
         res.register_advancement();
         advance();
 
-        return res.success(make_shared<CatchNode>(error_type, error_name, body_node));
+        auto node = make_shared<CatchNode>(error_type, error_name, body_node);
+        node->pos_end = get_last_parsed_pos_end();
+        return res.success(node);
     }
 
     ParseResult finally_expression()
@@ -2953,7 +2974,9 @@ private:
         res.register_advancement();
         advance();
 
-        return res.success(make_shared<FinallyNode>(body_node));
+        auto node = make_shared<FinallyNode>(body_node);
+        node->pos_end = get_last_parsed_pos_end();
+        return res.success(node);
     }
 
     ParseResult try_expression()
@@ -3310,7 +3333,9 @@ private:
         res.register_advancement();
         advance();
 
-        return res.success(make_shared<ModelNode>(model_name_tok, parent_name_toks, body_nodes));
+        auto node = make_shared<ModelNode>(model_name_tok, parent_name_toks, body_nodes);
+        node->pos_end = get_last_parsed_pos_end();
+        return res.success(node);
     }
 
     ParseResult class_member()
@@ -3568,11 +3593,10 @@ private:
                 current_tok.has_value() ? current_tok->pos_end.value_or(Position()) : Position(),
                 "Expected '}'"));
         }
+        auto body_node = make_body_node(body_nodes, pos_start);
         Position pos_end = current_tok->pos_end.value_or(Position());
         res.register_advancement();
         advance();
-
-        auto body_node = make_shared<ListNode>(body_nodes, pos_start, pos_end);
         return res.success(make_shared<InitNode>(param_nodes, body_node, pos_start, pos_end));
     }
 
@@ -3784,7 +3808,7 @@ private:
             }
         }
 
-        auto body_node = make_shared<ListNode>(body_nodes, pos_start, current_tok.has_value() ? current_tok->pos_end : nullopt);
+        auto body_node = make_body_node(body_nodes, pos_start);
 
         if (!current_tok.has_value() || current_tok->type != T_RPAREN2)
         {
@@ -3796,7 +3820,9 @@ private:
         res.register_advancement();
         advance();
 
-        return res.success(make_shared<ForEachLoopNode>(var_name_tokens, collection_node, body_node));
+        auto node = make_shared<ForEachLoopNode>(var_name_tokens, collection_node, body_node);
+        node->pos_end = get_last_parsed_pos_end();
+        return res.success(node);
     }
 
     ParseResult summon_statement()
@@ -4017,6 +4043,22 @@ private:
             if (sub_error_check(lex_error, res, pos_start, pos_end, expr_src))
                 return res;
 
+            Position expr_start_pos;
+            if (token.pos_start) {
+                expr_start_pos = get_position_at_index(*token.pos_start, token.pos_start->index + 1 + brace_start + 1);
+            } else {
+                expr_start_pos = Position();
+            }
+
+            for (auto& tok : sub_tokens) {
+                if (tok.pos_start) {
+                    tok.pos_start = map_sub_position(expr_start_pos, *tok.pos_start);
+                }
+                if (tok.pos_end) {
+                    tok.pos_end = map_sub_position(expr_start_pos, *tok.pos_end);
+                }
+            }
+
             Parser sub_parser(std::move(sub_tokens));
             auto sub_res = sub_parser.expression();
             if (sub_res.error)
@@ -4034,6 +4076,52 @@ private:
     }
 
 private:
+    Position get_position_at_index(const Position& base_pos, int target_index) {
+        Position pos = base_pos.copy();
+        if (!pos.file_text) return pos;
+        const string& text = *pos.file_text;
+        while (pos.index < target_index && pos.index < (int)text.length()) {
+            char c = text[pos.index];
+            pos.advance(c);
+        }
+        return pos;
+    }
+
+    Position map_sub_position(const Position& expr_start_pos, const Position& sub_pos) {
+        Position mapped;
+        mapped.file_name = expr_start_pos.file_name;
+        mapped.file_text = expr_start_pos.file_text;
+        mapped.index = expr_start_pos.index + sub_pos.index;
+        mapped.line = expr_start_pos.line + sub_pos.line;
+        if (sub_pos.line == 0) {
+            mapped.col = expr_start_pos.col + sub_pos.col;
+        } else {
+            mapped.col = sub_pos.col;
+        }
+        return mapped;
+    }
+
+    shared_ptr<ListNode> make_body_node(const vector<shared_ptr<Node>>& body_nodes, const optional<Position>& default_pos) {
+        optional<Position> start = default_pos;
+        optional<Position> end = default_pos;
+        if (current_tok.has_value()) {
+            start = current_tok->pos_start;
+            end = current_tok->pos_start;
+        }
+        if (!body_nodes.empty()) {
+            start = body_nodes.front()->pos_start;
+            end = body_nodes.back()->pos_end;
+        }
+        return make_shared<ListNode>(body_nodes, start, end);
+    }
+
+    Position get_last_parsed_pos_end() {
+        if (tok_index > 0 && tok_index - 1 < (int)tokens.size()) {
+            return tokens[tok_index - 1].pos_end.value_or(Position());
+        }
+        return Position();
+    }
+
     bool sub_error_check(const shared_ptr<Error>& err, ParseResult& res, const optional<Position>& start, const optional<Position>& end, const string& src) {
         if (err) {
             res.failure(InvalidSyntaxError(

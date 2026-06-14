@@ -7,7 +7,7 @@
 Caught expected error: [E5001] Traceback (most recent call last):
   File tests/features/operations/list_operations.sad, line 14, in <program>
         show([1, 2] - [3])
-                      ^^^^
+                      ^^^
 IllegalOperationError: Index must be of an integer Number type
 [1]
 [1, 2, 'hello']

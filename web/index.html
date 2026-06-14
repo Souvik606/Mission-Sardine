@@ -104,12 +104,12 @@
         }
 
         .ast-node-card {
-            width: 280px;
-            height: 110px;
+            width: 325px;
+            height: 125px;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             transform-origin: center;
-            background: rgba(24, 24, 37, 0.85);
-            border: 1px solid rgba(137, 180, 250, 0.15);
+            background: rgba(20, 20, 31, 0.96);
+            border: 2px solid rgba(137, 180, 250, 0.35);
             backdrop-filter: blur(12px);
             border-radius: 14px;
         }
@@ -120,21 +120,22 @@
 
         .ast-node:hover .ast-node-card {
             transform: scale(1.04);
-            border-color: rgba(137, 180, 250, 0.5);
-            box-shadow: 0 10px 25px -5px rgba(137, 180, 250, 0.3), 0 0 15px rgba(137, 180, 250, 0.1);
+            border-color: rgba(137, 180, 250, 0.7);
+            box-shadow: 0 10px 25px -5px rgba(137, 180, 250, 0.55), 0 0 15px rgba(137, 180, 250, 0.3);
         }
 
         .ast-node.highlighted .ast-node-card {
-            width: 380px;
-            height: 220px;
+            width: 440px;
+            height: 280px;
             border-color: #cba6f7 !important;
-            box-shadow: 0 0 35px rgba(203, 166, 247, 0.45), 0 0 15px rgba(203, 166, 247, 0.15);
-            background: rgba(17, 17, 27, 0.98) !important;
+            border-width: 3px !important;
+            box-shadow: 0 0 35px rgba(203, 166, 247, 0.65), 0 0 15px rgba(203, 166, 247, 0.35);
+            background: rgba(12, 12, 18, 0.99) !important;
             transform: scale(1.02);
         }
 
         .ast-node.muted {
-            opacity: 0.25;
+            opacity: 0.15;
         }
 
         .ast-node.muted .ast-node-card {
@@ -737,6 +738,19 @@
 
     <!-- System & SPA Page Routing Script -->
     <script>
+        window.collapsedNodeIds = new Set();
+        window.toggleNodeCollapse = function(stableId) {
+            if (!stableId) return;
+            if (window.collapsedNodeIds.has(stableId)) {
+                window.collapsedNodeIds.delete(stableId);
+            } else {
+                window.collapsedNodeIds.add(stableId);
+            }
+            if (latestAst) {
+                renderAstTree(latestAst);
+            }
+        };
+
         // App Routing and State Configuration
         const routes = {
             '#/': 'view-home',
@@ -2019,7 +2033,11 @@ cycle x = 0 : 5 {
                 if (obj.condition !== undefined && obj.body !== undefined) {
                     obj.node_type = 'IfCaseNode';
                 } else if (obj.value !== undefined && obj.body !== undefined) {
-                    obj.node_type = 'SwitchCaseNode';
+                    if (obj.value === null) {
+                        obj.node_type = 'FallbackCaseNode';
+                    } else {
+                        obj.node_type = 'SwitchCaseNode';
+                    }
                 } else if (obj.body !== undefined && obj.condition === undefined && obj.value === undefined) {
                     obj.node_type = 'ElseCaseNode';
                 }
@@ -2150,7 +2168,15 @@ cycle x = 0 : 5 {
                 }
             }
 
-            return { nodeType, value, children, pos_start, pos_end };
+            const stableId = nodeType + (pos_start ? `_${pos_start.line}_${pos_start.col}` : '');
+            const isCollapsed = window.collapsedNodeIds && window.collapsedNodeIds.has(stableId);
+
+            const returnedNode = { nodeType, value, children, pos_start, pos_end, stableId };
+            if (isCollapsed) {
+                returnedNode._children = children;
+                returnedNode.children = [];
+            }
+            return returnedNode;
         }
 
         // DFS pre-order traversal extraction
@@ -2182,12 +2208,16 @@ cycle x = 0 : 5 {
             // Find the node index in the DFS queue
             const index = dfsNodesQueue.findIndex(n => n.id === nodeId);
             if (index !== -1) {
+                window.isCursorSourcedFocus = true;
                 currentTraversalIndex = index;
-                highlightCurrentNode(true);
+                highlightCurrentNode(true, 'tree');
+                setTimeout(() => {
+                    window.isCursorSourcedFocus = false;
+                }, 300);
             }
         }
 
-        function highlightCurrentNode(centerViewport = true) {
+        function highlightCurrentNode(centerViewport = true, source = 'tree') {
             if (!d3Svg) return;
 
             if (currentTraversalIndex < 0 || currentTraversalIndex >= dfsNodesQueue.length) {
@@ -2281,7 +2311,7 @@ cycle x = 0 : 5 {
                 if (!window.eduEditorDecorations) {
                     window.eduEditorDecorations = [];
                 }
-                if (activeNode.pos_start && activeNode.pos_end) {
+                if (source === 'tree' && activeNode.pos_start && activeNode.pos_end) {
                     const startLine = activeNode.pos_start.line + 1;
                     const startCol = activeNode.pos_start.col + 1;
                     const endLine = activeNode.pos_end.line + 1;
@@ -2306,7 +2336,8 @@ cycle x = 0 : 5 {
                     } else {
                         window.eduEditorDecorations = eduEditorInstance.deltaDecorations(window.eduEditorDecorations, []);
                     }
-                } else {
+                } else if (source !== 'tree') {
+                    // Clear editor decorations when moving cursor in the editor so they don't overlay the cursor
                     window.eduEditorDecorations = eduEditorInstance.deltaDecorations(window.eduEditorDecorations, []);
                 }
             }
@@ -2380,37 +2411,75 @@ cycle x = 0 : 5 {
             }
         }
 
+        const NODE_EXPLANATIONS = {
+            'IfNode': 'Evaluates a conditional expression. If it is true, the matching branch is executed.',
+            'IfCaseNode': 'A branch of a conditional expression (when or orwhen) containing a condition and a body.',
+            'ElseCaseNode': 'An otherwise branch. It is executed if all previous conditions evaluate to false.',
+            'SwitchNode': 'A menu statement. It matches a value against multiple choice cases or fallback.',
+            'SwitchCaseNode': 'A choice branch of a menu statement that matches a specific value.',
+            'FallbackCaseNode': 'A fallback branch of a menu statement that executes if no choices match.',
+            'ForNode': 'A loop that iterates over a numeric range from start to end with a step value.',
+            'WhileNode': 'A loop that repeatedly executes its body as long as the condition remains true.',
+            'ForEachLoopNode': 'A loop that iterates over every item in a list or collection.',
+            'NumberNode': 'A primitive numeric literal (e.g. 42 or 3.14).',
+            'StringNode': 'A primitive sequence of text characters.',
+            'FStringNode': 'An interpolated string (f-string) supporting expressions inside curly braces.',
+            'VariableUseNode': 'Retrieves the current value stored in a variable by its name.',
+            'VariableAssignNode': 'Assigns or updates the value of one or more variables.',
+            'BinaryOperationNode': 'An operation between two nodes (e.g. addition, subtraction, comparison).',
+            'UnaryOperationNode': 'An operation on a single node (e.g. logical not, negative sign).',
+            'TernaryOperationNode': 'An inline conditional assignment: condition ? true_val : false_val.',
+            'ListNode': 'A collection of expressions grouped together inside brackets [].',
+            'DictNode': 'A collection of key-value pairs stored in a dictionary.',
+            'IndexAccessNode': 'Accesses an element at a specific index inside a list or string.',
+            'AttrAccessNode': 'Retrieves the value of a property/attribute on an object.',
+            'AttrAssignNode': 'Sets the value of a property/attribute on an object.',
+            'ClassNode': 'Defines a class (model) schema with attributes and methods.',
+            'FunctionDefinitionNode': 'Declares a reusable block of code with arguments.',
+            'MethodDefinitionNode': 'Declares a function bound to a class model (method).',
+            'FunctionCallNode': 'Invokes a function or method with positional and keyword arguments.',
+            'ReturnNode': 'Returns a value from the current function (yield keyword).',
+            'ContinueNode': 'Skips the rest of the current loop iteration (proceed keyword).',
+            'BreakNode': 'Terminates and exits the loop immediately (escape keyword).',
+            'TryNode': 'A block of code wrapped with risk/trap error handling.',
+            'FinallyNode': 'A block of code that always runs after try/catch, regardless of errors.',
+            'SummonNode': 'Imports modules or external components into the namespace.'
+        };
+
         const NODE_TYPE_STYLING = {
-            'IfCaseNode': { icon: 'git-commit', color: 'text-orange-400', name: 'When Branch', border: 'border-orange-500/30', bg: 'bg-orange-500/5' },
-            'SwitchCaseNode': { icon: 'git-commit', color: 'text-orange-400', name: 'Choice Branch', border: 'border-orange-500/30', bg: 'bg-orange-500/5' },
-            'ElseCaseNode': { icon: 'git-commit', color: 'text-orange-400', name: 'Fallback Branch', border: 'border-orange-500/30', bg: 'bg-orange-500/5' },
-            'NumberNode': { icon: 'hash', color: 'text-amber-400', name: 'Number', border: 'border-amber-500/30', bg: 'bg-amber-500/5' },
-            'StringNode': { icon: 'type', color: 'text-emerald-400', name: 'String', border: 'border-emerald-500/30', bg: 'bg-emerald-500/5' },
-            'FStringNode': { icon: 'type', color: 'text-emerald-400', name: 'F-String', border: 'border-emerald-500/30', bg: 'bg-emerald-500/5' },
-            'VariableUseNode': { icon: 'user', color: 'text-cyan-400', name: 'Variable', border: 'border-cyan-500/30', bg: 'bg-cyan-500/5' },
-            'VariableAssignNode': { icon: 'edit-3', color: 'text-indigo-400', name: 'Assign', border: 'border-indigo-500/30', bg: 'bg-indigo-500/5' },
-            'BinaryOperationNode': { icon: 'git-commit', color: 'text-pink-400', name: 'Binary Op', border: 'border-pink-500/30', bg: 'bg-pink-500/5' },
-            'UnaryOperationNode': { icon: 'minus-circle', color: 'text-rose-400', name: 'Unary Op', border: 'border-rose-500/30', bg: 'bg-rose-500/5' },
-            'TernaryOperationNode': { icon: 'help-circle', color: 'text-purple-400', name: 'Ternary Op', border: 'border-purple-500/30', bg: 'bg-purple-500/5' },
-            'IndexAccessNode': { icon: 'key', color: 'text-yellow-400', name: 'Index Access', border: 'border-yellow-500/30', bg: 'bg-yellow-500/5' },
-            'ListNode': { icon: 'list', color: 'text-sky-400', name: 'List', border: 'border-sky-500/30', bg: 'bg-sky-500/5' },
-            'DictNode': { icon: 'database', color: 'text-teal-400', name: 'Dictionary', border: 'border-teal-500/30', bg: 'bg-teal-500/5' },
-            'IfNode': { icon: 'git-branch', color: 'text-orange-400', name: 'If', border: 'border-orange-500/30', bg: 'bg-orange-500/5' },
-            'SwitchNode': { icon: 'git-pull-request', color: 'text-orange-400', name: 'Switch', border: 'border-orange-500/30', bg: 'bg-orange-500/5' },
-            'ForNode': { icon: 'repeat', color: 'text-indigo-400', name: 'For Loop', border: 'border-indigo-500/30', bg: 'bg-indigo-500/5' },
-            'WhileNode': { icon: 'repeat', color: 'text-indigo-400', name: 'While Loop', border: 'border-indigo-500/30', bg: 'bg-indigo-500/5' },
-            'ForEachLoopNode': { icon: 'repeat', color: 'text-indigo-400', name: 'ForEach Loop', border: 'border-indigo-500/30', bg: 'bg-indigo-500/5' },
-            'FunctionCallNode': { icon: 'play-circle', color: 'text-violet-400', name: 'Call', border: 'border-violet-500/30', bg: 'bg-violet-500/5' },
-            'ReturnNode': { icon: 'corner-down-left', color: 'text-red-400', name: 'Return', border: 'border-red-500/30', bg: 'bg-red-500/5' },
-            'TryNode': { icon: 'shield-alert', color: 'text-amber-500', name: 'Try', border: 'border-amber-500/30', bg: 'bg-amber-500/5' },
-            'FinallyNode': { icon: 'shield-check', color: 'text-emerald-500', name: 'Finally', border: 'border-emerald-500/30', bg: 'bg-emerald-500/5' },
-            'AttrAccessNode': { icon: 'link', color: 'text-cyan-400', name: 'Attr Access', border: 'border-cyan-500/30', bg: 'bg-cyan-500/5' },
-            'AttrAssignNode': { icon: 'link-2', color: 'text-cyan-400', name: 'Attr Assign', border: 'border-cyan-500/30', bg: 'bg-cyan-500/5' },
-            'ClassNode': { icon: 'box', color: 'text-blue-400', name: 'Class', border: 'border-blue-500/30', bg: 'bg-blue-500/5' },
-            'FunctionDefinitionNode': { icon: 'code', color: 'text-violet-400', name: 'Function', border: 'border-violet-500/30', bg: 'bg-violet-500/5' },
-            'MethodDefinitionNode': { icon: 'code-2', color: 'text-violet-400', name: 'Method', border: 'border-violet-500/30', bg: 'bg-violet-500/5' },
-            'SummonNode': { icon: 'download-cloud', color: 'text-pink-400', name: 'Summon', border: 'border-pink-500/30', bg: 'bg-pink-500/5' },
-            'ListComprehensionNode': { icon: 'layers', color: 'text-sky-400', name: 'Comprehension', border: 'border-sky-500/30', bg: 'bg-sky-500/5' }
+            'IfCaseNode': { icon: 'git-commit', color: 'text-orange-400 font-extrabold', name: 'When Branch', border: 'border-orange-500/50 border-2', bg: 'bg-orange-500/10' },
+            'SwitchCaseNode': { icon: 'git-commit', color: 'text-orange-400 font-extrabold', name: 'Choice Branch', border: 'border-orange-500/50 border-2', bg: 'bg-orange-500/10' },
+            'ElseCaseNode': { icon: 'git-commit', color: 'text-orange-400 font-extrabold', name: 'Otherwise Branch', border: 'border-orange-500/50 border-2', bg: 'bg-orange-500/10' },
+            'FallbackCaseNode': { icon: 'git-commit', color: 'text-orange-400 font-extrabold', name: 'Fallback Branch', border: 'border-orange-500/50 border-2', bg: 'bg-orange-500/10' },
+            'ContinueNode': { icon: 'arrow-right', color: 'text-rose-400 font-extrabold', name: 'Proceed', border: 'border-rose-500/50 border-2', bg: 'bg-rose-500/10' },
+            'BreakNode': { icon: 'x-circle', color: 'text-rose-400 font-extrabold', name: 'Escape', border: 'border-rose-500/50 border-2', bg: 'bg-rose-500/10' },
+            'NumberNode': { icon: 'hash', color: 'text-amber-400 font-extrabold', name: 'Number', border: 'border-amber-500/50 border-2', bg: 'bg-amber-500/10' },
+            'StringNode': { icon: 'type', color: 'text-emerald-400 font-extrabold', name: 'String', border: 'border-emerald-500/50 border-2', bg: 'bg-emerald-500/10' },
+            'FStringNode': { icon: 'type', color: 'text-emerald-400 font-extrabold', name: 'F-String', border: 'border-emerald-500/50 border-2', bg: 'bg-emerald-500/10' },
+            'VariableUseNode': { icon: 'user', color: 'text-cyan-400 font-extrabold', name: 'Variable', border: 'border-cyan-500/50 border-2', bg: 'bg-cyan-500/10' },
+            'VariableAssignNode': { icon: 'edit-3', color: 'text-indigo-400 font-extrabold', name: 'Assign', border: 'border-indigo-500/50 border-2', bg: 'bg-indigo-500/10' },
+            'BinaryOperationNode': { icon: 'git-commit', color: 'text-pink-400 font-extrabold', name: 'Binary Op', border: 'border-pink-500/50 border-2', bg: 'bg-pink-500/10' },
+            'UnaryOperationNode': { icon: 'minus-circle', color: 'text-rose-400 font-extrabold', name: 'Unary Op', border: 'border-rose-500/50 border-2', bg: 'bg-rose-500/10' },
+            'TernaryOperationNode': { icon: 'help-circle', color: 'text-purple-400 font-extrabold', name: 'Ternary Op', border: 'border-purple-500/50 border-2', bg: 'bg-purple-500/10' },
+            'IndexAccessNode': { icon: 'key', color: 'text-yellow-400 font-extrabold', name: 'Index Access', border: 'border-yellow-500/50 border-2', bg: 'bg-yellow-500/10' },
+            'ListNode': { icon: 'list', color: 'text-sky-400 font-extrabold', name: 'List', border: 'border-sky-500/50 border-2', bg: 'bg-sky-500/10' },
+            'DictNode': { icon: 'database', color: 'text-teal-400 font-extrabold', name: 'Dictionary', border: 'border-teal-500/50 border-2', bg: 'bg-teal-500/10' },
+            'IfNode': { icon: 'git-branch', color: 'text-orange-400 font-extrabold', name: 'If', border: 'border-orange-500/50 border-2', bg: 'bg-orange-500/10' },
+            'SwitchNode': { icon: 'git-pull-request', color: 'text-orange-400 font-extrabold', name: 'Switch', border: 'border-orange-500/50 border-2', bg: 'bg-orange-500/10' },
+            'ForNode': { icon: 'repeat', color: 'text-indigo-400 font-extrabold', name: 'For Loop', border: 'border-indigo-500/50 border-2', bg: 'bg-indigo-500/10' },
+            'WhileNode': { icon: 'repeat', color: 'text-indigo-400 font-extrabold', name: 'While Loop', border: 'border-indigo-500/50 border-2', bg: 'bg-indigo-500/10' },
+            'ForEachLoopNode': { icon: 'repeat', color: 'text-indigo-400 font-extrabold', name: 'ForEach Loop', border: 'border-indigo-500/50 border-2', bg: 'bg-indigo-500/10' },
+            'FunctionCallNode': { icon: 'play-circle', color: 'text-violet-400 font-extrabold', name: 'Call', border: 'border-violet-500/50 border-2', bg: 'bg-violet-500/10' },
+            'ReturnNode': { icon: 'corner-down-left', color: 'text-red-400 font-extrabold', name: 'Return', border: 'border-red-500/50 border-2', bg: 'bg-red-500/10' },
+            'TryNode': { icon: 'shield-alert', color: 'text-amber-500', name: 'Try', border: 'border-amber-500/50 border-2', bg: 'bg-amber-500/10' },
+            'FinallyNode': { icon: 'shield-check', color: 'text-emerald-500', name: 'Finally', border: 'border-emerald-500/50 border-2', bg: 'bg-emerald-500/10' },
+            'AttrAccessNode': { icon: 'link', color: 'text-cyan-400 font-extrabold', name: 'Attr Access', border: 'border-cyan-500/50 border-2', bg: 'bg-cyan-500/10' },
+            'AttrAssignNode': { icon: 'link-2', color: 'text-cyan-400 font-extrabold', name: 'Attr Assign', border: 'border-cyan-500/50 border-2', bg: 'bg-cyan-500/10' },
+            'ClassNode': { icon: 'box', color: 'text-blue-400 font-extrabold', name: 'Class', border: 'border-blue-500/50 border-2', bg: 'bg-blue-500/10' },
+            'FunctionDefinitionNode': { icon: 'code', color: 'text-violet-400 font-extrabold', name: 'Function', border: 'border-violet-500/50 border-2', bg: 'bg-violet-500/10' },
+            'MethodDefinitionNode': { icon: 'code-2', color: 'text-violet-400 font-extrabold', name: 'Method', border: 'border-violet-500/50 border-2', bg: 'bg-violet-500/10' },
+            'SummonNode': { icon: 'download-cloud', color: 'text-pink-400 font-extrabold', name: 'Summon', border: 'border-pink-500/50 border-2', bg: 'bg-pink-500/10' },
+            'ListComprehensionNode': { icon: 'layers', color: 'text-sky-400 font-extrabold', name: 'Comprehension', border: 'border-sky-500/50 border-2', bg: 'bg-sky-500/10' }
         };
 
         function renderAstTree(astObj) {
@@ -2467,8 +2536,8 @@ cycle x = 0 : 5 {
             // Create D3 Hierarchy structure
             const root = d3.hierarchy(simplifiedAst);
 
-            // Compute D3 Tree Layout (horizontal separation 360px, vertical separation 240px)
-            const treeLayout = d3.tree().nodeSize([360, 240]);
+            // Compute D3 Tree Layout (horizontal separation 460px, vertical separation 300px)
+            const treeLayout = d3.tree().nodeSize([460, 300]);
             treeLayout(root);
 
             // Store each node's D3 layout coordinates indexed by node id
@@ -2506,50 +2575,65 @@ cycle x = 0 : 5 {
                     focusNode(d.data.id);
                 });
 
-            // Embedded HTML Card within each node group using foreignObject (bounds expanded to fit 380x220 highlighted cards)
+            // Embedded HTML Card within each node group using foreignObject (bounds expanded to fit 440x280 highlighted cards)
             const fo = nodes.append("foreignObject")
-                .attr("width", 420)
-                .attr("height", 260)
-                .attr("x", -210)
-                .attr("y", -130);
+                .attr("width", 480)
+                .attr("height", 320)
+                .attr("x", -240)
+                .attr("y", -160);
 
             fo.html(d => {
                 const style = NODE_TYPE_STYLING[d.data.nodeType] || {
                     icon: 'help-circle',
-                    color: 'text-indigo-400',
+                    color: 'text-indigo-300 font-extrabold',
                     name: d.data.nodeType.replace("Node", ""),
-                    border: 'border-indigo-500/20',
-                    bg: 'bg-indigo-500/5'
+                    border: 'border-indigo-500/40 border-2',
+                    bg: 'bg-indigo-500/10'
                 };
 
                 const parentLabel = d.data.label
                     ? `<span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-slate-900/90 text-indigo-300 border border-slate-800 w-max leading-none select-none">${d.data.label}</span>`
                     : '';
-
+ 
                 const val = d.data.value;
                 const valText = (val !== null && val !== undefined) ? (typeof val === 'string' ? `"${val}"` : val) : "";
                 const valDiv = valText !== ""
-                    ? `<div class="ast-node-val text-xs text-emerald-400 font-mono mt-2 px-2.5 py-1.5 rounded-lg bg-slate-950/60 border border-emerald-500/20 truncate select-all">${escapeHtml(valText)}</div>`
+                    ? `<div class="ast-node-val text-sm text-emerald-300 font-bold font-mono mt-2.5 px-3 py-2 rounded-lg bg-slate-950/80 border border-emerald-500/35 truncate select-all shadow-inner">${escapeHtml(valText)}</div>`
                     : "";
-
+ 
+                const explanation = NODE_EXPLANATIONS[d.data.nodeType] || 'A structural node in the program AST.';
+ 
                 const detailContent = `
-                    <div class="mt-2.5 text-xs text-slate-400 border-t border-slate-800/80 pt-2.5 flex flex-col space-y-1.5 overflow-y-auto max-h-[110px] font-sans">
-                        <div class="flex justify-between items-center"><span class="font-bold text-slate-400">Node Class:</span> <span class="font-mono text-indigo-300 font-semibold bg-indigo-950/30 px-1.5 py-0.5 rounded border border-indigo-900/40">${d.data.nodeType}</span></div>
-                        ${d.data.pos_start ? `<div class="flex justify-between items-center"><span class="font-bold text-slate-400">Code Range:</span> <span class="font-mono text-slate-350 text-slate-300 bg-slate-900/60 px-1.5 py-0.5 rounded border border-slate-800/80">L${d.data.pos_start.line + 1}:${d.data.pos_start.col + 1} - L${d.data.pos_end.line + 1}:${d.data.pos_end.col + 1}</span></div>` : ''}
-                        ${valText !== "" ? `<div class="flex justify-between items-center"><span class="font-bold text-slate-400">Value:</span> <span class="font-mono text-emerald-400 bg-emerald-950/20 px-1.5 py-0.5 rounded border border-emerald-900/30 truncate max-w-[180px]">${escapeHtml(valText)}</span></div>` : ''}
-                        <div class="flex justify-between items-center"><span class="font-bold text-slate-400">Children:</span> <span class="font-semibold text-slate-200 bg-slate-900/60 px-1.5 py-0.5 rounded border border-slate-800/80">${d.data.children ? d.data.children.length : 0}</span></div>
+                    <div class="mt-3 text-[13px] text-slate-200 border-t border-slate-700/80 pt-3 flex flex-col space-y-2 overflow-y-auto max-h-[175px] font-sans">
+                        <div class="flex justify-between items-center"><span class="font-black text-slate-350">Node Class:</span> <span class="font-mono text-indigo-200 font-bold bg-indigo-950/70 px-2.5 py-0.5 rounded border border-indigo-700/60">${d.data.nodeType}</span></div>
+                        ${d.data.pos_start ? `<div class="flex justify-between items-center"><span class="font-black text-slate-350">Code Range:</span> <span class="font-mono text-slate-100 bg-slate-900/80 px-2.5 py-0.5 rounded border border-slate-700">L${d.data.pos_start.line + 1}:${d.data.pos_start.col + 1} - L${d.data.pos_end.line + 1}:${d.data.pos_end.col + 1}</span></div>` : ''}
+                        ${valText !== "" ? `<div class="flex justify-between items-center"><span class="font-black text-slate-350">Value:</span> <span class="font-mono text-emerald-300 bg-emerald-950/50 px-2.5 py-0.5 rounded border border-emerald-700/60 truncate max-w-[200px]">${escapeHtml(valText)}</span></div>` : ''}
+                        <div class="flex justify-between items-center"><span class="font-black text-slate-350">Children:</span> <span class="font-bold text-slate-100 bg-slate-900/80 px-2.5 py-0.5 rounded border border-slate-700">${(d.data.children ? d.data.children.length : 0) + (d.data._children ? d.data._children.length : 0)}</span></div>
+                        <div class="text-[12px] text-slate-100 bg-slate-950/80 p-2.5 rounded-lg border border-slate-700/80 mt-1.5 italic leading-relaxed select-text font-medium">${explanation}</div>
                     </div>
                 `;
-
+ 
+                const hasChildren = (d.data.children && d.data.children.length > 0) || (d.data._children && d.data._children.length > 0);
+                const isCollapsed = !!d.data._children;
+                const toggleButton = hasChildren
+                    ? `<button class="ast-node-collapse-btn ml-1.5 px-2.5 py-1 rounded bg-slate-900/80 text-[11px] font-bold text-slate-200 hover:text-white border border-slate-700 hover:border-slate-650 hover:bg-indigo-950/30 transition-all flex items-center space-x-1" onclick="event.stopPropagation(); window.toggleNodeCollapse('${d.data.stableId}')">
+                        <i data-lucide="${isCollapsed ? 'chevron-down' : 'chevron-up'}" class="h-3.5 w-3.5 shrink-0"></i>
+                        <span>${isCollapsed ? 'Expand' : 'Collapse'}</span>
+                       </button>`
+                    : '';
+ 
                 return `
                     <div class="ast-fo-wrapper w-full h-full flex items-center justify-center pointer-events-none">
                         <div class="ast-node-card pointer-events-auto rounded-xl border ${style.border} ${style.bg} text-left p-3.5 select-none flex flex-col justify-start backdrop-blur-md shadow-lg transition-all">
                             <div class="flex items-center justify-between w-full">
                                 <div class="flex items-center space-x-2 truncate">
-                                    <i data-lucide="${style.icon}" class="h-5 w-5 ${style.color} shrink-0"></i>
-                                    <span class="text-sm font-bold text-slate-100 truncate font-sans">${style.name}</span>
+                                    <i data-lucide="${style.icon}" class="h-5.5 w-5.5 ${style.color} shrink-0"></i>
+                                    <span class="text-[15px] font-black text-white truncate font-sans tracking-wide">${style.name}</span>
                                 </div>
-                                ${parentLabel}
+                                <div class="flex items-center space-x-1.5 shrink-0">
+                                    ${parentLabel}
+                                    ${toggleButton}
+                                </div>
                             </div>
                             
                             ${valDiv}
@@ -2844,18 +2928,60 @@ cycle x = 0 : 5 {
                 }
             });
 
+            window.isCursorSourcedFocus = false;
+            let cursorChangeTimeout = null;
+            eduEditorInstance.onDidChangeCursorPosition(event => {
+                if (window.isCursorSourcedFocus) return;
+                if (cursorChangeTimeout) clearTimeout(cursorChangeTimeout);
+                cursorChangeTimeout = setTimeout(() => {
+                    if (window.isCursorSourcedFocus) return;
+                    const pos = event.position;
+                    const targetLine = pos.lineNumber - 1;
+                    const targetCol = pos.column - 1;
+
+                    let foundNode = null;
+                    for (let i = dfsNodesQueue.length - 1; i >= 0; i--) {
+                        const node = dfsNodesQueue[i];
+                        if (node.pos_start && node.pos_end) {
+                            const startsBefore = node.pos_start.line < targetLine || (node.pos_start.line === targetLine && node.pos_start.col <= targetCol);
+                            const endsAfter = node.pos_end.line > targetLine || (node.pos_end.line === targetLine && node.pos_end.col >= targetCol);
+                            if (startsBefore && endsAfter) {
+                                foundNode = node;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (foundNode) {
+                        const index = dfsNodesQueue.findIndex(n => n.id === foundNode.id);
+                        if (index !== -1 && index !== currentTraversalIndex) {
+                            currentTraversalIndex = index;
+                            highlightCurrentNode(true, 'editor');
+                        }
+                    }
+                }, 200);
+            });
+
             // Select main.sad by default
             selectFile('main.sad');
 
             // Let layout adjust itself initially
-            setTimeout(() => {
-                if (editorInstance) editorInstance.layout();
-                if (eduEditorInstance) eduEditorInstance.layout();
-            }, 100);
+            for (let delay of [100, 300, 800, 1500, 3000]) {
+                setTimeout(() => {
+                    if (typeof monaco !== 'undefined' && monaco.editor && monaco.editor.remeasureFonts) {
+                        monaco.editor.remeasureFonts();
+                    }
+                    if (editorInstance) editorInstance.layout();
+                    if (eduEditorInstance) eduEditorInstance.layout();
+                }, delay);
+            }
 
             // Redraw Monaco once fonts are fully loaded to prevent cursor alignment offset bugs
             if (document.fonts) {
                 document.fonts.ready.then(function () {
+                    if (typeof monaco !== 'undefined' && monaco.editor && monaco.editor.remeasureFonts) {
+                        monaco.editor.remeasureFonts();
+                    }
                     if (editorInstance) {
                         editorInstance.layout();
                     }
