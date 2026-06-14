@@ -776,6 +776,41 @@ RunTimeResult builtin_fopen(const Position& pos_start, const Position& pos_end, 
     return RunTimeResult().success(file_obj);
 }
 
+inline string trace_to_json() {
+    string out = "[";
+    for (size_t i = 0; i < EXECUTION_TRACE.size(); ++i) {
+        if (i > 0) out += ",";
+        const auto& step = EXECUTION_TRACE[i];
+        out += "{";
+        out += "\"pos_start\":" + position_to_json(step.pos_start) + ",";
+        out += "\"pos_end\":" + position_to_json(step.pos_end) + ",";
+        out += "\"node_type\":\"" + escape_json_string(step.node_type) + "\",";
+        out += "\"scopes\":[";
+        for (size_t j = 0; j < step.scopes.size(); ++j) {
+            if (j > 0) out += ",";
+            const auto& scope = step.scopes[j];
+            out += "{";
+            out += "\"name\":\"" + escape_json_string(scope.name) + "\",";
+            out += "\"variables\":[";
+            for (size_t k = 0; k < scope.variables.size(); ++k) {
+                if (k > 0) out += ",";
+                const auto& var = scope.variables[k];
+                out += "{";
+                out += "\"name\":\"" + escape_json_string(var.name) + "\",";
+                out += "\"type\":\"" + escape_json_string(var.type) + "\",";
+                out += "\"value\":\"" + escape_json_string(var.value) + "\"";
+                out += "}";
+            }
+            out += "]";
+            out += "}";
+        }
+        out += "]";
+        out += "}";
+    }
+    out += "]";
+    return out;
+}
+
 struct RunResult {
     shared_ptr<DataType> value = nullptr;
     shared_ptr<Error> error = nullptr;
@@ -783,15 +818,16 @@ struct RunResult {
 
 RunResult run(const string& filename, const string& text) {
     RunResult out;
+    EXECUTION_TRACE.clear();
     try {
         Lexer lexer(filename, text);
         auto [tokens, lexer_error] = lexer.enumerate_tokens();
 
         if (EDUCATIONAL_MODE) {
-            cout << "--- EDUCATIONAL_MODE_OUTPUT_START ---" << endl;
             if (JSON_OUTPUT) {
                 if (lexer_error) {
-                    cout << "{\"tokens\":null,\"ast\":null,\"error\":" << error_to_json(lexer_error) << "}" << endl;
+                    cout << "--- EDUCATIONAL_MODE_OUTPUT_START ---" << endl;
+                    cout << "{\"tokens\":null,\"ast\":null,\"error\":" << error_to_json(lexer_error) << ",\"trace\":[]}" << endl;
                     cout << "--- EDUCATIONAL_MODE_OUTPUT_END ---" << endl;
                     out.error = lexer_error;
                     return out;
@@ -801,28 +837,34 @@ RunResult run(const string& filename, const string& text) {
                 Parser parser(std::move(tokens));
                 ParseResult ast = parser.parse();
 
-                string ast_json = "null";
-                string err_json = "null";
                 if (ast.error) {
-                    err_json = error_to_json(ast.error);
-                } else if (ast.node) {
-                    ast_json = node_to_json(ast.node);
-                }
-
-                cout << "{\"tokens\":" << token_vector_to_json(tokens_copy)
-                     << ",\"ast\":" << ast_json
-                     << ",\"error\":" << err_json << "}" << endl;
-                cout << "--- EDUCATIONAL_MODE_OUTPUT_END ---" << endl;
-
-                if (ast.error) {
+                    string err_json = error_to_json(ast.error);
+                    cout << "--- EDUCATIONAL_MODE_OUTPUT_START ---" << endl;
+                    cout << "{\"tokens\":" << token_vector_to_json(tokens_copy)
+                         << ",\"ast\":null"
+                         << ",\"error\":" << err_json
+                         << ",\"trace\":[]}" << endl;
+                    cout << "--- EDUCATIONAL_MODE_OUTPUT_END ---" << endl;
                     out.error = ast.error;
                     return out;
                 }
+
+                EXECUTION_TRACE.clear();
 
                 Interpreter interpreter;
                 auto context = make_shared<Context>("<program>");
                 context->symbol_table = global_symbol_table;
                 RunTimeResult result = interpreter.visit(ast.node, context);
+
+                string ast_json = node_to_json(ast.node);
+                string trace_json = trace_to_json();
+
+                cout << "--- EDUCATIONAL_MODE_OUTPUT_START ---" << endl;
+                cout << "{\"tokens\":" << token_vector_to_json(tokens_copy)
+                     << ",\"ast\":" << ast_json
+                     << ",\"error\":" << (result.error ? error_to_json(result.error) : "null")
+                     << ",\"trace\":" << trace_json << "}" << endl;
+                cout << "--- EDUCATIONAL_MODE_OUTPUT_END ---" << endl;
 
                 out.value = result.value;
                 out.error = result.error;
@@ -1077,6 +1119,7 @@ extern "C" {
         UNBOUNDED_MODE = (unbounded != 0);
         JSON_OUTPUT = (json_output != 0);
         EDUCATIONAL_MODE = (json_output != 0);
+        EXECUTION_TRACE.clear();
 
         // Reset and rebuild the global symbol table for a fresh execution context
         global_symbol_table = make_shared<SymbolTable>();

@@ -163,6 +163,7 @@ inline string node_to_json(const shared_ptr<Node>& node) {
     }
     if (auto n = dynamic_pointer_cast<ListNode>(node)) {
         return "{\"node_type\":\"ListNode\"," + node_positions_json(n) +
+               ",\"is_block\":" + (n->is_block ? "true" : "false") +
                ",\"element_nodes\":" + node_vector_to_json(n->element_nodes) + "}";
     }
     if (auto n = dynamic_pointer_cast<DictNode>(node)) {

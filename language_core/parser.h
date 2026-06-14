@@ -550,7 +550,7 @@ private:
         if (current_tok.has_value())
             pos_end = current_tok->pos_end;
 
-        return res.success(make_shared<ListNode>(statements_list, pos_start, pos_end));
+        return res.success(make_shared<ListNode>(statements_list, pos_start, pos_end, true));
     }
 
     ParseResult singleline()
@@ -4112,7 +4112,7 @@ private:
             start = body_nodes.front()->pos_start;
             end = body_nodes.back()->pos_end;
         }
-        return make_shared<ListNode>(body_nodes, start, end);
+        return make_shared<ListNode>(body_nodes, start, end, true);
     }
 
     Position get_last_parsed_pos_end() {

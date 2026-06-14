@@ -62,11 +62,34 @@ const string T_EOF = "EOF";
 const string T_ERROR = "ERROR";
 const string T_DOT = "DOT";
 
+#include "position.h"
+
 const int MAX_AST_DEPTH = 60;
 const int MAX_RECURSION_DEPTH = 100;
 inline bool UNBOUNDED_MODE = false;
 inline bool EDUCATIONAL_MODE = false;
 inline bool JSON_OUTPUT = false;
+
+struct ExecutionTraceVar {
+    string name;
+    string value;
+    string type;
+};
+
+struct ExecutionTraceScope {
+    string name;
+    vector<ExecutionTraceVar> variables;
+};
+
+struct ExecutionTraceStep {
+    Position pos_start;
+    Position pos_end;
+    string node_type;
+    vector<ExecutionTraceScope> scopes;
+};
+
+inline vector<ExecutionTraceStep> EXECUTION_TRACE;
+
 
 const vector<string> KEYWORDS = {
     "define", "and", "or", "not","when","orwhen","otherwise","cycle",

@@ -179,6 +179,25 @@
         .monaco-ast-node-line-highlight {
             background-color: rgba(99, 102, 241, 0.05);
         }
+
+        /* Monaco Debug Execution Step Highlight */
+        .monaco-execution-highlight {
+            background-color: rgba(16, 185, 129, 0.22) !important;
+            border-bottom: 2px solid #10b981 !important;
+            border-radius: 2px;
+        }
+
+        .monaco-execution-line-highlight {
+            background-color: rgba(16, 185, 129, 0.04) !important;
+        }
+
+        @keyframes variable-update-glow {
+            0% { background-color: rgba(16, 185, 129, 0.35); }
+            100% { background-color: transparent; }
+        }
+        .animate-var-update {
+            animation: variable-update-glow 1.8s cubic-bezier(0.1, 0.8, 0.3, 1);
+        }
     </style>
 </head>
 
@@ -556,24 +575,84 @@
                         class="w-1.5 cursor-col-resize hover:bg-indigo-500/50 transition-colors z-20 shrink-0 border-l border-slate-850"
                         title="Drag to resize info panel"></div>
 
-                    <!-- Right Info Sidebar (Tokens / AST View) -->
+                    <!-- Right Info Sidebar (Stepper + Tokens / AST View) -->
                     <aside id="edu-info-sidebar"
-                        class="w-96 min-w-[200px] shrink-0 bg-slate-950 flex flex-col border-l border-slate-850/80">
-                        <!-- Glassmorphic Tab Selector -->
-                        <div
-                            class="h-14 bg-slate-900/60 backdrop-blur-md px-4 flex items-center justify-between border-b border-slate-800/60 shrink-0">
-                            <div
-                                class="flex bg-slate-950/80 p-0.5 rounded-lg border border-slate-800/80 w-full font-sans">
-                                <button id="edu-tab-tokens" onclick="switchEduTab('tokens')"
-                                    class="flex-1 py-1.5 text-xs font-semibold rounded-md transition-all text-white bg-indigo-600/20 text-indigo-400 border border-indigo-500/10">
-                                    Tokens
-                                </button>
-                                <button id="edu-tab-ast" onclick="switchEduTab('ast')"
-                                    class="flex-1 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-400 hover:text-slate-200">
-                                    AST Tree
-                                </button>
+                        class="w-96 min-w-[200px] shrink-0 bg-slate-950 flex flex-row border-l border-slate-850/80 h-full">
+
+                        <!-- Visual Stepper Panel (Placed side-by-side with D3 Tree) -->
+                        <div id="edu-stepper-panel" class="hidden w-80 shrink-0 border-r border-slate-800 bg-slate-950 flex flex-col font-sans h-full">
+                            <!-- Stepper Header & Controls -->
+                            <div class="bg-slate-900/60 border-b border-slate-800/60 px-4 py-2.5 flex items-center justify-between shrink-0">
+                                <div class="flex items-center space-x-2 text-xs font-bold text-indigo-400 uppercase tracking-wider select-none">
+                                    <i data-lucide="play-circle" class="h-4 w-4 text-indigo-400 shrink-0"></i>
+                                    <span>Visual Stepper</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <!-- Stepper Control Buttons -->
+                                    <button onclick="prevExecutionStep()" id="btn-step-prev"
+                                        class="p-1 rounded bg-slate-950 border border-slate-800 hover:border-slate-750 text-slate-400 hover:text-white transition-colors cursor-pointer flex items-center justify-center animate-all"
+                                        title="Step Backward">
+                                        <i data-lucide="chevron-left" class="h-3.5 w-3.5"></i>
+                                    </button>
+                                    <button onclick="toggleExecutionPlay()" id="btn-step-play"
+                                        class="p-1.5 rounded bg-indigo-600 hover:bg-indigo-50 text-white transition-all cursor-pointer flex items-center justify-center shadow-[0_0_10px_rgba(99,102,241,0.25)] active:scale-95"
+                                        title="Auto Play / Pause">
+                                        <i id="btn-step-play-icon" data-lucide="play" class="h-3.5 w-3.5 shrink-0"></i>
+                                    </button>
+                                    <button onclick="nextExecutionStep()" id="btn-step-next"
+                                        class="p-1 rounded bg-slate-950 border border-slate-800 hover:border-slate-750 text-slate-400 hover:text-white transition-colors cursor-pointer flex items-center justify-center animate-all"
+                                        title="Step Forward">
+                                        <i data-lucide="chevron-right" class="h-3.5 w-3.5"></i>
+                                    </button>
+                                    
+                                    <!-- Step Counter -->
+                                    <span id="edu-stepper-status" class="text-[11px] font-mono text-slate-350 bg-slate-900 border border-slate-800/80 px-2 py-0.5 rounded font-bold select-none">Step 0 / 0</span>
+                                    
+                                    <!-- Stop / Close Stepper -->
+                                    <button onclick="stopExecutionStepper()"
+                                        class="p-1 rounded bg-slate-950 border border-slate-800 hover:border-rose-900/50 text-slate-400 hover:text-rose-400 hover:bg-rose-950/20 transition-all cursor-pointer flex items-center justify-center"
+                                        title="Exit Stepper Mode">
+                                        <i data-lucide="x-circle" class="h-3.5 w-3.5"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Speed Control Slider & Info Row -->
+                            <div class="bg-slate-900/20 px-4 py-1.5 border-b border-slate-900/40 flex items-center justify-between text-[11px] shrink-0 text-slate-400 select-none">
+                                <div class="flex items-center space-x-2">
+                                    <span>Speed:</span>
+                                    <input type="range" id="edu-stepper-speed" min="100" max="2000" step="100" value="600" oninput="updateStepperSpeed(this.value)" class="w-16 accent-indigo-500 h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                                    <span id="edu-stepper-speed-val" class="font-mono text-[10px] text-indigo-400 font-bold">600ms</span>
+                                </div>
+                                <div class="truncate max-w-[120px] flex items-center space-x-1">
+                                    <span class="font-bold text-slate-400">Node:</span>
+                                    <span id="edu-stepper-active-node" class="font-mono text-indigo-300 bg-indigo-950/40 px-1 rounded border border-indigo-900/30 text-[10px] font-bold">None</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Active Scope Variable Environment Panel -->
+                            <div class="flex-1 overflow-y-auto p-3.5 font-sans space-y-3.5 select-text bg-[#09090f]" id="edu-stepper-scopes">
+                                <div class="text-slate-500 italic text-[11px] text-center py-4">// No variables in scope.</div>
                             </div>
                         </div>
+
+                        <!-- Right Column inside sidebar: Tokens / AST Tree -->
+                        <div class="flex-1 flex flex-col min-w-0 h-full">
+                            <!-- Glassmorphic Tab Selector -->
+                            <div
+                                class="h-14 bg-slate-900/60 backdrop-blur-md px-4 flex items-center justify-between border-b border-slate-800/60 shrink-0">
+                                <div
+                                    class="flex bg-slate-950/80 p-0.5 rounded-lg border border-slate-800/80 w-full font-sans">
+                                    <button id="edu-tab-tokens" onclick="switchEduTab('tokens')"
+                                        class="flex-1 py-1.5 text-xs font-semibold rounded-md transition-all text-white bg-indigo-600/20 text-indigo-400 border border-indigo-500/10">
+                                        Tokens
+                                    </button>
+                                    <button id="edu-tab-ast" onclick="switchEduTab('ast')"
+                                        class="flex-1 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-400 hover:text-slate-200">
+                                        AST Tree
+                                    </button>
+                                </div>
+                            </div>
 
                         <!-- Tokens View Tab -->
                         <div id="edu-tokens-panel" class="flex-1 overflow-y-auto p-4 select-text">
@@ -631,7 +710,8 @@
                                 </button>
                             </div>
                         </div>
-                    </aside>
+                    </div>
+                </aside>
                 </div>
 
                 <!-- Terminal Output Panel -->
@@ -876,8 +956,14 @@ cycle x = 0 : 5 {
                         }
                         if (data.ast) {
                             renderAstTree(data.ast);
+                            if (data.trace && data.trace.length > 0) {
+                                initExecutionStepper(data.trace);
+                            } else {
+                                stopExecutionStepper();
+                            }
                         } else if (data.error) {
                             renderAstError(data.error);
+                            stopExecutionStepper();
                         }
                     }
                 }
@@ -990,6 +1076,9 @@ cycle x = 0 : 5 {
             if (eduEditorInstance && window.eduEditorDecorations) {
                 window.eduEditorDecorations = eduEditorInstance.deltaDecorations(window.eduEditorDecorations, []);
             }
+            if (typeof stopExecutionStepper === 'function') {
+                stopExecutionStepper();
+            }
 
             const tokensTbody = document.getElementById('edu-tokens-table-body');
             const astContainer = document.getElementById('edu-ast-tree-container');
@@ -1013,6 +1102,9 @@ cycle x = 0 : 5 {
             // Clear terminal automatically if in educationalMode, else check toggle
             if (educationalMode) {
                 clearTerminal();
+                if (typeof stopExecutionStepper === 'function') {
+                    stopExecutionStepper();
+                }
                 const tokensTbody = document.getElementById('edu-tokens-table-body');
                 const astContainer = document.getElementById('edu-ast-tree-container');
                 if (tokensTbody) {
@@ -1687,8 +1779,10 @@ cycle x = 0 : 5 {
                 const deltaX = startX - e.clientX; // drag left to increase width of right sidebar
                 let newWidth = startWidth + deltaX;
 
-                // Constraints (min 200px, max 60% window width)
-                const minWidth = 200;
+                // Constraints (min width based on stepper active state, max 60% window width)
+                const stepperPanel = document.getElementById('edu-stepper-panel');
+                const isStepperActive = stepperPanel && !stepperPanel.classList.contains('hidden');
+                const minWidth = isStepperActive ? 520 : 200;
                 const maxWidth = window.innerWidth * 0.6;
                 if (newWidth < minWidth) newWidth = minWidth;
                 if (newWidth > maxWidth) newWidth = maxWidth;
@@ -2142,9 +2236,11 @@ cycle x = 0 : 5 {
                     pos_start = adjusted.pos_start;
                     pos_end = adjusted.pos_end;
                 } else if (nodeType === 'ListNode' || nodeType === 'ListComprehensionNode') {
-                    const adjusted = adjustListPosition(sourceCode, pos_start, pos_end);
-                    pos_start = adjusted.pos_start;
-                    pos_end = adjusted.pos_end;
+                    if (!obj.is_block) {
+                        const adjusted = adjustListPosition(sourceCode, pos_start, pos_end);
+                        pos_start = adjusted.pos_start;
+                        pos_end = adjusted.pos_end;
+                    }
                 } else if (nodeType === 'DictNode' || nodeType === 'DictComprehensionNode') {
                     const adjusted = adjustDictPosition(sourceCode, pos_start, pos_end);
                     pos_start = adjusted.pos_start;
@@ -2396,6 +2492,357 @@ cycle x = 0 : 5 {
                     .duration(500)
                     .call(d3ZoomBehavior.transform, initialTransform);
             }
+        }
+
+        // Visual Stepper state and helper functions
+        window.executionTrace = [];
+        window.currentExecutionStep = -1;
+        window.stepperInterval = null;
+        window.stepperSpeed = 600;
+        window.previousStepVars = {};
+
+        function initExecutionStepper(trace) {
+            // Stop any running play interval
+            if (window.stepperInterval) {
+                clearInterval(window.stepperInterval);
+                window.stepperInterval = null;
+            }
+            
+            window.executionTrace = trace;
+            window.currentExecutionStep = 0;
+            window.previousStepVars = {};
+            
+            // Switch to AST tab to visualize
+            switchEduTab('ast');
+            
+            // Show stepper panel next to editor and expand sidebar width
+            const sidebar = document.getElementById('edu-info-sidebar');
+            const stepperPanel = document.getElementById('edu-stepper-panel');
+            if (sidebar && stepperPanel) {
+                if (stepperPanel.classList.contains('hidden')) {
+                    const currentWidth = sidebar.offsetWidth || 384;
+                    sidebar.style.width = `${currentWidth + 320}px`;
+                    stepperPanel.classList.remove('hidden');
+                }
+                if (eduEditorInstance) {
+                    setTimeout(() => eduEditorInstance.layout(), 50);
+                }
+            }
+            
+            // Reset play button state
+            const playIcon = document.getElementById('btn-step-play-icon');
+            if (playIcon) {
+                playIcon.setAttribute('data-lucide', 'play');
+            }
+            const playBtn = document.getElementById('btn-step-play');
+            if (playBtn) {
+                playBtn.className = "p-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white transition-all cursor-pointer flex items-center justify-center shadow-[0_0_10px_rgba(99,102,241,0.25)] active:scale-95";
+            }
+            lucide.createIcons();
+            
+            // Render first step
+            renderExecutionStep(0);
+        }
+
+        function stopExecutionStepper() {
+            if (window.stepperInterval) {
+                clearInterval(window.stepperInterval);
+                window.stepperInterval = null;
+            }
+            window.executionTrace = [];
+            window.currentExecutionStep = -1;
+            window.previousStepVars = {};
+            
+            const sidebar = document.getElementById('edu-info-sidebar');
+            const stepperPanel = document.getElementById('edu-stepper-panel');
+            if (sidebar && stepperPanel) {
+                if (!stepperPanel.classList.contains('hidden')) {
+                    const currentWidth = sidebar.offsetWidth || 704;
+                    const newWidth = Math.max(200, currentWidth - 320);
+                    sidebar.style.width = `${newWidth}px`;
+                    stepperPanel.classList.add('hidden');
+                }
+                if (eduEditorInstance) {
+                    setTimeout(() => eduEditorInstance.layout(), 50);
+                }
+            }
+            
+            // Clear Monaco execution decorations
+            if (eduEditorInstance && window.eduExecutionDecorations) {
+                window.eduExecutionDecorations = eduEditorInstance.deltaDecorations(window.eduExecutionDecorations, []);
+            }
+            
+            // Re-apply standard layout
+            resetTraversal();
+        }
+
+        function toggleExecutionPlay() {
+            const playIcon = document.getElementById('btn-step-play-icon');
+            const playBtn = document.getElementById('btn-step-play');
+            
+            if (window.stepperInterval) {
+                // Pause playback
+                clearInterval(window.stepperInterval);
+                window.stepperInterval = null;
+                if (playIcon) {
+                    playIcon.setAttribute('data-lucide', 'play');
+                    lucide.createIcons();
+                }
+                if (playBtn) playBtn.className = "p-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white transition-all cursor-pointer flex items-center justify-center shadow-[0_0_10px_rgba(99,102,241,0.25)] active:scale-95";
+            } else {
+                // Start playback
+                if (window.currentExecutionStep >= window.executionTrace.length - 1) {
+                    window.currentExecutionStep = -1; // wrap around
+                    window.previousStepVars = {};
+                }
+                
+                window.stepperInterval = setInterval(() => {
+                    if (window.currentExecutionStep < window.executionTrace.length - 1) {
+                        nextExecutionStep();
+                    } else {
+                        toggleExecutionPlay(); // pause on end
+                    }
+                }, window.stepperSpeed);
+                
+                if (playIcon) {
+                    playIcon.setAttribute('data-lucide', 'pause');
+                    lucide.createIcons();
+                }
+                if (playBtn) playBtn.className = "p-1.5 rounded bg-amber-600 hover:bg-amber-500 text-white transition-all cursor-pointer flex items-center justify-center shadow-[0_0_10px_rgba(245,158,11,0.25)] active:scale-95";
+            }
+        }
+
+        function updateStepperSpeed(val) {
+            window.stepperSpeed = parseInt(val);
+            const speedValLabel = document.getElementById('edu-stepper-speed-val');
+            if (speedValLabel) {
+                speedValLabel.innerText = `${val}ms`;
+            }
+            
+            if (window.stepperInterval) {
+                clearInterval(window.stepperInterval);
+                window.stepperInterval = setInterval(() => {
+                    if (window.currentExecutionStep < window.executionTrace.length - 1) {
+                        nextExecutionStep();
+                    } else {
+                        toggleExecutionPlay();
+                    }
+                }, window.stepperSpeed);
+            }
+        }
+
+        // Stepper control wrappers
+        window.prevExecutionStep = function() {
+            if (!window.executionTrace || window.executionTrace.length === 0) return;
+            if (window.currentExecutionStep > 0) {
+                window.previousStepVars = {};
+                renderExecutionStep(window.currentExecutionStep - 1);
+            }
+        };
+
+        window.nextExecutionStep = function() {
+            if (!window.executionTrace || window.executionTrace.length === 0) return;
+            if (window.currentExecutionStep < window.executionTrace.length - 1) {
+                renderExecutionStep(window.currentExecutionStep + 1);
+            }
+        };
+
+        window.toggleExecutionPlay = toggleExecutionPlay;
+        window.updateStepperSpeed = updateStepperSpeed;
+        window.stopExecutionStepper = stopExecutionStepper;
+
+        function renderExecutionStep(index) {
+            if (!window.executionTrace || window.executionTrace.length === 0) return;
+            if (index < 0 || index >= window.executionTrace.length) return;
+            
+            window.currentExecutionStep = index;
+            
+            // Update stepper status
+            const statusLabel = document.getElementById('edu-stepper-status');
+            if (statusLabel) {
+                statusLabel.innerText = `Step ${index + 1} / ${window.executionTrace.length}`;
+            }
+            
+            const step = window.executionTrace[index];
+            
+            // Update active node name
+            const activeNodeLabel = document.getElementById('edu-stepper-active-node');
+            if (activeNodeLabel) {
+                activeNodeLabel.innerText = step.node_type.replace("Node", "");
+            }
+            
+            // Highlight AST Tree Node in D3
+            const activeStableId = step.node_type + (step.pos_start ? `_${step.pos_start.line}_${step.pos_start.col}` : '');
+            highlightExecutionNode(activeStableId, step.pos_start, step.pos_end);
+            
+            // Highlight Monaco Editor range in green
+            if (eduEditorInstance && step.pos_start && step.pos_end) {
+                const startLine = step.pos_start.line + 1;
+                const startCol = step.pos_start.col + 1;
+                const endLine = step.pos_end.line + 1;
+                const endCol = step.pos_end.col + 1;
+                
+                if (startLine && startCol && endLine && endCol) {
+                    window.eduExecutionDecorations = eduEditorInstance.deltaDecorations(window.eduExecutionDecorations || [], [
+                        {
+                            range: new monaco.Range(startLine, startCol, endLine, endCol),
+                            options: {
+                                inlineClassName: 'monaco-execution-highlight',
+                                className: 'monaco-execution-line-highlight',
+                                isWholeLine: false,
+                                hoverMessage: { value: `**Executing**: ${step.node_type.replace("Node", "")}` }
+                            }
+                        }
+                    ]);
+                    eduEditorInstance.revealRangeInCenterIfOutsideViewport(new monaco.Range(startLine, startCol, endLine, endCol));
+                }
+            }
+            
+            // Render variables in scope
+            renderScopes(step.scopes);
+        }
+
+        function highlightExecutionNode(activeStableId, pos_start, pos_end) {
+            if (!d3Svg) return;
+            
+            let activeId = null;
+            
+            // Find the active node's SVG ID based on its stableId
+            d3Svg.selectAll(".ast-node").each(function (d) {
+                if (d.data.stableId === activeStableId) {
+                    activeId = d.data.id;
+                }
+            });
+            
+            // If not found by stableId, try finding by matching line and column position
+            if (!activeId && pos_start) {
+                d3Svg.selectAll(".ast-node").each(function (d) {
+                    if (d.data.pos_start && d.data.pos_start.line === pos_start.line && d.data.pos_start.col === pos_start.col && d.data.nodeType === activeStableId.split('_')[0]) {
+                        activeId = d.data.id;
+                    }
+                });
+            }
+            
+            if (activeId) {
+                d3Svg.selectAll(".ast-node")
+                    .style("pointer-events", "auto")
+                    .style("opacity", 1)
+                    .each(function (d) {
+                        const nodeElement = d3.select(this);
+                        if (d.data.id === activeId) {
+                            nodeElement.classed("highlighted", true).classed("muted", false);
+                        } else {
+                            nodeElement.classed("muted", true).classed("highlighted", false);
+                        }
+                    });
+                    
+                d3Svg.selectAll(".ast-link")
+                    .style("opacity", 1)
+                    .each(function (d) {
+                        const linkElement = d3.select(this);
+                        const isConnected = (d.source.data.id === activeId || d.target.data.id === activeId);
+                        if (isConnected) {
+                            linkElement.classed("highlighted", true).classed("muted", false);
+                        } else {
+                            linkElement.classed("muted", true).classed("highlighted", false);
+                        }
+                    });
+                    
+                if (d3ZoomBehavior && d3NodeCoords) {
+                    const coords = d3NodeCoords[activeId];
+                    if (coords) {
+                        const container = document.getElementById('edu-ast-tree-container');
+                        if (container) {
+                            const W = container.clientWidth || 400;
+                            const H = container.clientHeight || 500;
+                            const k = 0.85;
+                            const tx = W / 2 - k * coords.x;
+                            const ty = H / 2 - k * coords.y;
+                            
+                            d3Svg.transition()
+                                .duration(400)
+                                .ease(d3.easeCubicOut)
+                                .call(d3ZoomBehavior.transform, d3.zoomIdentity.translate(tx, ty).scale(k));
+                        }
+                    }
+                }
+            }
+        }
+
+        function renderScopes(scopes) {
+            const container = document.getElementById('edu-stepper-scopes');
+            if (!container) return;
+            
+            if (!scopes || scopes.length === 0) {
+                container.innerHTML = '<div class="text-slate-500 italic text-[11px] text-center py-4">// No variables in scope.</div>';
+                return;
+            }
+            
+            let html = "";
+            const currentVars = {};
+            
+            scopes.forEach((scope, scopeIdx) => {
+                let scopeTitle = scope.name;
+                const isGlobalScope = (scopeTitle === "<program>");
+                if (isGlobalScope) scopeTitle = "Global Scope";
+                else if (scopeIdx === 0) scopeTitle = `Local Scope (${scopeTitle})`;
+                else scopeTitle = `Enclosing Scope (${scopeTitle})`;
+                
+                html += `
+                    <div class="rounded-xl border border-slate-800/80 bg-slate-950/40 p-3 shadow-sm flex flex-col space-y-2">
+                        <div class="flex items-center space-x-1.5 text-xs font-bold text-slate-350 border-b border-slate-850/60 pb-1.5 uppercase select-none">
+                            <i data-lucide="${scopeIdx === 0 ? 'box' : 'database'}" class="h-3.5 w-3.5 text-indigo-400 shrink-0"></i>
+                            <span>${scopeTitle}</span>
+                        </div>
+                `;
+                
+                if (!scope.variables || scope.variables.length === 0) {
+                    html += `<div class="text-slate-550 italic text-[10px] pl-5 py-0.5">// No variables defined.</div>`;
+                } else {
+                    const scrollWrapperClass = isGlobalScope ? "max-h-48 overflow-y-auto pr-1" : "";
+                    html += `
+                        <div class="${scrollWrapperClass}">
+                            <div class="grid grid-cols-[1fr_auto_1.5fr] gap-x-3 gap-y-2 font-mono text-[11px] pl-1.5 pr-1 py-1">
+                    `;
+                    
+                    scope.variables.forEach(v => {
+                        const varKey = `${scopeIdx}_${scope.name}_${v.name}`;
+                        currentVars[varKey] = v.value;
+                        
+                        const prevVal = window.previousStepVars[varKey];
+                        const isUpdated = (prevVal !== undefined && prevVal !== v.value);
+                        const isNew = (prevVal === undefined && window.currentExecutionStep > 0);
+                        
+                        let highlightClass = "";
+                        if (isUpdated || isNew) {
+                            highlightClass = "animate-var-update";
+                        }
+                        
+                        let valColor = "text-slate-200";
+                        if (v.type === "Integer" || v.type === "Float") valColor = "text-amber-400 font-semibold";
+                        else if (v.type === "String") valColor = "text-emerald-400 font-semibold";
+                        else if (v.type === "List" || v.type === "Dictionary") valColor = "text-sky-400 font-bold";
+                        else if (v.type === "Boolean") valColor = "text-pink-400 font-bold";
+                        
+                        html += `
+                            <div class="truncate text-indigo-200 font-semibold select-all py-0.5 px-1 rounded ${highlightClass}">${escapeHtml(v.name)}</div>
+                            <div class="text-[9px] font-black uppercase text-slate-500 bg-slate-900 border border-slate-800 px-1.5 py-0.5 rounded self-center select-none tracking-wide">${v.type}</div>
+                            <div class="truncate select-all py-0.5 px-1.5 rounded bg-slate-950/70 border border-slate-900/60 shadow-inner font-bold ${valColor} ${highlightClass}" title="${escapeHtml(v.value)}">${escapeHtml(v.value)}</div>
+                        `;
+                    });
+                    
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                html += `</div>`;
+            });
+            
+            container.innerHTML = html;
+            window.previousStepVars = currentVars;
+            lucide.createIcons();
         }
 
         function updateTraversalBarUI() {
@@ -2733,27 +3180,43 @@ cycle x = 0 : 5 {
                     }
                 }
 
-                // Educational mode AST navigation key listeners
+                // Educational mode key listeners
                 if (window.location.hash.startsWith('#/educational')) {
-                    const astPanel = document.getElementById('edu-ast-panel');
-                    if (astPanel && !astPanel.classList.contains('hidden')) {
-                        // Check if focus is inside any text fields (input, textarea, Monaco editors)
-                        const active = document.activeElement;
-                        if (active) {
-                            const tagName = active.tagName.toLowerCase();
-                            const isInput = tagName === 'input' || tagName === 'textarea' || active.isContentEditable || active.closest('.monaco-editor');
-                            if (isInput) return;
-                        }
+                    // Check if focus is inside any text fields (input, textarea, Monaco editors)
+                    const active = document.activeElement;
+                    if (active) {
+                        const tagName = active.tagName.toLowerCase();
+                        const isInput = tagName === 'input' || tagName === 'textarea' || active.isContentEditable || active.closest('.monaco-editor');
+                        if (isInput) return;
+                    }
 
+                    const stepperActive = (window.executionTrace && window.executionTrace.length > 0 && window.currentExecutionStep >= 0);
+
+                    if (stepperActive) {
                         if (e.key === 'ArrowRight') {
                             e.preventDefault();
-                            stepTraversal(1);
+                            nextExecutionStep();
                         } else if (e.key === 'ArrowLeft') {
                             e.preventDefault();
-                            stepTraversal(-1);
+                            prevExecutionStep();
                         } else if (e.key === 'Escape') {
                             e.preventDefault();
-                            resetTraversal();
+                            stopExecutionStepper();
+                        }
+                    } else {
+                        // Regular AST traversal (only if AST panel is visible)
+                        const astPanel = document.getElementById('edu-ast-panel');
+                        if (astPanel && !astPanel.classList.contains('hidden')) {
+                            if (e.key === 'ArrowRight') {
+                                e.preventDefault();
+                                stepTraversal(1);
+                            } else if (e.key === 'ArrowLeft') {
+                                e.preventDefault();
+                                stepTraversal(-1);
+                            } else if (e.key === 'Escape') {
+                                e.preventDefault();
+                                resetTraversal();
+                            }
                         }
                     }
                 }

@@ -10,14 +10,17 @@ using namespace std;
 class ListNode final : public Node {
 public:
     vector<shared_ptr<Node>> element_nodes;
+    bool is_block = false;
 
     explicit ListNode(
         vector<shared_ptr<Node>> elements,
         optional<Position> pos_start,
-        optional<Position> pos_end
+        optional<Position> pos_end,
+        bool is_block = false
     )
         : Node(std::move(pos_start), std::move(pos_end)),
-          element_nodes(std::move(elements))
+          element_nodes(std::move(elements)),
+          is_block(is_block)
     {}
 
     [[nodiscard]] std::string to_string() const override {
