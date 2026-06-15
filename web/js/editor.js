@@ -3,14 +3,31 @@ function selectFile(filename) {
     // Save current editor content to active file before switching, but ONLY if the file still exists in our registry and is not stdlib!
     if (activeFilename && !activeFilename.startsWith('stdlib/') && virtualFiles[activeFilename] !== undefined) {
         if (editorInstance) {
-            virtualFiles[activeFilename] = editorInstance.getValue();
+            const val = editorInstance.getValue();
+            if (virtualFiles[activeFilename] !== val) {
+                virtualFiles[activeFilename] = val;
+                if (typeof virtualFileLastEdited !== 'undefined') {
+                    virtualFileLastEdited[activeFilename] = Date.now();
+                }
+            }
         }
         if (eduEditorInstance) {
-            virtualFiles[activeFilename] = eduEditorInstance.getValue();
+            const val = eduEditorInstance.getValue();
+            if (virtualFiles[activeFilename] !== val) {
+                virtualFiles[activeFilename] = val;
+                if (typeof virtualFileLastEdited !== 'undefined') {
+                    virtualFileLastEdited[activeFilename] = Date.now();
+                }
+            }
         }
     }
 
     activeFilename = filename;
+    if (filename) {
+        if (typeof virtualFileLastOpened !== 'undefined') {
+            virtualFileLastOpened[filename] = Date.now();
+        }
+    }
     updateVirtualFilesUI();
     updateRunButtonState(); // Enable/disable Run Code button based on file extension
 
@@ -234,13 +251,25 @@ require(['vs/editor/editor.main'], function () {
     // Auto-save changes back to our virtual files registry
     editorInstance.onDidChangeModelContent(() => {
         if (activeFilename && !activeFilename.startsWith('stdlib/')) {
-            virtualFiles[activeFilename] = editorInstance.getValue();
+            const val = editorInstance.getValue();
+            if (virtualFiles[activeFilename] !== val) {
+                virtualFiles[activeFilename] = val;
+                if (typeof virtualFileLastEdited !== 'undefined') {
+                    virtualFileLastEdited[activeFilename] = Date.now();
+                }
+            }
         }
     });
 
     eduEditorInstance.onDidChangeModelContent(() => {
         if (activeFilename && !activeFilename.startsWith('stdlib/')) {
-            virtualFiles[activeFilename] = eduEditorInstance.getValue();
+            const val = eduEditorInstance.getValue();
+            if (virtualFiles[activeFilename] !== val) {
+                virtualFiles[activeFilename] = val;
+                if (typeof virtualFileLastEdited !== 'undefined') {
+                    virtualFileLastEdited[activeFilename] = Date.now();
+                }
+            }
         }
     });
 

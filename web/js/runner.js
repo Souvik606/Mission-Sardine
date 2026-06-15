@@ -61,6 +61,9 @@ function initWasmWorker() {
                 // Merge worker files back into our registry
                 for (let filename in files) {
                     virtualFiles[filename] = files[filename];
+                    if (typeof virtualFileLastEdited !== 'undefined') {
+                        virtualFileLastEdited[filename] = Date.now();
+                    }
                 }
 
                 updateVirtualFilesUI();
@@ -183,7 +186,13 @@ function runCode(educationalMode = false) {
 
     // Save active editor contents to virtualFiles registry
     if (activeFilename && !activeFilename.startsWith('stdlib/')) {
-        virtualFiles[activeFilename] = currentEditor.getValue();
+        const val = currentEditor.getValue();
+        if (virtualFiles[activeFilename] !== val) {
+            virtualFiles[activeFilename] = val;
+            if (typeof virtualFileLastEdited !== 'undefined') {
+                virtualFileLastEdited[activeFilename] = Date.now();
+            }
+        }
     }
 
     // Clear terminal automatically if in educationalMode, else check toggle

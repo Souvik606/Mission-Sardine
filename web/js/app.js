@@ -20,6 +20,15 @@ var stdlibFiles = {};
 var isStdlibExpanded = false;
 var virtualFolders = [];
 var expandedFolders = new Set();
+var fileSortOrder = 'alphabetical'; // 'alphabetical', 'last-edited', or 'last-opened'
+var virtualFileLastEdited = {
+    'main.sad': Date.now()
+};
+var virtualFolderLastEdited = {};
+var virtualFileLastOpened = {
+    'main.sad': Date.now()
+};
+var virtualFolderLastOpened = {};
 
 // D3 AST Interactive Explorer State Variables
 var d3ZoomBehavior = null;
@@ -153,6 +162,9 @@ function handleRoute() {
 window.addEventListener('hashchange', handleRoute);
 window.addEventListener('DOMContentLoaded', () => {
     lucide.createIcons();
+    if (typeof updateSortButtonsUI === 'function') {
+        updateSortButtonsUI();
+    }
     handleRoute();
 });
 
@@ -258,6 +270,7 @@ function createNewFilePrompt(isEdu = false, folderPath = null, event = null) {
 
         finished = true;
         virtualFiles[fullPath] = "";
+        virtualFileLastEdited[fullPath] = Date.now();
         tempItem.remove();
         selectFile(fullPath);
     }
@@ -429,6 +442,7 @@ function createNewFolderPrompt(isEdu = false) {
 
         finished = true;
         virtualFolders.push(foldername);
+        virtualFolderLastEdited[foldername] = Date.now();
         tempItem.remove();
         updateVirtualFilesUI();
     }
@@ -501,16 +515,32 @@ function confirmDeleteFile() {
     if (isFolder) {
         // Delete this folder and all subfolders from virtualFolders list
         virtualFolders = virtualFolders.filter(f => f !== name && !f.startsWith(name + '/'));
+        delete virtualFolderLastEdited[name];
+        delete virtualFolderLastOpened[name];
+        Object.keys(virtualFolderLastEdited).forEach(f => {
+            if (f.startsWith(name + '/')) {
+                delete virtualFolderLastEdited[f];
+            }
+        });
+        Object.keys(virtualFolderLastOpened).forEach(f => {
+            if (f.startsWith(name + '/')) {
+                delete virtualFolderLastOpened[f];
+            }
+        });
 
         // Delete all files inside this folder from virtualFiles
         const prefix = name + '/';
         Object.keys(virtualFiles).forEach(file => {
             if (file.startsWith(prefix)) {
                 delete virtualFiles[file];
+                delete virtualFileLastEdited[file];
+                delete virtualFileLastOpened[file];
             }
         });
     } else {
         delete virtualFiles[name];
+        delete virtualFileLastEdited[name];
+        delete virtualFileLastOpened[name];
     }
 
     if (activeFilename && (activeFilename === name || activeFilename.startsWith(name + '/'))) {
@@ -596,7 +626,7 @@ function updateVirtualFilesUI() {
         const isActive = (path === activeFilename);
         const item = document.createElement('div');
 
-        const activeClass = 'bg-gradient-to-r from-indigo-500/15 via-purple-500/10 to-indigo-500/5 border-indigo-500/50 border-l-4 border-l-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.15)] translate-x-1';
+        const activeClass = 'bg-gradient-to-r from-indigo-500/15 via-purple-500/10 to-indigo-500/5 border-indigo-500/50 translate-x-1';
         const inactiveClass = 'bg-slate-900/40 border-slate-800/80 hover:border-indigo-500/40 hover:bg-slate-950/60 hover:translate-x-1';
 
         item.className = `p-2.5 rounded-xl border flex items-center justify-between text-xs cursor-pointer transition-all duration-300 group ${isActive ? activeClass : inactiveClass}`;
@@ -650,6 +680,9 @@ function updateVirtualFilesUI() {
                 expandedFolders.delete(folderNode.path);
             } else {
                 expandedFolders.add(folderNode.path);
+                if (typeof virtualFolderLastOpened !== 'undefined') {
+                    virtualFolderLastOpened[folderNode.path] = Date.now();
+                }
             }
             updateVirtualFilesUI();
         };
@@ -718,14 +751,79 @@ function updateVirtualFilesUI() {
         }
     }
 
+    function getFolderLastEdited(folderNode) {
+        let maxTime = virtualFolderLastEdited[folderNode.path] || 0;
+        folderNode.files.forEach(file => {
+            maxTime = Math.max(maxTime, virtualFileLastEdited[file.path] || 0);
+        });
+        Object.keys(folderNode.folders).forEach(key => {
+            maxTime = Math.max(maxTime, getFolderLastEdited(folderNode.folders[key]));
+        });
+        return maxTime;
+    }
+
+    function getFolderLastOpened(folderNode) {
+        let maxTime = virtualFolderLastOpened[folderNode.path] || 0;
+        folderNode.files.forEach(file => {
+            maxTime = Math.max(maxTime, virtualFileLastOpened[file.path] || 0);
+        });
+        Object.keys(folderNode.folders).forEach(key => {
+            maxTime = Math.max(maxTime, getFolderLastOpened(folderNode.folders[key]));
+        });
+        return maxTime;
+    }
+
     function renderNode(parentEl, node, depth) {
         // 1. Render subfolders
-        Object.keys(node.folders).sort().forEach(key => {
+        const folderKeys = Object.keys(node.folders);
+        if (fileSortOrder === 'last-edited') {
+            folderKeys.sort((a, b) => {
+                const timeA = getFolderLastEdited(node.folders[a]);
+                const timeB = getFolderLastEdited(node.folders[b]);
+                if (timeB !== timeA) {
+                    return timeB - timeA;
+                }
+                return a.localeCompare(b);
+            });
+        } else if (fileSortOrder === 'last-opened') {
+            folderKeys.sort((a, b) => {
+                const timeA = getFolderLastOpened(node.folders[a]);
+                const timeB = getFolderLastOpened(node.folders[b]);
+                if (timeB !== timeA) {
+                    return timeB - timeA;
+                }
+                return a.localeCompare(b);
+            });
+        } else {
+            folderKeys.sort();
+        }
+        folderKeys.forEach(key => {
             renderUserFolder(parentEl, node.folders[key], depth);
         });
 
         // 2. Render files
-        node.files.sort((a, b) => a.name.localeCompare(b.name)).forEach(file => {
+        if (fileSortOrder === 'last-edited') {
+            node.files.sort((a, b) => {
+                const timeA = virtualFileLastEdited[a.path] || 0;
+                const timeB = virtualFileLastEdited[b.path] || 0;
+                if (timeB !== timeA) {
+                    return timeB - timeA;
+                }
+                return a.name.localeCompare(b.name);
+            });
+        } else if (fileSortOrder === 'last-opened') {
+            node.files.sort((a, b) => {
+                const timeA = virtualFileLastOpened[a.path] || 0;
+                const timeB = virtualFileLastOpened[b.path] || 0;
+                if (timeB !== timeA) {
+                    return timeB - timeA;
+                }
+                return a.name.localeCompare(b.name);
+            });
+        } else {
+            node.files.sort((a, b) => a.name.localeCompare(b.name));
+        }
+        node.files.forEach(file => {
             renderFileItem(parentEl, file.name, file.path, depth, false);
         });
     }
@@ -768,8 +866,44 @@ function updateVirtualFilesUI() {
 function clearVirtualFiles() {
     virtualFiles = {};
     virtualFolders = [];
+    virtualFileLastEdited = {};
+    virtualFolderLastEdited = {};
+    virtualFileLastOpened = {};
+    virtualFolderLastOpened = {};
     selectFile(null);
     writeToTerminal("// Sandbox filesystem cleared.");
+}
+
+function updateSortButtonsUI() {
+    const btnIds = ['btn-sort-toggle', 'edu-btn-sort-toggle'];
+    btnIds.forEach(id => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        
+        if (fileSortOrder === 'alphabetical') {
+            btn.title = 'Sort: Alphabetical Order (Click to sort by Last Edited)';
+            btn.className = 'p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-900 rounded transition-all cursor-pointer active:scale-90';
+        } else if (fileSortOrder === 'last-edited') {
+            btn.title = 'Sort: Last Edited first (Click to sort by Last Opened)';
+            btn.className = 'p-1.5 text-emerald-400 hover:text-emerald-300 hover:bg-slate-900 rounded transition-all cursor-pointer active:scale-90';
+        } else {
+            btn.title = 'Sort: Last Opened first (Click to sort Alphabetically)';
+            btn.className = 'p-1.5 text-indigo-400 hover:text-indigo-300 hover:bg-slate-900 rounded transition-all cursor-pointer active:scale-90';
+        }
+    });
+}
+
+function toggleFileSorting() {
+    if (fileSortOrder === 'alphabetical') {
+        fileSortOrder = 'last-edited';
+    } else if (fileSortOrder === 'last-edited') {
+        fileSortOrder = 'last-opened';
+    } else {
+        fileSortOrder = 'alphabetical';
+    }
+    
+    updateSortButtonsUI();
+    updateVirtualFilesUI();
 }
 
 // Pop-up File Viewer details
