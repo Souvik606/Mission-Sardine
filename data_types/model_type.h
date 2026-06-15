@@ -13,6 +13,7 @@ using namespace std;
 class Interpreter;
 class ModelInstance;
 class FunctionDefinitionNode;
+class Function;
 
 struct AttrInfo {
     string name;
@@ -35,9 +36,11 @@ public:
     vector<shared_ptr<Node>> attr_node_list;
 
     shared_ptr<Node> init_node;
+    mutable shared_ptr<Function> init_func_proto = nullptr;
 
     unordered_map<string, MethodInfo> own_method_nodes;
     vector<shared_ptr<ModelType>> parents;
+    shared_ptr<Context> closure_context;
 
     ModelType(string n,
               vector<AttrInfo> own_attrs,
@@ -124,19 +127,30 @@ public:
         return result;
     }
 
+    [[nodiscard]] bool is_callable_type() const override { return true; }
+    [[nodiscard]] bool is_model_type() const override { return true; }
+
     [[nodiscard]] bool is_truthy() const override { return true; }
 
     [[nodiscard]] OperationResult is_true() const override
     {
-        auto r = make_shared<Number>(1LL);
+        auto r = Number::make(1LL);
         r->set_context(context).set_pos(pos_start, pos_end);
         return {r, nullptr};
+    }
+
+    DataType& set_context(const shared_ptr<Context>& ctx) override {
+        if (!this->closure_context) {
+            this->closure_context = ctx;
+            this->context = ctx;
+        }
+        return *this;
     }
 
     [[nodiscard]] shared_ptr<DataType> copy() const override
     {
         auto c = make_shared<ModelType>(name, own_attributes, attr_node_list, init_node, own_method_nodes, parents);
-        c->set_context(context).set_pos(pos_start, pos_end);
+        c->set_context(this->closure_context).set_pos(pos_start, pos_end);
         return c;
     }
 
@@ -213,10 +227,11 @@ public:
     }
 
     [[nodiscard]] bool is_truthy() const override { return true; }
+    [[nodiscard]] bool is_model_instance() const override { return true; }
 
     [[nodiscard]] OperationResult is_true() const override
     {
-        auto r = make_shared<Number>(1LL);
+        auto r = Number::make(1LL);
         r->set_context(context).set_pos(pos_start, pos_end);
         return {r, nullptr};
     }
@@ -264,4 +279,5 @@ public:
 
 private:
     [[nodiscard]] OperationResult err(const string &op) const;
+    mutable std::unordered_map<string, shared_ptr<Function>> method_cache;
 };

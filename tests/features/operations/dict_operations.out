@@ -16,13 +16,13 @@ has_key('y'): True
 has_key('missing'): False
 --- pop() method ---
 pop('z'): 300
-dict after pop: {'x': 100, 'y': 200, 'z': 300}
+dict after pop: {'x': 100, 'y': 200}
 pop('missing' with default): 555
 --- pop_item() method ---
 pop_item(): ['second', 2]
-dict after pop_item: {'first': 1, 'second': 2}
+dict after pop_item: {'first': 1}
 --- update() method ---
-after update: {'a': 1}
+after update: {'a': 1, 'b': 2, 'c': 3}
 --- copy() and clear() ---
-original after clear: {'a': 10}
+original after clear: {}
 copy is preserved: {'a': 10}

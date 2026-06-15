@@ -11,10 +11,10 @@ original a: [1, 2, 3]
 after append: [1, 2, 3, 4]
 after prepend: [0, 1, 2, 3, 4]
 after insert: [0, 1, 99, 2, 3, 4]
-popped last: 4 list now: [0, 1, 99, 2, 3, 4]
-popped index 2: 99 list now: [0, 1, 99, 2, 3, 4]
-after remove(2): [0, 1, 99, 3, 4]
-after extend: [0, 1, 99, 3, 4, 5, 6, 7]
+popped last: 4 list now: [0, 1, 99, 2, 3]
+popped index 2: 99 list now: [0, 1, 2, 3]
+after remove(2): [0, 1, 3]
+after extend: [0, 1, 3, 5, 6, 7]
 original b: [3, 1, 4, 1, 5, 9]
 sorted b: [1, 1, 3, 4, 5, 9]
 sorted desc b: [9, 5, 4, 3, 1, 1]
@@ -55,8 +55,8 @@ d.get('nonexistent', 'default_val'): default_val
 d.get('nonexistent'): 0
 d.has_key('type'): True
 d.contains('nonexistent'): False
-popped type: language d now: {'name': 'Sardine', 'type': 'language', 'version': 1}
+popped type: language d now: {'name': 'Sardine', 'version': 1}
 popped nonexistent: not_found
-popped item: ['version', 1] d now: {'name': 'Sardine', 'type': 'language', 'version': 1}
-after update: {'name': 'Sardine', 'type': 'language', 'version': 2, 'status': 'active'}
-cleared d_copy: {} original d untouched: {'name': 'Sardine', 'type': 'language', 'version': 2, 'status': 'active'}
+popped item: ['version', 1] d now: {'name': 'Sardine'}
+after update: {'name': 'Sardine', 'version': 2, 'status': 'active'}
+cleared d_copy: {} original d untouched: {'name': 'Sardine', 'version': 2, 'status': 'active'}

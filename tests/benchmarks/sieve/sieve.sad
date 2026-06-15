@@ -1,0 +1,28 @@
+method sieve(n) {
+    limit = n + 1
+    primes = [True] * limit
+    primes[0] = False
+    primes[1] = False
+    
+    i = 2
+    during i * i <= n {
+        when primes[i] {
+            j = i * i
+            during j <= n {
+                primes[j] = False
+                j = j + i
+            }
+        }
+        i = i + 1
+    }
+    
+    count = 0
+    cycle k = 2:n {
+        when primes[k] {
+            count = count + 1
+        }
+    }
+    yield count
+}
+
+show("primes up to 1000000 =", sieve(1000000))

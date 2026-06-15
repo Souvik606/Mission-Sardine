@@ -8,12 +8,51 @@ using namespace std;
 
 class DataType;
 class Number;
+class Context;
+
+class ContextRef {
+private:
+    std::weak_ptr<Context> ptr;
+public:
+    ContextRef() = default;
+    ContextRef(const std::shared_ptr<Context>& s) : ptr(s) {}
+    ContextRef(std::shared_ptr<Context>&& s) : ptr(std::move(s)) {}
+    ContextRef(const ContextRef&) = default;
+    ContextRef(ContextRef&&) = default;
+
+    ContextRef& operator=(const std::shared_ptr<Context>& s) {
+        ptr = s;
+        return *this;
+    }
+    ContextRef& operator=(std::shared_ptr<Context>&& s) {
+        ptr = std::move(s);
+        return *this;
+    }
+    ContextRef& operator=(const ContextRef&) = default;
+    ContextRef& operator=(ContextRef&&) = default;
+
+    operator std::shared_ptr<Context>() const {
+        return ptr.lock();
+    }
+
+    operator bool() const {
+        return !ptr.expired();
+    }
+
+    std::shared_ptr<Context> operator->() const {
+        return ptr.lock();
+    }
+
+    std::shared_ptr<Context> lock() const {
+        return ptr.lock();
+    }
+};
 
 class DataType {
 public:
     optional<Position> pos_start;
     optional<Position> pos_end;
-    shared_ptr<Context> context;
+    ContextRef context;
 
     virtual ~DataType() = default;
 
@@ -42,7 +81,21 @@ public:
     [[nodiscard]] virtual string to_string() const = 0;
 
     [[nodiscard]] virtual bool is_truthy() const = 0;
+    [[nodiscard]] virtual bool is_mutable() const { return false; }
     [[nodiscard]] virtual bool is_dict() const { return false; }
+    [[nodiscard]] virtual bool is_callable_type() const { return false; }
+    [[nodiscard]] virtual bool is_number() const { return false; }
+    [[nodiscard]] virtual bool is_string() const { return false; }
+    [[nodiscard]] virtual bool is_list() const { return false; }
+    [[nodiscard]] virtual bool is_model_instance() const { return false; }
+    [[nodiscard]] virtual bool is_function() const { return false; }
+    [[nodiscard]] virtual bool is_builtin_function() const { return false; }
+    [[nodiscard]] virtual bool is_bound_method() const { return false; }
+    [[nodiscard]] virtual bool is_model_type() const { return false; }
+    [[nodiscard]] virtual bool is_super_proxy() const { return false; }
+    [[nodiscard]] virtual bool is_file() const { return false; }
+    [[nodiscard]] virtual bool is_module() const { return false; }
+    [[nodiscard]] virtual bool is_null() const { return false; }
 
     [[nodiscard]] virtual OperationResult is_true() const = 0;
     [[nodiscard]] virtual OperationResult add(const shared_ptr<DataType>& other) const = 0;
@@ -109,6 +162,8 @@ public:
     [[nodiscard]] string get_type_name() const override {
         return "BoundMethod";
     }
+
+    [[nodiscard]] bool is_bound_method() const override { return true; }
 
     [[nodiscard]] bool is_truthy() const override { return true; }
     [[nodiscard]] OperationResult is_true() const override;

@@ -6,6 +6,7 @@
 #include "string_type.h"
 #include "null_type.h"
 #include "../language_core/error.h"
+#include "../language_core/constants.h"
 
 using namespace std;
 
@@ -37,7 +38,7 @@ struct FileDescriptor {
         string result;
         char buf[4096];
         while (fgets(buf, sizeof(buf), fp)) {
-            if (result.length() + strlen(buf) > 10000000) {
+            if (!UNBOUNDED_MODE && result.length() + strlen(buf) > 10000000) {
                 throw std::length_error("File read size limit exceeded (max 10MB)");
             }
             result += buf;
@@ -75,6 +76,8 @@ public:
         : filepath(std::move(filepath)), mode(std::move(mode)), descriptor(std::move(desc)) {}
 
     [[nodiscard]] string get_type_name() const override { return "File"; }
+
+    [[nodiscard]] bool is_file() const override { return true; }
 
     // Truthiness: open file is truthy, closed is falsy (matches Python: not Null -> True)
     [[nodiscard]] bool is_truthy() const override {
@@ -323,7 +326,7 @@ public:
         while (fgets(buf, sizeof(buf), descriptor->fp)) {
             size_t len = strlen(buf);
             total_bytes += len;
-            if (total_bytes > 10000000) {
+            if (!UNBOUNDED_MODE && total_bytes > 10000000) {
                 throw std::length_error("File read size limit exceeded (max 10MB)");
             }
             lines.emplace_back(buf);

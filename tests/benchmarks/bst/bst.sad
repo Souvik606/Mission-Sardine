@@ -1,0 +1,78 @@
+model Node {
+    open attr <value, left, right>
+    
+    init(value) {
+        value: value,
+        left: False,
+        right: False
+    }
+}
+
+model BST {
+    open attr <root>
+    
+    init() {
+        root: False
+    }
+    
+    method insert(value) {
+        when root == False {
+            root = Node(value)
+        } otherwise {
+            insert_node(root, value)
+        }
+    }
+    
+    method insert_node(current, value) {
+        when value < current.value {
+            when current.left == False {
+                current.left = Node(value)
+            } otherwise {
+                insert_node(current.left, value)
+            }
+        } otherwise {
+            when current.right == False {
+                current.right = Node(value)
+            } otherwise {
+                insert_node(current.right, value)
+            }
+        }
+    }
+    
+    method search(value) {
+        yield search_node(root, value)
+    }
+    
+    method search_node(current, value) {
+        when current == False {
+            yield False
+        }
+        when current.value == value {
+            yield True
+        }
+        when value < current.value {
+            yield search_node(current.left, value)
+        } otherwise {
+            yield search_node(current.right, value)
+        }
+    }
+}
+
+method run_bst(n) {
+    bst = BST()
+    cycle i = 1:n {
+        val = (i * 17) % n
+        bst.insert(val)
+    }
+    
+    count = 0
+    cycle i = 1:n {
+        val = (i * 17) % n
+        when bst.search(val) {
+            count = count + 1
+        }
+    }
+    yield count
+}
+
+show("bst count =", run_bst(1000))

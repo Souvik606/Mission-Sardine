@@ -33,6 +33,10 @@ public:
     {
     }
 
+    [[nodiscard]] int get_node_type() const override {
+        return NODE_FOR;
+    }
+
     [[nodiscard]] std::string to_string() const override {
         stringstream ss;
         ss << "(FOR " << any_cast<string>(var_name_tok.value)

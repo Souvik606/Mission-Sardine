@@ -1493,7 +1493,7 @@ private:
         res.register_advancement();
         advance();
 
-        auto node = make_shared<WhileNode>(condition, body_node, false);
+        auto node = make_shared<WhileNode>(condition, body_node, true);
         node->pos_end = get_last_parsed_pos_end();
         return res.success(node);
     }
@@ -1631,7 +1631,7 @@ private:
         res.register_advancement();
         advance();
 
-        auto node = make_shared<ForNode>(var_name, start_value, end_value, step_value, body_node, false);
+        auto node = make_shared<ForNode>(var_name, start_value, end_value, step_value, body_node, true);
         node->pos_end = get_last_parsed_pos_end();
         return res.success(node);
     }

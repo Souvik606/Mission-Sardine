@@ -94,6 +94,9 @@ struct ExecutionTraceStep {
 
 inline vector<ExecutionTraceStep> EXECUTION_TRACE;
 
+inline bool PROFILE_MODE = false;
+inline bool TIME_PROFILE_MODE = false;
+inline bool MEMORY_PROFILE_MODE = false;
 
 const vector<string> KEYWORDS = {
     "define", "and", "or", "not","when","orwhen","otherwise","cycle",

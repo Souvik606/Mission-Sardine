@@ -14,6 +14,10 @@ public:
         : Node(token.pos_start, token.pos_end), token(std::move(token)) {
     }
 
+    [[nodiscard]] int get_node_type() const override {
+        return NODE_NUMBER;
+    }
+
     [[nodiscard]] std::string to_string() const override {
         return token.to_string();
     }
@@ -29,6 +33,10 @@ public:
         operator_token(std::move(op)),
         node(std::move(n)) {
         this->depth = 1 + node->depth;
+    }
+
+    [[nodiscard]] int get_node_type() const override {
+        return NODE_UNARY_OPERATION;
     }
 
     [[nodiscard]] std::string to_string() const override {
@@ -50,6 +58,10 @@ public:
         this->depth = 1 + max(left_node->depth, right_node->depth);
     }
 
+    [[nodiscard]] int get_node_type() const override {
+        return NODE_BINARY_OPERATION;
+    }
+
     [[nodiscard]] std::string to_string() const override {
         return "(" + left_node->to_string() + ", " + operator_token.to_string() + ", " + right_node->to_string() + ")";
     }
@@ -67,6 +79,10 @@ public:
         true_node(std::move(true_n)),
         false_node(std::move(false_n)) {
         this->depth = 1 + max({comp_node->depth, true_node->depth, false_node->depth});
+    }
+
+    [[nodiscard]] int get_node_type() const override {
+        return NODE_TERNARY_OPERATION;
     }
 
     [[nodiscard]] std::string to_string() const override {
