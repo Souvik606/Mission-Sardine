@@ -853,7 +853,7 @@ function updateVirtualFilesUI() {
                 <div class="text-slate-500 italic p-6 text-center border border-dashed border-slate-800/60 rounded-xl flex flex-col items-center justify-center space-y-2 bg-slate-950/20 backdrop-blur-sm">
                     <i data-lucide="archive" class="h-6 w-6 text-slate-600 animate-pulse"></i>
                     <div class="flex flex-col space-y-0.5">
-                        <p class="text-xs font-bold text-slate-400 font-sans tracking-wide">FILE INVENTORY EMPTY</p>
+                        <p class="text-xs font-bold text-slate-400 font-sans tracking-wide">NO FILES</p>
                         <p class="text-[10px] text-slate-500 font-sans">Summon a file to begin your quest.</p>
                     </div>
                 </div>
