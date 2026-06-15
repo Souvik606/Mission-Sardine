@@ -1,13 +1,24 @@
+#ifdef _WIN32
+#define NOMINMAX
+#include <windows.h>
+#include <psapi.h>
+#else
+#include <sys/resource.h>
+#include <unistd.h>
+#endif
+
 #include <bits/stdc++.h>
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <chrono>
 
 #include "language_core/error.h"
 #include "language_core/constants.h"
 #include "language_core/lexer.h"
 #include "ast_results/parse_result.h"
 #include "language_core/parser.h"
+#include "ast_nodes/node_json.h"
 #include "ast_results/runtime_result.h"
 #include "language_core/interpreter.h"
 #include "language_core/context.h"
@@ -79,7 +90,6 @@ RunTimeResult builtin_show(const Position& pos_start, const Position& pos_end, c
     }
     ss << end_char;
     cout << ss.str();
-    cout.flush();
     return RunTimeResult().success(make_shared<Null>());
 }
 
@@ -170,13 +180,13 @@ RunTimeResult builtin_integer(const Position& pos_start, const Position& pos_end
             }
         }
         long long int_val = std::visit([](auto v) { return static_cast<long long>(v); }, num->value);
-        return RunTimeResult().success(make_shared<Number>(int_val, false, false));
+        return RunTimeResult().success(Number::make(int_val, false, false));
     }
 
     if (const auto str = dynamic_pointer_cast<String>(value)) {
         try {
             long long int_val = stoll(str->value);
-            return RunTimeResult().success(make_shared<Number>(int_val, false, false));
+            return RunTimeResult().success(Number::make(int_val, false, false));
         }
         catch (...) {
             return RunTimeResult().failure(ArgumentError(
@@ -207,13 +217,13 @@ RunTimeResult builtin_float(const Position& pos_start, const Position& pos_end, 
 
     if (const auto num = dynamic_pointer_cast<Number>(value)) {
         double d_val = std::visit([](auto v) { return static_cast<double>(v); }, num->value);
-        return RunTimeResult().success(make_shared<Number>(d_val, true));
+        return RunTimeResult().success(Number::make_double(d_val));
     }
 
     if (const auto str = dynamic_pointer_cast<String>(value)) {
         try {
             double d_val = stod(str->value);
-            return RunTimeResult().success(make_shared<Number>(d_val, true));
+            return RunTimeResult().success(Number::make_double(d_val));
         }
         catch (...) {
             return RunTimeResult().failure(ArgumentError(
@@ -341,11 +351,11 @@ RunTimeResult builtin_is_a(const Position& pos_start, const Position& pos_end, c
     auto model_inst = dynamic_pointer_cast<ModelInstance>(obj);
     if (!model_inst) {
         // Primitive types are never instances of any user-defined model
-        return RunTimeResult().success(make_shared<Number>(0LL));
+        return RunTimeResult().success(Number::make(0LL));
     }
 
     bool result = model_inst->model->is_descendant_of(model_class);
-    return RunTimeResult().success(make_shared<Number>(result ? 1LL : 0LL));
+    return RunTimeResult().success(Number::make(result ? 1LL : 0LL));
 }
 
 bool is_integer(const shared_ptr<DataType>& arg, long long& out_val) {
@@ -434,13 +444,13 @@ RunTimeResult builtin_len(const Position& pos_start, const Position& pos_end, co
 
     auto arg = args[0];
     if (auto list_val = dynamic_pointer_cast<List>(arg)) {
-        return RunTimeResult().success(make_shared<Number>(static_cast<long long>(list_val->elements.size())));
+        return RunTimeResult().success(Number::make(static_cast<long long>(list_val->elements.size())));
     }
     if (auto str_val = dynamic_pointer_cast<String>(arg)) {
-        return RunTimeResult().success(make_shared<Number>(static_cast<long long>(str_val->value.length())));
+        return RunTimeResult().success(Number::make(static_cast<long long>(str_val->value.length())));
     }
     if (auto dict_val = dynamic_pointer_cast<Dict>(arg)) {
-        return RunTimeResult().success(make_shared<Number>(static_cast<long long>(dict_val->elements.size())));
+        return RunTimeResult().success(Number::make(static_cast<long long>(dict_val->elements.size())));
     }
     if (auto inst_val = dynamic_pointer_cast<ModelInstance>(arg)) {
         auto [len_result, len_error] = inst_val->_call_op_method("__len__", {});
@@ -577,7 +587,7 @@ RunTimeResult builtin_range(const Position& pos_start, const Position& pos_end, 
         num_elements_double = std::ceil(diff / std::abs(step));
     }
 
-    if (num_elements_double > 1000000.0) {
+    if (!UNBOUNDED_MODE && num_elements_double > 1000000.0) {
         return RunTimeResult().failure(ValueError(
             args.front()->pos_start.value_or(Position()), args.back()->pos_end.value_or(Position()),
             "range() limit exceeded (size " + format_double_as_clean_int(num_elements_double) + " > 1,000,000 limit)",
@@ -633,14 +643,14 @@ RunTimeResult builtin_range(const Position& pos_start, const Position& pos_end, 
     long long current = start_ll;
     if (step_ll > 0) {
         while (current < end_ll) {
-            auto num_obj = make_shared<Number>(current);
+            auto num_obj = Number::make(current);
             num_obj->set_context(context);
             elements.push_back(num_obj);
             current += step_ll;
         }
     } else {
         while (current > end_ll) {
-            auto num_obj = make_shared<Number>(current);
+            auto num_obj = Number::make(current);
             num_obj->set_context(context);
             elements.push_back(num_obj);
             current += step_ll;
@@ -774,6 +784,141 @@ RunTimeResult builtin_fopen(const Position& pos_start, const Position& pos_end, 
     file_obj->set_context(context);
     return RunTimeResult().success(file_obj);
 }
+#ifdef _WIN32
+typedef BOOL (WINAPI *GetProcessMemoryInfoProc)(HANDLE, PPROCESS_MEMORY_COUNTERS, DWORD);
+#endif
+
+size_t get_memory_usage() {
+#ifdef _WIN32
+    PROCESS_MEMORY_COUNTERS pmc;
+    HMODULE hPsapi = LoadLibraryA("psapi.dll");
+    if (hPsapi) {
+        GetProcessMemoryInfoProc proc = (GetProcessMemoryInfoProc)GetProcAddress(hPsapi, "GetProcessMemoryInfo");
+        if (proc) {
+            if (proc(GetCurrentProcess(), &pmc, sizeof(pmc))) {
+                FreeLibrary(hPsapi);
+                return pmc.WorkingSetSize;
+            }
+        }
+        FreeLibrary(hPsapi);
+    }
+    return 0;
+#else
+    struct rusage usage;
+    if (getrusage(RUSAGE_SELF, &usage) == 0) {
+#ifdef __APPLE__
+        return usage.ru_maxrss;
+#else
+        return usage.ru_maxrss * 1024;
+#endif
+    }
+    return 0;
+#endif
+}
+
+struct ProfileGuard {
+    chrono::high_resolution_clock::time_point lex_start;
+    chrono::high_resolution_clock::time_point lex_end;
+    chrono::high_resolution_clock::time_point parse_start;
+    chrono::high_resolution_clock::time_point parse_end;
+    chrono::high_resolution_clock::time_point interpret_start;
+    chrono::high_resolution_clock::time_point interpret_end;
+
+    size_t lex_mem_start = 0;
+    size_t lex_mem_end = 0;
+    size_t parse_mem_start = 0;
+    size_t parse_mem_end = 0;
+    size_t interpret_mem_start = 0;
+    size_t interpret_mem_end = 0;
+
+    bool has_lex_end = false;
+    bool has_parse_start = false;
+    bool has_parse_end = false;
+    bool has_interpret_start = false;
+    bool has_interpret_end = false;
+
+    ProfileGuard() {
+        if (TIME_PROFILE_MODE) {
+            lex_start = chrono::high_resolution_clock::now();
+        }
+        if (MEMORY_PROFILE_MODE) {
+            lex_mem_start = get_memory_usage();
+        }
+    }
+
+    void mark_lex_end() {
+        if (TIME_PROFILE_MODE) {
+            lex_end = chrono::high_resolution_clock::now();
+        }
+        if (MEMORY_PROFILE_MODE) {
+            lex_mem_end = get_memory_usage();
+        }
+        has_lex_end = true;
+    }
+
+    void mark_parse_start() {
+        if (TIME_PROFILE_MODE) {
+            parse_start = chrono::high_resolution_clock::now();
+        }
+        if (MEMORY_PROFILE_MODE) {
+            parse_mem_start = get_memory_usage();
+        }
+        has_parse_start = true;
+    }
+
+    void mark_parse_end() {
+        if (TIME_PROFILE_MODE) {
+            parse_end = chrono::high_resolution_clock::now();
+        }
+        if (MEMORY_PROFILE_MODE) {
+            parse_mem_end = get_memory_usage();
+        }
+        has_parse_end = true;
+    }
+
+    void mark_interpret_start() {
+        if (TIME_PROFILE_MODE) {
+            interpret_start = chrono::high_resolution_clock::now();
+        }
+        if (MEMORY_PROFILE_MODE) {
+            interpret_mem_start = get_memory_usage();
+        }
+        has_interpret_start = true;
+    }
+
+    void mark_interpret_end() {
+        if (TIME_PROFILE_MODE) {
+            interpret_end = chrono::high_resolution_clock::now();
+        }
+        if (MEMORY_PROFILE_MODE) {
+            interpret_mem_end = get_memory_usage();
+        }
+        has_interpret_end = true;
+    }
+
+    ~ProfileGuard() {
+        if (TIME_PROFILE_MODE && MEMORY_PROFILE_MODE) {
+            double lex_dur = has_lex_end ? chrono::duration<double, milli>(lex_end - lex_start).count() : 0.0;
+            double parse_dur = has_parse_end ? chrono::duration<double, milli>(parse_end - parse_start).count() : 0.0;
+            double interpret_dur = has_interpret_end ? chrono::duration<double, milli>(interpret_end - interpret_start).count() : 0.0;
+            double lex_mem = has_lex_end ? (double)(lex_mem_end - lex_mem_start) / 1024.0 : 0.0;
+            double parse_mem = has_parse_end ? (double)(parse_mem_end - parse_mem_start) / 1024.0 : 0.0;
+            double interpret_mem = has_interpret_end ? (double)(interpret_mem_end - interpret_mem_start) / 1024.0 : 0.0;
+            cerr << "{\"profile\": {\"lex_ms\": " << lex_dur << ", \"parse_ms\": " << parse_dur << ", \"interpret_ms\": " << interpret_dur
+                 << ", \"lex_kb\": " << lex_mem << ", \"parse_kb\": " << parse_mem << ", \"interpret_kb\": " << interpret_mem << "}}" << endl;
+        } else if (TIME_PROFILE_MODE) {
+            double lex_dur = has_lex_end ? chrono::duration<double, milli>(lex_end - lex_start).count() : 0.0;
+            double parse_dur = has_parse_end ? chrono::duration<double, milli>(parse_end - parse_start).count() : 0.0;
+            double interpret_dur = has_interpret_end ? chrono::duration<double, milli>(interpret_end - interpret_start).count() : 0.0;
+            cerr << "{\"profile\": {\"lex_ms\": " << lex_dur << ", \"parse_ms\": " << parse_dur << ", \"interpret_ms\": " << interpret_dur << "}}" << endl;
+        } else if (MEMORY_PROFILE_MODE) {
+            double lex_mem = has_lex_end ? (double)(lex_mem_end - lex_mem_start) / 1024.0 : 0.0;
+            double parse_mem = has_parse_end ? (double)(parse_mem_end - parse_mem_start) / 1024.0 : 0.0;
+            double interpret_mem = has_interpret_end ? (double)(interpret_mem_end - interpret_mem_start) / 1024.0 : 0.0;
+            cerr << "{\"profile\": {\"lex_kb\": " << lex_mem << ", \"parse_kb\": " << parse_mem << ", \"interpret_kb\": " << interpret_mem << "}}" << endl;
+        }
+    }
+};
 
 struct RunResult {
     shared_ptr<DataType> value = nullptr;
@@ -782,25 +927,124 @@ struct RunResult {
 
 RunResult run(const string& filename, const string& text) {
     RunResult out;
+    ProfileGuard profile_guard;
     try {
         Lexer lexer(filename, text);
         auto [tokens, lexer_error] = lexer.enumerate_tokens();
+        profile_guard.mark_lex_end();
+
+        if (EDUCATIONAL_MODE) {
+            cout << "--- EDUCATIONAL_MODE_OUTPUT_START ---" << endl;
+            if (JSON_OUTPUT) {
+                if (lexer_error) {
+                    cout << "{\"tokens\":null,\"ast\":null,\"error\":" << error_to_json(lexer_error) << "}" << endl;
+                    cout << "--- EDUCATIONAL_MODE_OUTPUT_END ---" << endl;
+                    out.error = lexer_error;
+                    return out;
+                }
+                
+                vector<Token> tokens_copy = tokens;
+                profile_guard.mark_parse_start();
+                Parser parser(std::move(tokens));
+                ParseResult ast = parser.parse();
+                profile_guard.mark_parse_end();
+
+                string ast_json = "null";
+                string err_json = "null";
+                if (ast.error) {
+                    err_json = error_to_json(ast.error);
+                } else if (ast.node) {
+                    ast_json = node_to_json(ast.node);
+                }
+
+                cout << "{\"tokens\":" << token_vector_to_json(tokens_copy)
+                     << ",\"ast\":" << ast_json
+                     << ",\"error\":" << err_json << "}" << endl;
+                cout << "--- EDUCATIONAL_MODE_OUTPUT_END ---" << endl;
+
+                if (ast.error) {
+                    out.error = ast.error;
+                    return out;
+                }
+
+                profile_guard.mark_interpret_start();
+                Interpreter interpreter;
+                auto context = make_shared<Context>("<program>");
+                context->symbol_table = global_symbol_table;
+                RunTimeResult result = interpreter.visit(ast.node, context);
+                profile_guard.mark_interpret_end();
+
+                out.value = result.value;
+                out.error = result.error;
+                return out;
+            } else {
+                if (lexer_error) {
+                    cout << "--- Tokens ---" << endl;
+                    cout << "[Lexer Error: " << lexer_error->details << "]" << endl;
+                    cout << "--- EDUCATIONAL_MODE_OUTPUT_END ---" << endl;
+                    out.error = lexer_error;
+                    return out;
+                }
+
+                cout << "--- Tokens ---" << endl;
+                for (const auto& token : tokens) {
+                    cout << token.to_string() << endl;
+                }
+                cout << endl;
+
+                profile_guard.mark_parse_start();
+                Parser parser(std::move(tokens));
+                ParseResult ast = parser.parse();
+                profile_guard.mark_parse_end();
+
+                cout << "--- AST Tree ---" << endl;
+                if (ast.error) {
+                    cout << "[Parser Error: " << ast.error->details << "]" << endl;
+                } else if (ast.node) {
+                    cout << ast.node->to_string() << endl;
+                } else {
+                    cout << "null" << endl;
+                }
+                cout << "--- EDUCATIONAL_MODE_OUTPUT_END ---" << endl;
+
+                if (ast.error) {
+                    out.error = ast.error;
+                    return out;
+                }
+
+                profile_guard.mark_interpret_start();
+                Interpreter interpreter;
+                auto context = make_shared<Context>("<program>");
+                context->symbol_table = global_symbol_table;
+                RunTimeResult result = interpreter.visit(ast.node, context);
+                profile_guard.mark_interpret_end();
+
+                out.value = result.value;
+                out.error = result.error;
+                return out;
+            }
+        }
+
         if (lexer_error) {
             out.error = lexer_error;
             return out;
         }
 
+        profile_guard.mark_parse_start();
         Parser parser(std::move(tokens));
         ParseResult ast = parser.parse();
+        profile_guard.mark_parse_end();
         if (ast.error) {
             out.error = ast.error;
             return out;
         }
 
+        profile_guard.mark_interpret_start();
         Interpreter interpreter;
         auto context = make_shared<Context>("<program>");
         context->symbol_table = global_symbol_table;
         RunTimeResult result = interpreter.visit(ast.node, context);
+        profile_guard.mark_interpret_end();
 
         out.value = result.value;
         out.error = result.error;
@@ -833,26 +1077,40 @@ RunResult run(const string& filename, const string& text) {
 
 inline string get_relative_path(const string& file_path) {
     if (file_path.empty()) return "";
+    string f_path = file_path;
+    for (char& c : f_path) {
+        if (c == '\\') c = '/';
+    }
+    if (f_path.length() >= 2 && f_path[1] == ':') {
+        f_path[0] = toupper(f_path[0]);
+    }
     try {
         namespace fs = std::filesystem;
-        fs::path p(file_path);
-        if (p.is_absolute()) {
-            auto rel = fs::relative(p, fs::current_path());
-            string r_str = rel.generic_string();
-            return r_str;
-        }
-        string r_str = file_path;
-        for (char& c : r_str) {
+        string cur_path = fs::current_path().generic_string();
+        for (char& c : cur_path) {
             if (c == '\\') c = '/';
         }
-        return r_str;
-    } catch (...) {
-        string r_str = file_path;
-        for (char& c : r_str) {
-            if (c == '\\') c = '/';
+        if (cur_path.length() >= 2 && cur_path[1] == ':') {
+            cur_path[0] = toupper(cur_path[0]);
         }
-        return r_str;
-    }
+        if (!cur_path.empty() && cur_path.back() != '/') {
+            cur_path += '/';
+        }
+        if (f_path.length() >= cur_path.length()) {
+            bool is_prefix = true;
+            for (size_t i = 0; i < cur_path.length(); ++i) {
+                if (toupper(f_path[i]) != toupper(cur_path[i])) {
+                    is_prefix = false;
+                    break;
+                }
+            }
+            if (is_prefix) {
+                string r_str = f_path.substr(cur_path.length());
+                return r_str;
+            }
+        }
+    } catch (...) {}
+    return f_path;
 }
 
 void run_file(const string& filepath) {
@@ -907,6 +1165,34 @@ int main(int argc, char* argv[]) {
         UNBOUNDED_MODE = true;
         args.erase(it);
     }
+    auto it_edu = find(args.begin(), args.end(), "--edu");
+    if (it_edu != args.end()) {
+        EDUCATIONAL_MODE = true;
+        args.erase(it_edu);
+    }
+    auto it_json = find(args.begin(), args.end(), "--json");
+    if (it_json != args.end()) {
+        JSON_OUTPUT = true;
+        EDUCATIONAL_MODE = true;
+        args.erase(it_json);
+    }
+    auto it_profile = find(args.begin(), args.end(), "--profile");
+    if (it_profile != args.end()) {
+        PROFILE_MODE = true;
+        TIME_PROFILE_MODE = true;
+        MEMORY_PROFILE_MODE = true;
+        args.erase(it_profile);
+    }
+    auto it_timeprofile = find(args.begin(), args.end(), "--timeprofile");
+    if (it_timeprofile != args.end()) {
+        TIME_PROFILE_MODE = true;
+        args.erase(it_timeprofile);
+    }
+    auto it_memoryprofile = find(args.begin(), args.end(), "--memoryprofile");
+    if (it_memoryprofile != args.end()) {
+        MEMORY_PROFILE_MODE = true;
+        args.erase(it_memoryprofile);
+    }
 
     if (args.size() > 1) {
         try {
@@ -914,12 +1200,16 @@ int main(int argc, char* argv[]) {
         } catch (const CleanExitException&) {
             // Clean exit
         }
+        global_symbol_table->reset();
         return 0;
     }
 
     string choice;
     cout << "Enter 0 for REPL mode and 1 for file input: ";
-    if (!getline(cin, choice)) return 0; // Handle EOF early
+    if (!getline(cin, choice)) {
+        global_symbol_table->reset();
+        return 0; // Handle EOF early
+    }
 
     if (choice == "0") {
         while (true) {
@@ -961,5 +1251,6 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    global_symbol_table->reset();
     return 0;
 }

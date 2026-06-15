@@ -1,0 +1,8 @@
+method fib(n) {
+    when n < 2 {
+        yield n
+    }
+    yield fib(n - 1) + fib(n - 2)
+}
+
+show("fib(28) =", fib(28))

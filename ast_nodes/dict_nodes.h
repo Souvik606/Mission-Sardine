@@ -11,6 +11,10 @@ public:
         : Node(std::move(pos_start), std::move(pos_end)), keyval_nodes(std::move(keyval_nodes)) {
     }
 
+    [[nodiscard]] int get_node_type() const override {
+        return NODE_DICT;
+    }
+
     [[nodiscard]] string to_string() const override {
         stringstream ss;
         ss << "{";

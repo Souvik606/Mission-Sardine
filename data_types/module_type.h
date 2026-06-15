@@ -18,12 +18,15 @@ public:
     Module(string name, shared_ptr<SymbolTable> symbol_table)
         : name(std::move(name)), symbol_table(std::move(symbol_table)) {}
 
+    [[nodiscard]] bool is_callable_type() const override { return true; }
+    [[nodiscard]] bool is_module() const override { return true; }
+
     [[nodiscard]] bool is_truthy() const override {
         return true;
     }
 
     [[nodiscard]] OperationResult is_true() const override {
-        auto result = make_shared<Number>(1LL);
+        auto result = Number::make(1LL);
         result->set_context(this->context);
         result->set_pos(this->pos_start, this->pos_end);
         return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);

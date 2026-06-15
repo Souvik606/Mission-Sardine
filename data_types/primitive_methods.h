@@ -5,8 +5,8 @@
 #include "string_type.h"
 #include "list_type.h"
 #include "dict_type.h"
-#include "null_type.h"
 #include "../language_core/error.h"
+#include "../language_core/constants.h"
 
 using namespace std;
 
@@ -37,7 +37,7 @@ inline DataType::OperationResult String::get_attr(const string& attr_name, const
             string d = delim->value;
             size_t pos = 0;
             while ((pos = s.find(d)) != string::npos) {
-                if (parts.size() >= 1000000) {
+                if (!UNBOUNDED_MODE && parts.size() >= 1000000) {
                     return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "Split size limit exceeded (max 1,000,000 elements)", context) };
                 }
                 auto part = make_shared<String>(s.substr(0, pos));
@@ -45,7 +45,7 @@ inline DataType::OperationResult String::get_attr(const string& attr_name, const
                 parts.push_back(part);
                 s.erase(0, pos + d.length());
             }
-            if (parts.size() >= 1000000) {
+            if (!UNBOUNDED_MODE && parts.size() >= 1000000) {
                 return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "Split size limit exceeded (max 1,000,000 elements)", context) };
             }
             auto last_part = make_shared<String>(s);
@@ -175,7 +175,7 @@ inline DataType::OperationResult String::get_attr(const string& attr_name, const
             }
             size_t start_pos = 0;
             while((start_pos = s.find(from, start_pos)) != string::npos) {
-                if (s.length() - from.length() + to.length() > 1000000) {
+                if (!UNBOUNDED_MODE && s.length() - from.length() + to.length() > 1000000) {
                     return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "String size limit exceeded (max 1,000,000 characters)", context) };
                 }
                 s.replace(start_pos, from.length(), to);
@@ -202,7 +202,7 @@ inline DataType::OperationResult String::get_attr(const string& attr_name, const
             }
             size_t pos = str_self->value.find(sub->value);
             long long index = (pos == string::npos) ? -1 : static_cast<long long>(pos);
-            return { make_shared<Number>(index), nullptr };
+            return { Number::make(index), nullptr };
         };
         shared_ptr<DataType> bound = make_shared<BoundMethod>("find", self_ptr, impl);
         bound->set_context(calling_context).set_pos(pos_start, pos_end);
@@ -273,9 +273,10 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             if (args.size() != 1 || !kw_args.empty()) {
                 return { nullptr, make_shared<ArgumentError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "append() takes exactly 1 argument", context) };
             }
-            if (list_self->elements.size() >= 1000000) {
+            if (!UNBOUNDED_MODE && list_self->elements.size() >= 1000000) {
                 return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", context) };
             }
+            list_self->detach();
             list_self->elements.push_back(args[0]);
             return { list_self, nullptr };
         };
@@ -290,9 +291,10 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             if (args.size() != 1 || !kw_args.empty()) {
                 return { nullptr, make_shared<ArgumentError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "prepend() takes exactly 1 argument", context) };
             }
-            if (list_self->elements.size() >= 1000000) {
+            if (!UNBOUNDED_MODE && list_self->elements.size() >= 1000000) {
                 return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", context) };
             }
+            list_self->detach();
             list_self->elements.insert(list_self->elements.begin(), args[0]);
             return { list_self, nullptr };
         };
@@ -307,7 +309,7 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             if (args.size() != 2 || !kw_args.empty()) {
                 return { nullptr, make_shared<ArgumentError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "insert() takes exactly 2 arguments: (index, item)", context) };
             }
-            if (list_self->elements.size() >= 1000000) {
+            if (!UNBOUNDED_MODE && list_self->elements.size() >= 1000000) {
                 return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", context) };
             }
             auto num_idx = dynamic_pointer_cast<Number>(args[0]);
@@ -322,6 +324,7 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
                 idx_val = static_cast<long long>(list_self->elements.size()) + idx_val;
             }
             idx_val = max(0LL, min(idx_val, static_cast<long long>(list_self->elements.size())));
+            list_self->detach();
             list_self->elements.insert(list_self->elements.begin() + idx_val, args[1]);
             return { list_self, nullptr };
         };
@@ -354,6 +357,7 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             if (actual_idx < 0 || actual_idx >= static_cast<long long>(list_self->elements.size())) {
                 return { nullptr, make_shared<IndexOutOfBoundsError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "Index out of bounds", context) };
             }
+            list_self->detach();
             auto popped = list_self->elements[actual_idx];
             list_self->elements.erase(list_self->elements.begin() + actual_idx);
             return { popped, nullptr };
@@ -381,6 +385,7 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             if (found_idx == -1) {
                 return { nullptr, make_shared<IllegalOperationError>(target->pos_start.value_or(Position()), target->pos_end.value_or(Position()), "Element not found in list", context) };
             }
+            list_self->detach();
             list_self->elements.erase(list_self->elements.begin() + found_idx);
             return { list_self, nullptr };
         };
@@ -395,6 +400,7 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             if (!args.empty() || !kw_args.empty()) {
                 return { nullptr, make_shared<ArgumentError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "clear() takes no arguments", context) };
             }
+            list_self->detach();
             list_self->elements.clear();
             return { list_self, nullptr };
         };
@@ -417,25 +423,45 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
                 }
                 descending = (desc_val != 0);
             }
-            vector<shared_ptr<DataType>> sorted_elements = list_self->elements;
-            bool sort_error = false;
-            shared_ptr<RunTimeError> err_obj;
-            sort(sorted_elements.begin(), sorted_elements.end(), [&](const shared_ptr<DataType>& a, const shared_ptr<DataType>& b) {
-                if (sort_error) return false;
-                auto [lt_res, err] = descending ? b->get_comparison_lt(a) : a->get_comparison_lt(b);
-                if (err) {
-                    sort_error = true;
-                    err_obj = err;
-                    return false;
+            if (self.use_count() <= 1) {
+                list_self->detach();
+                bool sort_error = false;
+                shared_ptr<RunTimeError> err_obj;
+                sort(list_self->elements.begin(), list_self->elements.end(), [&](const shared_ptr<DataType>& a, const shared_ptr<DataType>& b) {
+                    if (sort_error) return false;
+                    auto [lt_res, err] = descending ? b->get_comparison_lt(a) : a->get_comparison_lt(b);
+                    if (err) {
+                        sort_error = true;
+                        err_obj = err;
+                        return false;
+                    }
+                    return lt_res && lt_res->is_truthy();
+                });
+                if (sort_error) {
+                    return { nullptr, make_shared<IllegalOperationError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "List elements are not comparable for sorting", context) };
                 }
-                return lt_res && lt_res->is_truthy();
-            });
-            if (sort_error) {
-                return { nullptr, make_shared<IllegalOperationError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "List elements are not comparable for sorting", context) };
+                return { list_self, nullptr };
+            } else {
+                vector<shared_ptr<DataType>> sorted_elements = list_self->elements;
+                bool sort_error = false;
+                shared_ptr<RunTimeError> err_obj;
+                sort(sorted_elements.begin(), sorted_elements.end(), [&](const shared_ptr<DataType>& a, const shared_ptr<DataType>& b) {
+                    if (sort_error) return false;
+                    auto [lt_res, err] = descending ? b->get_comparison_lt(a) : a->get_comparison_lt(b);
+                    if (err) {
+                        sort_error = true;
+                        err_obj = err;
+                        return false;
+                    }
+                    return lt_res && lt_res->is_truthy();
+                });
+                if (sort_error) {
+                    return { nullptr, make_shared<IllegalOperationError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "List elements are not comparable for sorting", context) };
+                }
+                auto out = make_shared<List>(sorted_elements);
+                out->set_context(self->context);
+                return { out, nullptr };
             }
-            auto out = make_shared<List>(sorted_elements);
-            out->set_context(self->context);
-            return { out, nullptr };
         };
         shared_ptr<DataType> bound = make_shared<BoundMethod>("sort", self_ptr, impl);
         bound->set_context(calling_context).set_pos(pos_start, pos_end);
@@ -448,11 +474,17 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             if (!args.empty() || !kw_args.empty()) {
                 return { nullptr, make_shared<ArgumentError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "reverse() takes no arguments", context) };
             }
-            vector<shared_ptr<DataType>> rev_elements = list_self->elements;
-            std::reverse(rev_elements.begin(), rev_elements.end());
-            auto out = make_shared<List>(rev_elements);
-            out->set_context(self->context);
-            return { out, nullptr };
+            if (self.use_count() <= 1) {
+                list_self->detach();
+                std::reverse(list_self->elements.begin(), list_self->elements.end());
+                return { list_self, nullptr };
+            } else {
+                vector<shared_ptr<DataType>> rev_elements = list_self->elements;
+                std::reverse(rev_elements.begin(), rev_elements.end());
+                auto out = make_shared<List>(rev_elements);
+                out->set_context(self->context);
+                return { out, nullptr };
+            }
         };
         shared_ptr<DataType> bound = make_shared<BoundMethod>("reverse", self_ptr, impl);
         bound->set_context(calling_context).set_pos(pos_start, pos_end);
@@ -486,7 +518,7 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             }
             vector<shared_ptr<DataType>> sliced;
             for (long long i = start_val; i < end_val; ++i) {
-                sliced.push_back(list_self->elements[i]->copy());
+                sliced.push_back(list_self->elements[i]);
             }
             auto out = make_shared<List>(sliced);
             out->set_context(self->context);
@@ -543,7 +575,7 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
                     break;
                 }
             }
-            return { make_shared<Number>(index), nullptr };
+            return { Number::make(index), nullptr };
         };
         shared_ptr<DataType> bound = make_shared<BoundMethod>("index_of", self_ptr, impl);
         bound->set_context(calling_context).set_pos(pos_start, pos_end);
@@ -582,11 +614,12 @@ inline DataType::OperationResult List::get_attr(const string& attr_name, const s
             if (!other) {
                 return { nullptr, make_shared<IllegalOperationError>(args[0]->pos_start.value_or(Position()), args[0]->pos_end.value_or(Position()), "Argument to extend() must be a List", context) };
             }
-            if (list_self->elements.size() + other->elements.size() > 1000000) {
+            if (!UNBOUNDED_MODE && list_self->elements.size() + other->elements.size() > 1000000) {
                 return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "List size limit exceeded (max 1,000,000 elements)", context) };
             }
+            list_self->detach();
             for (const auto& el : other->elements) {
-                list_self->elements.push_back(el->copy());
+                list_self->elements.push_back(el);
             }
             return { list_self, nullptr };
         };
@@ -627,9 +660,9 @@ inline DataType::OperationResult Dict::get_attr(const string& attr_name, const s
         for (const auto& key : d->keys_order) {
             shared_ptr<DataType> node;
             if (key.substr(0, 2) == "I:") {
-                node = make_shared<Number>(stoll(key.substr(2)));
+                node = Number::make(stoll(key.substr(2)));
             } else if (key.substr(0, 2) == "D:") {
-                node = make_shared<Number>(stod(key.substr(2)));
+                node = Number::make_double(stod(key.substr(2)));
             } else {
                 node = make_shared<String>(key.substr(2));
             }
@@ -663,7 +696,7 @@ inline DataType::OperationResult Dict::get_attr(const string& attr_name, const s
             }
             vector<shared_ptr<DataType>> list_vals;
             for (const auto& key : dict_self->keys_order) {
-                list_vals.push_back(dict_self->elements.at(key)->copy());
+                list_vals.push_back(dict_self->elements.at(key));
             }
             auto out = make_shared<List>(list_vals);
             out->set_context(context);
@@ -684,7 +717,7 @@ inline DataType::OperationResult Dict::get_attr(const string& attr_name, const s
             vector<shared_ptr<DataType>> pairs;
             for (size_t i = 0; i < keys.size(); ++i) {
                 auto k_node = keys[i];
-                auto v_node = dict_self->elements.at(dict_self->keys_order[i])->copy();
+                auto v_node = dict_self->elements.at(dict_self->keys_order[i]);
                 auto pair_list = make_shared<List>(vector<shared_ptr<DataType>>{ k_node, v_node });
                 pair_list->set_context(context);
                 pairs.push_back(pair_list);
@@ -715,7 +748,7 @@ inline DataType::OperationResult Dict::get_attr(const string& attr_name, const s
                 }
                 return { Number::make(0LL), nullptr };
             }
-            return { dict_self->elements.at(key_str)->copy(), nullptr };
+            return { dict_self->elements.at(key_str), nullptr };
         };
         shared_ptr<DataType> bound = make_shared<BoundMethod>("get", self_ptr, impl);
         bound->set_context(calling_context).set_pos(pos_start, pos_end);
@@ -758,6 +791,7 @@ inline DataType::OperationResult Dict::get_attr(const string& attr_name, const s
                 }
                 return { nullptr, make_shared<DictKeyError>(key->pos_start.value_or(Position()), key->pos_end.value_or(Position()), "Key not found in dictionary", context) };
             }
+            dict_self->detach();
             auto popped = dict_self->elements.at(key_str);
             dict_self->elements.erase(key_str);
             dict_self->keys_order.erase(std::remove(dict_self->keys_order.begin(), dict_self->keys_order.end(), key_str), dict_self->keys_order.end());
@@ -780,6 +814,7 @@ inline DataType::OperationResult Dict::get_attr(const string& attr_name, const s
             string last_key = dict_self->keys_order.back();
             auto keys = get_ordered_keys(dict_self.get(), context);
             auto k_node = keys.back();
+            dict_self->detach();
             auto v_node = dict_self->elements.at(last_key);
             dict_self->elements.erase(last_key);
             dict_self->keys_order.pop_back();
@@ -809,14 +844,15 @@ inline DataType::OperationResult Dict::get_attr(const string& attr_name, const s
                     combined_keys++;
                 }
             }
-            if (combined_keys > 100000) {
+            if (!UNBOUNDED_MODE && combined_keys > 100000) {
                 return { nullptr, make_shared<ValueError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "Dictionary size limit exceeded (max 100,000 elements)", context) };
             }
+            dict_self->detach();
             for (const auto& key : other->keys_order) {
                 if (dict_self->elements.find(key) == dict_self->elements.end()) {
                     dict_self->keys_order.push_back(key);
                 }
-                dict_self->elements[key] = other->elements.at(key)->copy();
+                dict_self->elements[key] = other->elements.at(key);
             }
             return { dict_self, nullptr };
         };
@@ -831,6 +867,7 @@ inline DataType::OperationResult Dict::get_attr(const string& attr_name, const s
             if (!args.empty() || !kw_args.empty()) {
                 return { nullptr, make_shared<ArgumentError>(self->pos_start.value_or(Position()), self->pos_end.value_or(Position()), "clear() takes no arguments", context) };
             }
+            dict_self->detach();
             dict_self->elements.clear();
             dict_self->keys_order.clear();
             return { dict_self, nullptr };

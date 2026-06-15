@@ -1,0 +1,26 @@
+method rle(s) {
+    n = len(s)
+    when n == 0 {
+        yield ""
+    }
+    
+    result = ""
+    current_char = s[0]
+    count = 1
+    
+    cycle i = 1:(n - 1) {
+        char = s[i]
+        when char == current_char {
+            count = count + 1
+        } otherwise {
+            result = result + String(count) + current_char
+            current_char = char
+            count = 1
+        }
+    }
+    result = result + String(count) + current_char
+    yield result
+}
+
+test_str = ("A" * 5000) + ("B" * 5000) + ("C" * 5000) + ("D" * 5000) + ("E" * 5000) + ("F" * 5000)
+show("rle len =", len(rle(test_str)))

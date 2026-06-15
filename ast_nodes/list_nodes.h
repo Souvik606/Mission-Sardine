@@ -20,6 +20,10 @@ public:
           element_nodes(std::move(elements))
     {}
 
+    [[nodiscard]] int get_node_type() const override {
+        return NODE_LIST;
+    }
+
     [[nodiscard]] std::string to_string() const override {
         stringstream ss;
         ss << "[";

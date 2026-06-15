@@ -65,6 +65,11 @@ const string T_DOT = "DOT";
 const int MAX_AST_DEPTH = 60;
 const int MAX_RECURSION_DEPTH = 100;
 inline bool UNBOUNDED_MODE = false;
+inline bool EDUCATIONAL_MODE = false;
+inline bool JSON_OUTPUT = false;
+inline bool PROFILE_MODE = false;
+inline bool TIME_PROFILE_MODE = false;
+inline bool MEMORY_PROFILE_MODE = false;
 
 const vector<string> KEYWORDS = {
     "define", "and", "or", "not","when","orwhen","otherwise","cycle",

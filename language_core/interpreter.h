@@ -43,123 +43,40 @@ namespace fs = std::filesystem;
 
 using namespace std;
 
+
 class Interpreter
 {
 public:
     Interpreter()
     {
-        visit_methods[typeid(NumberNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_NumberNode(static_pointer_cast<NumberNode>(node), context);
-        };
-        visit_methods[typeid(StringNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_StringNode(static_pointer_cast<StringNode>(node), context);
-        };
-        visit_methods[typeid(ListNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_ListNode(static_pointer_cast<ListNode>(node), context);
-        };
-        visit_methods[typeid(BinaryOperationNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_BinaryOperationNode(static_pointer_cast<BinaryOperationNode>(node), context);
-        };
-        visit_methods[typeid(TernaryOperationNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_TernaryOperationNode(static_pointer_cast<TernaryOperationNode>(node), context);
-        };
-        visit_methods[typeid(UnaryOperationNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_UnaryOperationNode(static_pointer_cast<UnaryOperationNode>(node), context);
-        };
-        visit_methods[typeid(VariableUseNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_VariableUseNode(static_pointer_cast<VariableUseNode>(node), context);
-        };
-        visit_methods[typeid(VariableAssignNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_VariableAssignNode(static_pointer_cast<VariableAssignNode>(node), context);
-        };
-        visit_methods[typeid(IfNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_IfNode(static_pointer_cast<IfNode>(node), context);
-        };
-        visit_methods[typeid(SwitchNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_SwitchNode(static_pointer_cast<SwitchNode>(node), context);
-        };
-        visit_methods[typeid(ForNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_ForNode(static_pointer_cast<ForNode>(node), context);
-        };
-        visit_methods[typeid(WhileNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_WhileNode(static_pointer_cast<WhileNode>(node), context);
-        };
-        visit_methods[typeid(FunctionDefinitionNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_FunctionDefinitionNode(static_pointer_cast<FunctionDefinitionNode>(node), context);
-        };
-        visit_methods[typeid(FunctionCallNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_FunctionCallNode(static_pointer_cast<FunctionCallNode>(node), context);
-        };
-        visit_methods[typeid(ReturnNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_ReturnNode(static_pointer_cast<ReturnNode>(node), context);
-        };
-        visit_methods[typeid(ContinueNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_ContinueNode(static_pointer_cast<ContinueNode>(node), context);
-        };
-        visit_methods[typeid(BreakNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_BreakNode(static_pointer_cast<BreakNode>(node), context);
-        };
-        visit_methods[typeid(DictNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_DictNode(static_pointer_cast<DictNode>(node), context);
-        };
-        visit_methods[typeid(TryNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_TryNode(static_pointer_cast<TryNode>(node), context);
-        };
-        visit_methods[typeid(ModelNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_ModelNode(static_pointer_cast<ModelNode>(node), context);
-        };
-        visit_methods[typeid(AttrAccessNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_AttrAccessNode(static_pointer_cast<AttrAccessNode>(node), context);
-        };
-        visit_methods[typeid(AttrAssignNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_AttrAssignNode(static_pointer_cast<AttrAssignNode>(node), context);
-        };
-        visit_methods[typeid(FStringNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_FStringNode(static_pointer_cast<FStringNode>(node), context);
-        };
-        visit_methods[typeid(ForEachLoopNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_ForEachLoopNode(static_pointer_cast<ForEachLoopNode>(node), context);
-        };
-        visit_methods[typeid(SummonNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_SummonNode(static_pointer_cast<SummonNode>(node), context);
-        };
-        visit_methods[typeid(ListComprehensionNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_ListComprehensionNode(static_pointer_cast<ListComprehensionNode>(node), context);
-        };
-        visit_methods[typeid(DictComprehensionNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_DictComprehensionNode(static_pointer_cast<DictComprehensionNode>(node), context);
-        };
-        visit_methods[typeid(IndexAccessNode)] = [this](const shared_ptr<Node> &node, const shared_ptr<Context> &context)
-        {
-            return this->visit_IndexAccessNode(static_pointer_cast<IndexAccessNode>(node), context);
-        };
+        type_index_to_id[typeid(NumberNode)] = NODE_NUMBER;
+        type_index_to_id[typeid(StringNode)] = NODE_STRING;
+        type_index_to_id[typeid(ListNode)] = NODE_LIST;
+        type_index_to_id[typeid(BinaryOperationNode)] = NODE_BINARY_OPERATION;
+        type_index_to_id[typeid(TernaryOperationNode)] = NODE_TERNARY_OPERATION;
+        type_index_to_id[typeid(UnaryOperationNode)] = NODE_UNARY_OPERATION;
+        type_index_to_id[typeid(VariableUseNode)] = NODE_VARIABLE_USE;
+        type_index_to_id[typeid(VariableAssignNode)] = NODE_VARIABLE_ASSIGN;
+        type_index_to_id[typeid(IfNode)] = NODE_IF;
+        type_index_to_id[typeid(SwitchNode)] = NODE_SWITCH;
+        type_index_to_id[typeid(ForNode)] = NODE_FOR;
+        type_index_to_id[typeid(WhileNode)] = NODE_WHILE;
+        type_index_to_id[typeid(FunctionDefinitionNode)] = NODE_FUNCTION_DEFINITION;
+        type_index_to_id[typeid(FunctionCallNode)] = NODE_FUNCTION_CALL;
+        type_index_to_id[typeid(ReturnNode)] = NODE_RETURN;
+        type_index_to_id[typeid(ContinueNode)] = NODE_CONTINUE;
+        type_index_to_id[typeid(BreakNode)] = NODE_BREAK;
+        type_index_to_id[typeid(DictNode)] = NODE_DICT;
+        type_index_to_id[typeid(TryNode)] = NODE_TRY;
+        type_index_to_id[typeid(ModelNode)] = NODE_MODEL;
+        type_index_to_id[typeid(AttrAccessNode)] = NODE_ATTR_ACCESS;
+        type_index_to_id[typeid(AttrAssignNode)] = NODE_ATTR_ASSIGN;
+        type_index_to_id[typeid(FStringNode)] = NODE_FSTRING;
+        type_index_to_id[typeid(ForEachLoopNode)] = NODE_FOREACH_LOOP;
+        type_index_to_id[typeid(SummonNode)] = NODE_SUMMON;
+        type_index_to_id[typeid(ListComprehensionNode)] = NODE_LIST_COMPREHENSION;
+        type_index_to_id[typeid(DictComprehensionNode)] = NODE_DICT_COMPREHENSION;
+        type_index_to_id[typeid(IndexAccessNode)] = NODE_INDEX_ACCESS;
     }
 
     RunTimeResult visit(const shared_ptr<Node> &node, const shared_ptr<Context> &context)
@@ -170,13 +87,59 @@ public:
         }
         try
         {
-            const Node &node_ref = *node;
-            const std::type_index type_idx = typeid(node_ref);
-            if (const auto it = visit_methods.find(type_idx); it != visit_methods.end())
+            if (node->node_type_id == -1)
             {
-                return it->second(node, context);
+                int static_id = node->get_node_type();
+                if (static_id != NODE_UNKNOWN)
+                {
+                    node->node_type_id = static_id;
+                }
+                else
+                {
+                    const Node &node_ref = *node;
+                    const std::type_index type_idx = typeid(node_ref);
+                    if (const auto it = type_index_to_id.find(type_idx); it != type_index_to_id.end())
+                    {
+                        node->node_type_id = it->second;
+                    }
+                    else
+                    {
+                        return no_visit_method(node);
+                    }
+                }
             }
-            return no_visit_method(node);
+            switch (node->node_type_id)
+            {
+                case NODE_NUMBER: return visit_NumberNode(static_pointer_cast<NumberNode>(node), context);
+                case NODE_STRING: return visit_StringNode(static_pointer_cast<StringNode>(node), context);
+                case NODE_LIST: return visit_ListNode(static_pointer_cast<ListNode>(node), context);
+                case NODE_BINARY_OPERATION: return visit_BinaryOperationNode(static_pointer_cast<BinaryOperationNode>(node), context);
+                case NODE_TERNARY_OPERATION: return visit_TernaryOperationNode(static_pointer_cast<TernaryOperationNode>(node), context);
+                case NODE_UNARY_OPERATION: return visit_UnaryOperationNode(static_pointer_cast<UnaryOperationNode>(node), context);
+                case NODE_VARIABLE_USE: return visit_VariableUseNode(static_pointer_cast<VariableUseNode>(node), context);
+                case NODE_VARIABLE_ASSIGN: return visit_VariableAssignNode(static_pointer_cast<VariableAssignNode>(node), context);
+                case NODE_IF: return visit_IfNode(static_pointer_cast<IfNode>(node), context);
+                case NODE_SWITCH: return visit_SwitchNode(static_pointer_cast<SwitchNode>(node), context);
+                case NODE_FOR: return visit_ForNode(static_pointer_cast<ForNode>(node), context);
+                case NODE_WHILE: return visit_WhileNode(static_pointer_cast<WhileNode>(node), context);
+                case NODE_FUNCTION_DEFINITION: return visit_FunctionDefinitionNode(static_pointer_cast<FunctionDefinitionNode>(node), context);
+                case NODE_FUNCTION_CALL: return visit_FunctionCallNode(static_pointer_cast<FunctionCallNode>(node), context);
+                case NODE_RETURN: return visit_ReturnNode(static_pointer_cast<ReturnNode>(node), context);
+                case NODE_CONTINUE: return visit_ContinueNode(static_pointer_cast<ContinueNode>(node), context);
+                case NODE_BREAK: return visit_BreakNode(static_pointer_cast<BreakNode>(node), context);
+                case NODE_DICT: return visit_DictNode(static_pointer_cast<DictNode>(node), context);
+                case NODE_TRY: return visit_TryNode(static_pointer_cast<TryNode>(node), context);
+                case NODE_MODEL: return visit_ModelNode(static_pointer_cast<ModelNode>(node), context);
+                case NODE_ATTR_ACCESS: return visit_AttrAccessNode(static_pointer_cast<AttrAccessNode>(node), context);
+                case NODE_ATTR_ASSIGN: return visit_AttrAssignNode(static_pointer_cast<AttrAssignNode>(node), context);
+                case NODE_FSTRING: return visit_FStringNode(static_pointer_cast<FStringNode>(node), context);
+                case NODE_FOREACH_LOOP: return visit_ForEachLoopNode(static_pointer_cast<ForEachLoopNode>(node), context);
+                case NODE_SUMMON: return visit_SummonNode(static_pointer_cast<SummonNode>(node), context);
+                case NODE_LIST_COMPREHENSION: return visit_ListComprehensionNode(static_pointer_cast<ListComprehensionNode>(node), context);
+                case NODE_DICT_COMPREHENSION: return visit_DictComprehensionNode(static_pointer_cast<DictComprehensionNode>(node), context);
+                case NODE_INDEX_ACCESS: return visit_IndexAccessNode(static_pointer_cast<IndexAccessNode>(node), context);
+                default: return no_visit_method(node);
+            }
         }
         catch (const CleanExitException &e)
         {
@@ -207,8 +170,7 @@ public:
     }
 
 private:
-    using VisitFunction = std::function<RunTimeResult(shared_ptr<Node>, shared_ptr<Context>)>;
-    std::unordered_map<std::type_index, VisitFunction> visit_methods;
+    std::unordered_map<std::type_index, int> type_index_to_id;
 
     static RunTimeResult no_visit_method(const shared_ptr<Node> &node)
     {
@@ -219,9 +181,9 @@ private:
 public:
     shared_ptr<SymbolTable> get_instance_symbol_table(const shared_ptr<DataType> &val) const
     {
-        if (auto inst = dynamic_pointer_cast<ModelInstance>(val))
+        if (val && val->is_model_instance())
         {
-            return inst->symbol_table;
+            return static_pointer_cast<ModelInstance>(val)->symbol_table;
         }
         return nullptr;
     }
@@ -247,6 +209,11 @@ private:
     RunTimeResult visit_StringNode(const shared_ptr<StringNode> &node, const shared_ptr<Context> &context)
     {
         RunTimeResult res;
+        if (node->cached_value)
+        {
+            node->cached_value->set_context(context).set_pos(node->pos_start, node->pos_end);
+            return res.success(node->cached_value);
+        }
         shared_ptr<String> str;
 
         if (node->token.value.type() == typeid(string))
@@ -259,6 +226,7 @@ private:
         }
 
         str->set_context(context).set_pos(node->pos_start, node->pos_end);
+        node->cached_value = str;
         return res.success(std::static_pointer_cast<DataType>(str));
     }
 
@@ -287,49 +255,68 @@ private:
     RunTimeResult visit_FunctionCallNode(const shared_ptr<FunctionCallNode> &node, const shared_ptr<Context> &context)
     {
         RunTimeResult res;
-        vector<shared_ptr<DataType>> pos_args;
-        map<string, shared_ptr<DataType>> kw_args;
+        static const map<string, shared_ptr<DataType>> empty_kw_args;
+        static const vector<shared_ptr<DataType>> empty_pos_args;
 
         auto call_value = res.register_result(visit(node->call_node, context));
         if (res.should_return())
             return res;
 
-        call_value = call_value->copy();
         call_value->set_pos(node->pos_start, node->pos_end);
 
-        for (const auto &arg_node : node->positional_arg_nodes)
+        const vector<shared_ptr<DataType>>* pos_args_ptr = &empty_pos_args;
+        vector<shared_ptr<DataType>> pos_args_local;
+        if (!node->positional_arg_nodes.empty())
         {
-            pos_args.push_back(res.register_result(visit(arg_node, context)));
-            if (res.should_return())
-                return res;
+            pos_args_local.reserve(node->positional_arg_nodes.size());
+            for (const auto &arg_node : node->positional_arg_nodes)
+            {
+                pos_args_local.push_back(res.register_result(visit(arg_node, context)));
+                if (res.should_return())
+                    return res;
+            }
+            pos_args_ptr = &pos_args_local;
         }
 
-        for (const auto &p : node->keyword_arg_nodes)
+        const map<string, shared_ptr<DataType>>* kw_args_ptr = &empty_kw_args;
+        map<string, shared_ptr<DataType>> kw_args_local;
+        if (!node->keyword_arg_nodes.empty())
         {
-            const string &name = any_cast<string>(p.first.value);
-            auto val = res.register_result(visit(p.second, context));
-            if (res.should_return())
-                return res;
-            kw_args[name] = val;
+            for (const auto &p : node->keyword_arg_nodes)
+            {
+                const string &name = any_cast<string>(p.first.value);
+                auto val = res.register_result(visit(p.second, context));
+                if (res.should_return())
+                    return res;
+                kw_args_local[name] = val;
+            }
+            kw_args_ptr = &kw_args_local;
         }
+
+        const auto &pos_args = *pos_args_ptr;
+        const auto &kw_args = *kw_args_ptr;
 
         shared_ptr<DataType> return_value;
-        if (auto func_to_call = dynamic_pointer_cast<Function>(call_value))
+        if (call_value->is_function())
         {
+            auto func_to_call = static_pointer_cast<Function>(call_value);
             return_value = res.register_result(func_to_call->execute(pos_args, kw_args, *this, context));
         }
-        else if (auto builtin_to_call = dynamic_pointer_cast<BuiltInFunction>(call_value))
+        else if (call_value->is_builtin_function())
         {
+            auto builtin_to_call = static_pointer_cast<BuiltInFunction>(call_value);
             return_value = res.register_result(builtin_to_call->execute(pos_args, kw_args, context));
         }
-        else if (auto bound_to_call = dynamic_pointer_cast<BoundMethod>(call_value))
+        else if (call_value->is_bound_method())
         {
+            auto bound_to_call = static_pointer_cast<BoundMethod>(call_value);
             auto [v, err] = bound_to_call->execute(pos_args, kw_args, context);
             if (err) return res.failure(*err);
             return_value = v;
         }
-        else if (auto model_to_call = dynamic_pointer_cast<ModelType>(call_value))
+        else if (call_value->is_model_type())
         {
+            auto model_to_call = static_pointer_cast<ModelType>(call_value);
             return_value = res.register_result(model_to_call->execute(pos_args, kw_args, *this));
         }
         else
@@ -348,9 +335,8 @@ private:
 
         if (return_value)
         {
-            return_value = return_value->copy();
             return_value->set_pos(node->pos_start, node->pos_end);
-            if (!dynamic_pointer_cast<Function>(return_value) && !dynamic_pointer_cast<ModelType>(return_value)) {
+            if (!return_value->is_callable_type()) {
                 return_value->set_context(context);
             }
         }
@@ -368,11 +354,11 @@ private:
             if (!UNBOUNDED_MODE)
             {
                 iterations++;
-                if (iterations >= 200000)
+                if (iterations > 100000)
                 {
                     return res.failure(ValueError(
                         node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
-                        "Loop execution limit exceeded (max 100,000 iterations)",
+                        "Loop execution result accumulation limit exceeded (max 100,000 items)",
                         context));
                 }
             }
@@ -461,7 +447,7 @@ private:
             step_value = std::static_pointer_cast<DataType>(Number::make(1LL));
         }
 
-        auto start_num = dynamic_pointer_cast<Number>(start_value);
+        auto start_num = start_value->is_number() ? static_pointer_cast<Number>(start_value) : nullptr;
         if (!start_num)
         {
             return res.failure(TypeError(
@@ -471,7 +457,7 @@ private:
             ));
         }
 
-        auto end_num = dynamic_pointer_cast<Number>(end_value);
+        auto end_num = end_value->is_number() ? static_pointer_cast<Number>(end_value) : nullptr;
         if (!end_num)
         {
             return res.failure(TypeError(
@@ -481,7 +467,7 @@ private:
             ));
         }
 
-        auto step_num = dynamic_pointer_cast<Number>(step_value);
+        auto step_num = step_value->is_number() ? static_pointer_cast<Number>(step_value) : nullptr;
         if (!step_num)
         {
             return res.failure(TypeError(
@@ -512,19 +498,27 @@ private:
                     "Loop step cannot be 0", context));
             }
 
+            context->symbol_table->set(var_name, Number::make(i));
+            const SymbolTable* found_table = nullptr;
+            const shared_ptr<DataType>* loop_var_ptr = context->symbol_table->get_ptr(var_name, found_table);
+
             auto cond = [&]()
             { return step >= 0 ? (i <= end) : (i >= end); };
             while (cond())
             {
                 if (!UNBOUNDED_MODE) {
                     iterations++;
-                    if (iterations >= 200000) {
+                    if (iterations > 100000) {
                         return res.failure(ValueError(
                             node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
-                            "Loop execution limit exceeded (max 100,000 iterations)", context));
+                            "Loop execution result accumulation limit exceeded (max 100,000 items)", context));
                     }
                 }
-                context->symbol_table->set(var_name, Number::make(i));
+                if (loop_var_ptr) {
+                    *const_cast<shared_ptr<DataType>*>(loop_var_ptr) = Number::make(i);
+                } else {
+                    context->symbol_table->set(var_name, Number::make(i));
+                }
                 i += step;
 
                 auto val = res.register_result(visit(node->body_node, context));
@@ -569,19 +563,27 @@ private:
                     "Loop step cannot be 0", context));
             }
 
+            context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(Number::make_double(i_val)));
+            const SymbolTable* found_table = nullptr;
+            const shared_ptr<DataType>* loop_var_ptr = context->symbol_table->get_ptr(var_name, found_table);
+
             auto cond_f = [&]()
             { return step_val >= 0 ? (i_val <= end_val) : (i_val >= end_val); };
             while (cond_f())
             {
                 if (!UNBOUNDED_MODE) {
                     iterations++;
-                    if (iterations >= 200000) {
+                    if (iterations > 100000) {
                         return res.failure(ValueError(
                             node->pos_start.value_or(Position()), node->pos_end.value_or(Position()),
-                            "Loop execution limit exceeded (max 100,000 iterations)", context));
+                            "Loop execution result accumulation limit exceeded (max 100,000 items)", context));
                     }
                 }
-                context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(make_shared<Number>(i_val)));
+                if (loop_var_ptr) {
+                    *const_cast<shared_ptr<DataType>*>(loop_var_ptr) = std::static_pointer_cast<DataType>(Number::make_double(i_val));
+                } else {
+                    context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(Number::make_double(i_val)));
+                }
                 i_val += step_val;
 
                 auto val = res.register_result(visit(node->body_node, context));
@@ -632,8 +634,8 @@ private:
         if (res.should_return())
             return res;
 
-        auto num_sel = dynamic_pointer_cast<Number>(selection_val);
-        auto str_sel = dynamic_pointer_cast<String>(selection_val);
+        auto num_sel = selection_val->is_number() ? static_pointer_cast<Number>(selection_val) : nullptr;
+        auto str_sel = selection_val->is_string() ? static_pointer_cast<String>(selection_val) : nullptr;
         if (!num_sel && !str_sel)
         {
             return res.failure(IllegalOperationError(
@@ -662,8 +664,8 @@ private:
             if (res.should_return())
                 return res;
 
-            auto num_choice = dynamic_pointer_cast<Number>(choice_val);
-            auto str_choice = dynamic_pointer_cast<String>(choice_val);
+            auto num_choice = choice_val->is_number() ? static_pointer_cast<Number>(choice_val) : nullptr;
+            auto str_choice = choice_val->is_string() ? static_pointer_cast<String>(choice_val) : nullptr;
             if (!num_choice && !str_choice)
             {
                 return res.failure(IllegalOperationError(
@@ -716,13 +718,16 @@ private:
             if (res.should_return() && !res.loop_or_switch_break)
                 return res;
 
-            if (c->return_null)
+            if (!node->return_null)
             {
-                elements.push_back(std::static_pointer_cast<DataType>(make_shared<Null>()));
-            }
-            else
-            {
-                elements.push_back(body_val);
+                if (c->return_null)
+                {
+                    elements.push_back(std::static_pointer_cast<DataType>(make_shared<Null>()));
+                }
+                else
+                {
+                    elements.push_back(body_val);
+                }
             }
 
             if (res.loop_or_switch_break)
@@ -785,21 +790,60 @@ private:
     {
         RunTimeResult res;
         const string &var_name = any_cast<string>(node->var_name_tok.value);
-        shared_ptr<DataType> value = context->symbol_table->get(var_name);
+        shared_ptr<DataType> value = nullptr;
 
-        if (!value)
+        if (node->cached_symbol_table_id == context->symbol_table->id && node->cached_value_ptr)
         {
-            auto this_val = context->symbol_table->get("this");
-            if (this_val)
+            value = *node->cached_value_ptr;
+        }
+        else
+        {
+            value = context->symbol_table->get(node->interned_name);
+            if (!value)
             {
-                if (auto inst = dynamic_pointer_cast<ModelInstance>(this_val))
+                static const string* this_interned = StringInterner::intern("this");
+                auto this_val = context->symbol_table->get(this_interned);
+                if (this_val)
                 {
-                    value = inst->symbol_table->get(var_name);
-                    if (!value)
+                    if (this_val->is_model_instance())
                     {
-                        auto [method_val, err] = inst->get_attr(var_name, *this, context);
-                        if (!err && method_val)
-                            value = method_val;
+                        auto inst = static_pointer_cast<ModelInstance>(this_val);
+                        value = inst->symbol_table->get(node->interned_name);
+                        if (!value)
+                        {
+                            auto [method_val, err] = inst->get_attr(var_name, *this, context);
+                            if (!err && method_val)
+                                value = method_val;
+                        }
+                    }
+                }
+            }
+
+            if (value)
+            {
+                const SymbolTable* found_table = nullptr;
+                const shared_ptr<DataType>* ptr = context->symbol_table->get_ptr(node->interned_name, found_table);
+                if (ptr && *ptr == value)
+                {
+                    node->cached_symbol_table_id = context->symbol_table->id;
+                    node->cached_value_ptr = ptr;
+                }
+                else
+                {
+                    static const string* this_interned = StringInterner::intern("this");
+                    auto this_val = context->symbol_table->get(this_interned);
+                    if (this_val)
+                    {
+                        if (this_val->is_model_instance())
+                        {
+                            auto inst = static_pointer_cast<ModelInstance>(this_val);
+                            const shared_ptr<DataType>* inst_ptr = inst->symbol_table->get_ptr(node->interned_name, found_table);
+                            if (inst_ptr && *inst_ptr == value)
+                            {
+                                node->cached_symbol_table_id = context->symbol_table->id;
+                                node->cached_value_ptr = inst_ptr;
+                            }
+                        }
                     }
                 }
             }
@@ -814,9 +858,9 @@ private:
 
         if (node->index_node.empty())
         {
-            auto copied = value->copy();
+            auto copied = value;
             copied->set_pos(node->pos_start, node->pos_end);
-            if (!dynamic_pointer_cast<Function>(copied) && !dynamic_pointer_cast<ModelType>(copied))
+            if (!copied->is_callable_type())
             {
                 copied->set_context(context);
             }
@@ -837,9 +881,9 @@ private:
         if (error)
             return res.failure(*error);
 
-        auto copied = indexed_val->copy();
+        auto copied = indexed_val;
         copied->set_pos(node->pos_start, node->pos_end);
-        if (!dynamic_pointer_cast<Function>(copied) && !dynamic_pointer_cast<ModelType>(copied))
+        if (!copied->is_callable_type())
         {
             copied->set_context(context);
         }
@@ -881,12 +925,13 @@ private:
                 return res;
 
             vector<shared_ptr<DataType>> elements;
-            if (auto lst = dynamic_pointer_cast<List>(collection))
+            if (collection->is_list())
             {
-                elements = lst->elements;
+                elements = static_pointer_cast<List>(collection)->elements;
             }
-            else if (auto str = dynamic_pointer_cast<String>(collection))
+            else if (collection->is_string())
             {
+                auto str = static_pointer_cast<String>(collection);
                 for (const auto& char_val : str->value) {
                     auto char_str = make_shared<String>(string(1, char_val));
                     char_str->set_context(context).set_pos(collection->pos_start, collection->pos_end);
@@ -920,8 +965,13 @@ private:
                 if (auto var_use = dynamic_pointer_cast<VariableUseNode>(left_node))
                 {
                     string var_name = any_cast<string>(var_use->var_name_tok.value);
-                    auto this_val = context->symbol_table->get("this");
-                    auto this_inst = dynamic_pointer_cast<ModelInstance>(this_val);
+                    static const string* this_interned = StringInterner::intern("this");
+                    auto this_val = context->symbol_table->get(this_interned);
+                    shared_ptr<ModelInstance> this_inst = nullptr;
+                    if (this_val && this_val->is_model_instance())
+                    {
+                        this_inst = static_pointer_cast<ModelInstance>(this_val);
+                    }
                     bool is_attr = false;
                     if (this_inst && this_inst->model->find_attribute(var_name) != nullptr)
                     {
@@ -934,7 +984,7 @@ private:
                     }
                     else
                     {
-                        context->symbol_table->set(var_name, value);
+                        context->symbol_table->set(var_use->interned_name, value);
                     }
                     last_result = value;
                 }
@@ -944,12 +994,14 @@ private:
                     if (res.should_return()) return res;
                     const string &attr_name = any_cast<string>(attr_access->attr_name_tok.value);
 
-                    if (auto inst = dynamic_pointer_cast<ModelInstance>(obj_val))
+                    if (obj_val->is_model_instance())
                     {
+                        auto inst = static_pointer_cast<ModelInstance>(obj_val);
                         inst->set_attr(attr_name, value);
                     }
-                    else if (auto proxy = dynamic_pointer_cast<SuperProxy>(obj_val))
+                    else if (obj_val->is_super_proxy())
                     {
+                        auto proxy = static_pointer_cast<SuperProxy>(obj_val);
                         auto [v, err] = proxy->set_attr(attr_name, value);
                         if (err)
                             return res.failure(*err);
@@ -1003,7 +1055,26 @@ private:
 
                 if (!indexes_vals.empty())
                 {
-                    auto list_value = context->symbol_table->get(var_name);
+                    shared_ptr<DataType> list_value;
+                    if (var_use->cached_symbol_table_id == context->symbol_table->id && var_use->cached_value_ptr)
+                    {
+                        list_value = *const_cast<shared_ptr<DataType>*>(var_use->cached_value_ptr);
+                    }
+                    else
+                    {
+                        list_value = context->symbol_table->get(var_use->interned_name);
+                        if (list_value)
+                        {
+                            const SymbolTable* found_table = nullptr;
+                            const shared_ptr<DataType>* ptr = context->symbol_table->get_ptr(var_use->interned_name, found_table);
+                            if (ptr)
+                            {
+                                var_use->cached_symbol_table_id = found_table->id;
+                                var_use->cached_value_ptr = ptr;
+                            }
+                        }
+                    }
+
                     if (!list_value)
                     {
                         return res.failure(NameError(
@@ -1015,26 +1086,56 @@ private:
                     auto [new_list, error] = list_value->assignIndex(indexes_vals, value, node->pos_start.value_or(Position()), node->pos_end.value_or(Position()));
                     if (error)
                         return res.failure(*error);
-                    context->symbol_table->set(var_name, new_list);
+                    if (new_list != list_value)
+                    {
+                        context->symbol_table->set(var_use->interned_name, new_list);
+                        var_use->cached_value_ptr = nullptr; // Invalidate cache on modification
+                    }
                     last_result = new_list;
                 }
                 else
                 {
-                    auto this_val = context->symbol_table->get("this");
-                    auto this_inst = dynamic_pointer_cast<ModelInstance>(this_val);
-                    bool is_attr = false;
-                    if (this_inst && this_inst->model->find_attribute(var_name) != nullptr)
+                    if (var_use->cached_symbol_table_id == context->symbol_table->id && var_use->cached_value_ptr)
                     {
-                        is_attr = true;
-                    }
-
-                    if (is_attr)
-                    {
-                        this_inst->set_attr(var_name, value);
+                        *const_cast<shared_ptr<DataType>*>(var_use->cached_value_ptr) = value;
                     }
                     else
                     {
-                        context->symbol_table->set(var_name, value);
+                        static const string* this_interned = StringInterner::intern("this");
+                        auto this_val = context->symbol_table->get(this_interned);
+                        shared_ptr<ModelInstance> this_inst = nullptr;
+                        if (this_val && this_val->is_model_instance())
+                        {
+                            this_inst = static_pointer_cast<ModelInstance>(this_val);
+                        }
+                        bool is_attr = false;
+                        if (this_inst && this_inst->model->find_attribute(var_name) != nullptr)
+                        {
+                            is_attr = true;
+                        }
+
+                        if (is_attr)
+                        {
+                            this_inst->set_attr(var_name, value);
+                            const SymbolTable* found_table = nullptr;
+                            const shared_ptr<DataType>* ptr = this_inst->symbol_table->get_ptr(var_use->interned_name, found_table);
+                            if (ptr)
+                            {
+                                var_use->cached_symbol_table_id = context->symbol_table->id;
+                                var_use->cached_value_ptr = ptr;
+                            }
+                        }
+                        else
+                        {
+                            context->symbol_table->set(var_use->interned_name, value);
+                            const SymbolTable* found_table = nullptr;
+                            const shared_ptr<DataType>* ptr = context->symbol_table->get_ptr(var_use->interned_name, found_table);
+                            if (ptr)
+                            {
+                                var_use->cached_symbol_table_id = context->symbol_table->id;
+                                var_use->cached_value_ptr = ptr;
+                            }
+                        }
                     }
                     last_result = value;
                 }
@@ -1045,12 +1146,14 @@ private:
                 if (res.should_return()) return res;
                 const string &attr_name = any_cast<string>(attr_access->attr_name_tok.value);
 
-                if (auto inst = dynamic_pointer_cast<ModelInstance>(obj_val))
+                if (obj_val->is_model_instance())
                 {
+                    auto inst = static_pointer_cast<ModelInstance>(obj_val);
                     inst->set_attr(attr_name, value);
                 }
-                else if (auto proxy = dynamic_pointer_cast<SuperProxy>(obj_val))
+                else if (obj_val->is_super_proxy())
                 {
+                    auto proxy = static_pointer_cast<SuperProxy>(obj_val);
                     auto [v, err] = proxy->set_attr(attr_name, value);
                     if (err)
                         return res.failure(*err);
@@ -1085,16 +1188,21 @@ private:
     RunTimeResult visit_NumberNode(const shared_ptr<NumberNode> &node, const shared_ptr<Context> &context)
     {
         RunTimeResult res;
+        if (node->cached_value)
+        {
+            node->cached_value->set_context(context).set_pos(node->pos_start, node->pos_end);
+            return res.success(node->cached_value);
+        }
         shared_ptr<Number> number;
         bool is_float = (node->token.type == T_FLOAT);
 
         if (node->token.value.type() == typeid(long long))
         {
-            number = make_shared<Number>(any_cast<long long>(node->token.value), is_float);
+            number = Number::make(any_cast<long long>(node->token.value), is_float);
         }
         else if (node->token.value.type() == typeid(double))
         {
-            number = make_shared<Number>(any_cast<double>(node->token.value), is_float);
+            number = Number::make_double(any_cast<double>(node->token.value), is_float);
         }
         else
         {
@@ -1102,6 +1210,7 @@ private:
         }
 
         number->set_context(context).set_pos(node->pos_start, node->pos_end);
+        node->cached_value = number;
         return res.success(std::static_pointer_cast<DataType>(number));
     }
 
@@ -1135,10 +1244,7 @@ private:
         if (res.should_return())
             return res;
 
-        if ((dynamic_pointer_cast<Function>(left) ||
-             dynamic_pointer_cast<BuiltInFunction>(left) ||
-             dynamic_pointer_cast<Module>(left) ||
-             dynamic_pointer_cast<ModelType>(left)) &&
+        if (left->is_callable_type() &&
             node->operator_token.type != T_EE &&
             node->operator_token.type != T_NEQ)
         {
@@ -1149,7 +1255,7 @@ private:
             }
 
             string type_name = left->get_type_name();
-            if (dynamic_pointer_cast<ModelType>(left)) {
+            if (left->is_model_type()) {
                 type_name = "Model";
             }
 
@@ -1272,10 +1378,10 @@ private:
         if (res.should_return())
             return res;
 
-        if (dynamic_pointer_cast<Function>(number) ||
-            dynamic_pointer_cast<BuiltInFunction>(number) ||
-            dynamic_pointer_cast<Module>(number) ||
-            dynamic_pointer_cast<ModelType>(number))
+        if (number->is_function() ||
+            number->is_builtin_function() ||
+            number->is_module() ||
+            number->is_model_type())
         {
             string op_symbol = node->operator_token.type;
             if (op_symbol == T_KEYWORD && node->operator_token.value.type() == typeid(string)) {
@@ -1284,7 +1390,7 @@ private:
             }
 
             string type_name = number->get_type_name();
-            if (dynamic_pointer_cast<ModelType>(number)) {
+            if (number->is_model_type()) {
                 type_name = "Model";
             }
 
@@ -1300,7 +1406,7 @@ private:
 
         if (node->operator_token.type == T_MINUS)
         {
-            tie(result, error) = number->multiply(std::static_pointer_cast<DataType>(make_shared<Number>(-1LL)));
+            tie(result, error) = number->multiply(std::static_pointer_cast<DataType>(Number::make(-1LL)));
         }
         else if (node->operator_token.type == T_KEYWORD && any_cast<string>(node->operator_token.value) == "not")
         {
@@ -1391,15 +1497,16 @@ private:
                 else
                 {
                     auto model_val = context->symbol_table->get(caught_err);
-                    auto model_class = dynamic_pointer_cast<ModelType>(model_val);
+                    auto model_class = (model_val && model_val->is_model_type()) ? static_pointer_cast<ModelType>(model_val) : nullptr;
                     if (!model_class)
                     {
                         return res.failure(InvalidErrorTypeError(trap_node->pos_start.value_or(Position{}), trap_node->pos_end.value_or(Position{}), "'" + caught_err + "' is not a valid error type", context));
                     }
                     if (auto user_err = dynamic_cast<const UserDefinedError*>(error.get()))
                     {
-                        if (auto model_inst = dynamic_pointer_cast<ModelInstance>(user_err->instance))
+                        if (user_err->instance && user_err->instance->is_model_instance())
                         {
+                            auto model_inst = static_pointer_cast<ModelInstance>(user_err->instance);
                             if (model_inst->model->is_descendant_of(model_class))
                             {
                                 matches = true;
@@ -1492,7 +1599,7 @@ private:
                     parent_tok.pos_start.value_or(Position()), parent_tok.pos_end.value_or(Position()),
                     "Parent class '" + pname + "' is not defined", context));
             }
-            auto parent_model = dynamic_pointer_cast<ModelType>(parent_val);
+            auto parent_model = parent_val->is_model_type() ? static_pointer_cast<ModelType>(parent_val) : nullptr;
             if (!parent_model)
             {
                 return res.failure(TypeError(
@@ -1550,11 +1657,11 @@ private:
 
     static shared_ptr<DataType> key_to_datatype(const string& key, const shared_ptr<Context>& context) {
         if (key.substr(0, 2) == "I:") {
-            auto num = make_shared<Number>(stoll(key.substr(2)));
+            auto num = Number::make(stoll(key.substr(2)));
             num->set_context(context);
             return num;
         } else if (key.substr(0, 2) == "D:") {
-            auto num = make_shared<Number>(stod(key.substr(2)));
+            auto num = Number::make_double(stod(key.substr(2)));
             num->set_context(context);
             return num;
         } else if (key.substr(0, 2) == "S:") {
@@ -1583,9 +1690,9 @@ private:
         if (error)
             return res.failure(*error);
 
-        auto copied = indexed_val->copy();
+        auto copied = indexed_val;
         copied->set_pos(node->pos_start, node->pos_end);
-        if (!dynamic_pointer_cast<Function>(copied) && !dynamic_pointer_cast<ModelType>(copied))
+        if (!copied->is_function() && !copied->is_model_type())
         {
             copied->set_context(context);
         }
@@ -1603,8 +1710,9 @@ private:
         const string &attr_name = any_cast<string>(node->attr_name_tok.value);
 
         shared_ptr<DataType> value;
-        if (auto inst = dynamic_pointer_cast<ModelInstance>(object_val))
+        if (object_val->is_model_instance())
         {
+            auto inst = static_pointer_cast<ModelInstance>(object_val);
             auto [v, err] = inst->get_attr(attr_name, *this, context);
             if (err)
                 return res.failure(*err);
@@ -1626,9 +1734,9 @@ private:
                 context));
         }
 
-        auto copied = value->copy();
+        auto copied = value;
         copied->set_pos(node->pos_start, node->pos_end);
-        if (!dynamic_pointer_cast<Function>(copied) && !dynamic_pointer_cast<ModelType>(copied)) {
+        if (!copied->is_function() && !copied->is_model_type()) {
             copied->set_context(context);
         }
         return res.success(copied);
@@ -1648,13 +1756,15 @@ private:
 
         const string &attr_name = any_cast<string>(node->attr_name_tok.value);
 
-        if (auto inst = dynamic_pointer_cast<ModelInstance>(object_val))
+        if (object_val->is_model_instance())
         {
+            auto inst = static_pointer_cast<ModelInstance>(object_val);
             inst->set_attr(attr_name, value);
             return res.success(value);
         }
-        else if (auto proxy = dynamic_pointer_cast<SuperProxy>(object_val))
+        else if (object_val->is_super_proxy())
         {
+            auto proxy = static_pointer_cast<SuperProxy>(object_val);
             auto [v, err] = proxy->set_attr(attr_name, value);
             if (err)
                 return res.failure(*err);
@@ -1683,8 +1793,8 @@ private:
                 auto val = res.register_result(visit(expr_node, context));
                 if (res.should_return())
                     return res;
-                if (auto str_val = dynamic_pointer_cast<String>(val)) {
-                    ss << str_val->value;
+                if (val->is_string()) {
+                    ss << static_pointer_cast<String>(val)->value;
                 } else {
                     ss << val->to_string();
                 }
@@ -1705,15 +1815,16 @@ private:
         if (res.should_return())
             return res;
 
-        if (auto dict_val = dynamic_pointer_cast<Dict>(collection))
+        if (collection->is_dict())
         {
+            auto dict_val = static_pointer_cast<Dict>(collection);
             if (num_vars == 1)
             {
                 string var_name = any_cast<string>(var_name_tokens[0].value);
                 for (const auto& [key_str, val] : dict_val->elements)
                 {
                     auto key_dt = key_to_datatype(key_str, context);
-                    auto pair_list = make_shared<List>(vector<shared_ptr<DataType>>{key_dt, val->copy()});
+                    auto pair_list = make_shared<List>(vector<shared_ptr<DataType>>{key_dt, val});
                     pair_list->set_context(context).set_pos(node->pos_start, node->pos_end);
                     context->symbol_table->set(var_name, pair_list);
 
@@ -1740,7 +1851,7 @@ private:
                 {
                     auto key_dt = key_to_datatype(key_str, context);
                     context->symbol_table->set(key_var_name, key_dt);
-                    context->symbol_table->set(val_var_name, val->copy());
+                    context->symbol_table->set(val_var_name, val);
 
                     res.register_result(visit(node->body_node, context));
                     if (res.should_return() && !res.loop_continue && !res.loop_or_switch_break)
@@ -1767,14 +1878,15 @@ private:
                 ));
             }
         }
-        else if (auto list_val = dynamic_pointer_cast<List>(collection))
+        else if (collection->is_list())
         {
+            auto list_val = static_pointer_cast<List>(collection);
             if (num_vars == 1)
             {
                 string var_name = any_cast<string>(var_name_tokens[0].value);
                 for (const auto& element : list_val->elements)
                 {
-                    context->symbol_table->set(var_name, element->copy());
+                    context->symbol_table->set(var_name, element);
 
                     res.register_result(visit(node->body_node, context));
                     if (res.should_return() && !res.loop_continue && !res.loop_or_switch_break)
@@ -1795,7 +1907,7 @@ private:
             {
                 for (const auto& element : list_val->elements)
                 {
-                    auto sub_list = dynamic_pointer_cast<List>(element);
+                    auto sub_list = element->is_list() ? static_pointer_cast<List>(element) : nullptr;
                     if (!sub_list)
                     {
                         return res.failure(RunTimeError(
@@ -1819,7 +1931,7 @@ private:
                     for (size_t i = 0; i < num_vars; ++i)
                     {
                         string var_name = any_cast<string>(var_name_tokens[i].value);
-                        context->symbol_table->set(var_name, sub_list->elements[i]->copy());
+                        context->symbol_table->set(var_name, sub_list->elements[i]);
                     }
 
                     res.register_result(visit(node->body_node, context));
@@ -1838,8 +1950,9 @@ private:
                 }
             }
         }
-        else if (auto str_val = dynamic_pointer_cast<String>(collection))
+        else if (collection->is_string())
         {
+            auto str_val = static_pointer_cast<String>(collection);
             if (num_vars == 1)
             {
                 string var_name = any_cast<string>(var_name_tokens[0].value);
@@ -1874,8 +1987,9 @@ private:
                 ));
             }
         }
-        else if (auto file_val = dynamic_pointer_cast<File>(collection))
+        else if (collection->is_file())
         {
+            auto file_val = static_pointer_cast<File>(collection);
             if (num_vars == 1)
             {
                 string var_name = any_cast<string>(var_name_tokens[0].value);
@@ -1986,19 +2100,40 @@ private:
         }
 
         if (resolved_path.empty()) {
-            auto get_relative_path = [](const string& file_path) {
-                if (file_path.empty()) return string("");
+            auto get_relative_path = [](const string& file_path) -> string {
+                if (file_path.empty()) return "";
+                string f_path = file_path;
+                for (char& c : f_path) {
+                    if (c == '\\') c = '/';
+                }
+                if (f_path.length() >= 2 && f_path[1] == ':') {
+                    f_path[0] = toupper(f_path[0]);
+                }
                 try {
-                    fs::path p(file_path);
-                    fs::path rel = fs::relative(p, fs::current_path());
-                    return rel.generic_string();
-                } catch (...) {
-                    string r_str = file_path;
-                    for (char& c : r_str) {
+                    string cur_path = fs::current_path().generic_string();
+                    for (char& c : cur_path) {
                         if (c == '\\') c = '/';
                     }
-                    return r_str;
-                }
+                    if (cur_path.length() >= 2 && cur_path[1] == ':') {
+                        cur_path[0] = toupper(cur_path[0]);
+                    }
+                    if (!cur_path.empty() && cur_path.back() != '/') {
+                        cur_path += '/';
+                    }
+                    if (f_path.length() >= cur_path.length()) {
+                        bool is_prefix = true;
+                        for (size_t i = 0; i < cur_path.length(); ++i) {
+                            if (toupper(f_path[i]) != toupper(cur_path[i])) {
+                                is_prefix = false;
+                                break;
+                            }
+                        }
+                        if (is_prefix) {
+                            return f_path.substr(cur_path.length());
+                        }
+                    }
+                } catch (...) {}
+                return f_path;
             };
             vector<string> display_candidates;
             display_candidates.push_back(get_relative_path((fs::path(source_dir) / (module_name + ".sad")).string()));
@@ -2160,9 +2295,9 @@ private:
                 step_val = std::static_pointer_cast<DataType>(Number::make(1LL));
             }
 
-            auto start_num = dynamic_pointer_cast<Number>(start_val);
-            auto end_num = dynamic_pointer_cast<Number>(end_val);
-            auto step_num = dynamic_pointer_cast<Number>(step_val);
+            auto start_num = start_val->is_number() ? static_pointer_cast<Number>(start_val) : nullptr;
+            auto end_num = end_val->is_number() ? static_pointer_cast<Number>(end_val) : nullptr;
+            auto step_num = step_val->is_number() ? static_pointer_cast<Number>(step_val) : nullptr;
 
             if (!start_num || !end_num || !step_num)
             {
@@ -2269,7 +2404,7 @@ private:
                         }
                     }
 
-                    comp_context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(make_shared<Number>(i_val)));
+                    comp_context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(Number::make_double(i_val)));
                     i_val += step_val;
 
                     if (node->condition_node)
@@ -2295,12 +2430,13 @@ private:
             int num_vars = node->var_name_tokens.size();
             vector<shared_ptr<DataType>> items;
 
-            if (auto list_coll = dynamic_pointer_cast<List>(collection))
+            if (collection->is_list())
             {
-                items = list_coll->elements;
+                items = static_pointer_cast<List>(collection)->elements;
             }
-            else if (auto str_coll = dynamic_pointer_cast<String>(collection))
+            else if (collection->is_string())
             {
+                auto str_coll = static_pointer_cast<String>(collection);
                 for (char ch : str_coll->value)
                 {
                     auto str_ch = make_shared<String>(string(1, ch));
@@ -2309,8 +2445,9 @@ private:
                     items.push_back(str_ch);
                 }
             }
-            else if (auto file_coll = dynamic_pointer_cast<File>(collection))
+            else if (collection->is_file())
             {
+                auto file_coll = static_pointer_cast<File>(collection);
                 if (!file_coll->descriptor || file_coll->descriptor->is_closed()) {
                     return res.failure(FileIOError(
                         file_coll->pos_start.value_or(node->pos_start.value_or(Position())),
@@ -2371,7 +2508,7 @@ private:
                 }
                 else
                 {
-                    auto item_list = dynamic_pointer_cast<List>(item);
+                    auto item_list = item->is_list() ? static_pointer_cast<List>(item) : nullptr;
                     if (!item_list || item_list->elements.size() != static_cast<size_t>(num_vars))
                     {
                         return res.failure(IllegalOperationError(
@@ -2433,9 +2570,9 @@ private:
                 step_val = std::static_pointer_cast<DataType>(Number::make(1LL));
             }
 
-            auto start_num = dynamic_pointer_cast<Number>(start_val);
-            auto end_num = dynamic_pointer_cast<Number>(end_val);
-            auto step_num = dynamic_pointer_cast<Number>(step_val);
+            auto start_num = start_val->is_number() ? static_pointer_cast<Number>(start_val) : nullptr;
+            auto end_num = end_val->is_number() ? static_pointer_cast<Number>(end_val) : nullptr;
+            auto step_num = step_val->is_number() ? static_pointer_cast<Number>(step_val) : nullptr;
 
             if (!start_num || !end_num || !step_num)
             {
@@ -2544,7 +2681,7 @@ private:
                         }
                     }
 
-                    comp_context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(make_shared<Number>(i_val)));
+                    comp_context->symbol_table->set(var_name, std::static_pointer_cast<DataType>(Number::make_double(i_val)));
                     i_val += step_val;
 
                     if (node->condition_node)
@@ -2572,12 +2709,13 @@ private:
             int num_vars = node->var_name_tokens.size();
             vector<shared_ptr<DataType>> items;
 
-            if (auto list_coll = dynamic_pointer_cast<List>(collection))
+            if (collection->is_list())
             {
-                items = list_coll->elements;
+                items = static_pointer_cast<List>(collection)->elements;
             }
-            else if (auto str_coll = dynamic_pointer_cast<String>(collection))
+            else if (collection->is_string())
             {
+                auto str_coll = static_pointer_cast<String>(collection);
                 for (char ch : str_coll->value)
                 {
                     auto str_ch = make_shared<String>(string(1, ch));
@@ -2621,7 +2759,7 @@ private:
                 }
                 else
                 {
-                    auto item_list = dynamic_pointer_cast<List>(item);
+                    auto item_list = item->is_list() ? static_pointer_cast<List>(item) : nullptr;
                     if (!item_list || item_list->elements.size() != static_cast<size_t>(num_vars))
                     {
                         return res.failure(IllegalOperationError(

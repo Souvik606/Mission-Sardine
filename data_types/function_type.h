@@ -40,14 +40,18 @@ public:
     bool return_null;
     shared_ptr<DataType> instance;
     shared_ptr<ModelType> access_modifier_owner; 
+    shared_ptr<Context> closure_context;
 
     explicit Function(string name, shared_ptr<Node> body, vector<pair<string, shared_ptr<Node>>> args, bool return_null,
                       shared_ptr<DataType> instance = nullptr);
 
     [[nodiscard]] string get_type_name() const override { return "Function"; }
+    [[nodiscard]] bool is_callable_type() const override { return true; }
+    [[nodiscard]] bool is_function() const override { return true; }
 
     DataType& set_context(const shared_ptr<Context>& ctx) override {
-        if (!this->context) {
+        if (!this->closure_context) {
+            this->closure_context = ctx;
             this->context = ctx;
         }
         return *this;
@@ -62,7 +66,7 @@ public:
 
     [[nodiscard]] OperationResult is_true() const override
     {
-        auto result = make_shared<Number>(1LL);
+        auto result = Number::make(1LL);
         result->set_context(this->context);
         result->set_pos(this->pos_start, this->pos_end);
         return std::make_pair(std::static_pointer_cast<DataType>(result), nullptr);

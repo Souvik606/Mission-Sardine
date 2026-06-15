@@ -30,4 +30,12 @@ public:
           depth(parent ? parent->depth + 1 : 1)
     {
     }
+
+    void reset(string new_display_name, shared_ptr<Context> new_parent, optional<Position> new_parent_entry_pos) {
+        display_name = std::move(new_display_name);
+        parent = std::move(new_parent);
+        parent_entry_pos = std::move(new_parent_entry_pos);
+        owner_class = nullptr;
+        depth = parent ? parent->depth + 1 : 1;
+    }
 };
