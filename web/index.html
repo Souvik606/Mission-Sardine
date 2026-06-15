@@ -19,6 +19,8 @@
     <script src="coi-serviceworker.js"></script>
     <!-- D3.js library for interactive AST graphs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <!-- JSZip library for folder downloads -->
+    <script src="jszip.min.js"></script>
     <!-- Monaco Editor Loader -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs/loader.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -318,22 +320,26 @@
                             <i data-lucide="folder" class="h-4 w-4 text-indigo-400"></i>
                             <span>FILE INVENTORY</span>
                         </span>
-                        <div class="flex items-center space-x-1.5">
+                        <div class="flex items-center space-x-0.5">
                             <button onclick="createNewFilePrompt()"
-                                class="flex items-center space-x-0.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 hover:border-indigo-400 text-indigo-400 hover:text-white px-2 py-1 rounded-lg text-[10px] font-bold transition-all shadow-[0_0_10px_rgba(99,102,241,0.05)] active:scale-95"
-                                title="Create new file">
-                                <i data-lucide="plus" class="h-3 w-3"></i>
-                                <span>SUMMON</span>
+                                class="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-900 rounded transition-all cursor-pointer active:scale-90"
+                                title="New File">
+                                <i data-lucide="plus" class="h-4 w-4"></i>
+                            </button>
+                            <button onclick="createNewFolderPrompt()"
+                                class="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-900 rounded transition-all cursor-pointer active:scale-90"
+                                title="New Folder">
+                                <i data-lucide="folder-plus" class="h-4 w-4"></i>
                             </button>
                             <button onclick="clearVirtualFiles()"
-                                class="flex items-center bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 hover:border-rose-400 text-rose-400 hover:text-white px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all shadow-[0_0_10px_rgba(239,68,68,0.05)] active:scale-95"
-                                title="Clear all virtual files">
-                                <span>PURGE</span>
+                                class="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-900 rounded transition-all cursor-pointer active:scale-90"
+                                title="Delete All Files">
+                                <i data-lucide="trash-2" class="h-4 w-4"></i>
                             </button>
                             <button onclick="toggleSidebar()"
-                                class="p-1 text-slate-405 text-slate-400 hover:text-white rounded hover:bg-slate-900 transition-colors ml-0.5"
+                                class="p-1.5 text-slate-400 hover:text-white rounded hover:bg-slate-900 transition-all cursor-pointer ml-0.5"
                                 title="Collapse Sidebar">
-                                <i data-lucide="chevron-left" class="h-3.5 w-3.5"></i>
+                                <i data-lucide="chevron-left" class="h-4 w-4"></i>
                             </button>
                         </div>
                     </div>
@@ -486,22 +492,26 @@
                             <i data-lucide="folder" class="h-4 w-4 text-indigo-400"></i>
                             <span>FILE INVENTORY</span>
                         </span>
-                        <div class="flex items-center space-x-1.5">
+                        <div class="flex items-center space-x-0.5">
                             <button onclick="createNewFilePrompt(true)"
-                                class="flex items-center space-x-0.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 hover:border-indigo-400 text-indigo-400 hover:text-white px-2 py-1 rounded-lg text-[10px] font-bold transition-all shadow-[0_0_10px_rgba(99,102,241,0.05)] active:scale-95"
-                                title="Create new file">
-                                <i data-lucide="plus" class="h-3 w-3"></i>
-                                <span>SUMMON</span>
+                                class="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-900 rounded transition-all cursor-pointer active:scale-90"
+                                title="New File">
+                                <i data-lucide="plus" class="h-4 w-4"></i>
+                            </button>
+                            <button onclick="createNewFolderPrompt(true)"
+                                class="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-900 rounded transition-all cursor-pointer active:scale-90"
+                                title="New Folder">
+                                <i data-lucide="folder-plus" class="h-4 w-4"></i>
                             </button>
                             <button onclick="clearVirtualFiles()"
-                                class="flex items-center bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 hover:border-rose-400 text-rose-400 hover:text-white px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all shadow-[0_0_10px_rgba(239,68,68,0.05)] active:scale-95"
-                                title="Clear all virtual files">
-                                <span>PURGE</span>
+                                class="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-900 rounded transition-all cursor-pointer active:scale-90"
+                                title="Delete All Files">
+                                <i data-lucide="trash-2" class="h-4 w-4"></i>
                             </button>
                             <button onclick="toggleSidebar(true)"
-                                class="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-900 transition-colors ml-0.5"
+                                class="p-1.5 text-slate-400 hover:text-white rounded hover:bg-slate-900 transition-all cursor-pointer ml-0.5"
                                 title="Collapse Sidebar">
-                                <i data-lucide="chevron-left" class="h-3.5 w-3.5"></i>
+                                <i data-lucide="chevron-left" class="h-4 w-4"></i>
                             </button>
                         </div>
                     </div>
@@ -898,6 +908,12 @@ cycle x = 0 : 5 {
         let wasmReady = false;
         let isRunning = false;
 
+        // Folders and System standard library state
+        let stdlibFiles = {};
+        let isStdlibExpanded = false;
+        let virtualFolders = [];
+        let expandedFolders = new Set();
+
         // D3 AST Interactive Explorer State Variables
         let d3ZoomBehavior = null;
         let d3Svg = null;
@@ -939,7 +955,9 @@ cycle x = 0 : 5 {
                 const { type, data, files } = event.data;
 
                 if (type === 'ready') {
+                    stdlibFiles = event.data.stdlib || {};
                     setWasmReadyState(true);
+                    updateVirtualFilesUI();
                 }
                 else if (type === 'stdout') {
                     writeToTerminal(data);
@@ -996,7 +1014,7 @@ cycle x = 0 : 5 {
         function updateRunButtonState() {
             const runBtn = document.getElementById('editor-btn-run');
             const eduRunBtn = document.getElementById('edu-btn-run');
-            const isSad = activeFilename && activeFilename.endsWith('.sad');
+            const isSad = activeFilename && activeFilename.endsWith('.sad') && !activeFilename.startsWith('stdlib/');
 
             [runBtn, eduRunBtn].forEach(btn => {
                 if (!btn) return;
@@ -1093,7 +1111,7 @@ cycle x = 0 : 5 {
             if (!currentEditor) return;
 
             // Save active editor contents to virtualFiles registry
-            if (activeFilename) {
+            if (activeFilename && !activeFilename.startsWith('stdlib/')) {
                 virtualFiles[activeFilename] = currentEditor.getValue();
             }
 
@@ -1203,9 +1221,10 @@ cycle x = 0 : 5 {
         }
 
         // Select and display file contents in the main editor
+        // Select and display file contents in the main editor
         function selectFile(filename) {
-            // Save current editor content to active file before switching, but ONLY if the file still exists in our registry!
-            if (activeFilename && virtualFiles[activeFilename] !== undefined) {
+            // Save current editor content to active file before switching, but ONLY if the file still exists in our registry and is not stdlib!
+            if (activeFilename && !activeFilename.startsWith('stdlib/') && virtualFiles[activeFilename] !== undefined) {
                 if (editorInstance) {
                     virtualFiles[activeFilename] = editorInstance.getValue();
                 }
@@ -1250,8 +1269,19 @@ cycle x = 0 : 5 {
                 eduActiveSpan.className = "bg-gradient-to-r from-indigo-500/20 to-purple-500/10 border border-indigo-500/35 px-3 py-1 rounded-lg text-xs font-mono text-indigo-300 font-bold tracking-wide select-all shadow-[0_0_10px_rgba(99,102,241,0.1)]";
             }
 
+            let fileContent = "";
+            let isReadOnly = false;
+            if (filename.startsWith('stdlib/')) {
+                const libName = filename.substring(7);
+                fileContent = stdlibFiles[libName] || "";
+                isReadOnly = true;
+            } else {
+                fileContent = virtualFiles[filename] || "";
+            }
+
             if (editorInstance) {
-                editorInstance.setValue(virtualFiles[filename]);
+                editorInstance.setValue(fileContent);
+                editorInstance.updateOptions({ readOnly: isReadOnly });
                 // Set language syntax highlighting based on extension
                 const isSad = filename.endsWith('.sad');
                 const model = editorInstance.getModel();
@@ -1261,7 +1291,8 @@ cycle x = 0 : 5 {
                 setTimeout(() => editorInstance.layout(), 50);
             }
             if (eduEditorInstance) {
-                eduEditorInstance.setValue(virtualFiles[filename]);
+                eduEditorInstance.setValue(fileContent);
+                eduEditorInstance.updateOptions({ readOnly: isReadOnly });
                 // Set language syntax highlighting based on extension
                 const isSad = filename.endsWith('.sad');
                 const model = eduEditorInstance.getModel();
@@ -1273,7 +1304,9 @@ cycle x = 0 : 5 {
         }
 
         // Prompt user to create a new file
-        function createNewFilePrompt(isEdu = false) {
+        function createNewFilePrompt(isEdu = false, folderPath = null, event = null) {
+            if (event) event.stopPropagation();
+
             // Check if there's already an active inline input box
             const existingInput = document.getElementById('new-file-inline-input');
             if (existingInput) {
@@ -1281,12 +1314,31 @@ cycle x = 0 : 5 {
                 return;
             }
 
-            const container = document.getElementById(isEdu ? 'edu-virtual-files-list' : 'virtual-files-list');
+            // If folderPath is provided, ensure folder is expanded
+            if (folderPath && !expandedFolders.has(folderPath)) {
+                expandedFolders.add(folderPath);
+                updateVirtualFilesUI();
+            }
+
+            let container;
+            if (folderPath) {
+                // Find the child container of the folder in the correct sidebar
+                const sidebarId = isEdu ? 'edu-virtual-files-list' : 'virtual-files-list';
+                const sidebar = document.getElementById(sidebarId);
+                if (sidebar) {
+                    container = sidebar.querySelector(`[data-folder-path="${folderPath}"]`);
+                }
+            }
+            if (!container) {
+                container = document.getElementById(isEdu ? 'edu-virtual-files-list' : 'virtual-files-list');
+            }
 
             // Remove the empty state message if it is showing
-            const emptyState = container.querySelector('.text-slate-600');
-            if (emptyState) {
-                container.innerHTML = "";
+            if (!folderPath) {
+                const emptyState = container.querySelector('.text-slate-600');
+                if (emptyState) {
+                    container.innerHTML = "";
+                }
             }
 
             // Create temporary list item
@@ -1313,7 +1365,11 @@ cycle x = 0 : 5 {
             input.focus();
 
             // Scroll sidebar container to the bottom so input is fully visible
-            container.scrollTop = container.scrollHeight;
+            if (folderPath) {
+                tempItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else {
+                container.scrollTop = container.scrollHeight;
+            }
 
             let finished = false;
 
@@ -1321,21 +1377,25 @@ cycle x = 0 : 5 {
                 if (finished) return;
                 finished = true;
                 tempItem.remove();
-                if (Object.keys(virtualFiles).length === 0) {
+                if (Object.keys(virtualFiles).length === 0 && virtualFolders.length === 0) {
                     updateVirtualFilesUI();
                 }
             }
 
             function handleSubmit() {
                 if (finished) return;
-                const filename = input.value.trim();
+                let filename = input.value.trim();
+                filename = filename.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
                 if (!filename) {
                     handleCancel();
                     return;
                 }
 
+                // Prepend folderPath if creating in a folder
+                const fullPath = folderPath ? (folderPath + '/' + filename) : filename;
+
                 // Double check duplicate filenames
-                if (virtualFiles[filename] !== undefined) {
+                if (virtualFiles[fullPath] !== undefined) {
                     tempItem.classList.remove('animate-shake');
                     void tempItem.offsetWidth; // trigger reflow to restart animation
                     tempItem.classList.add('animate-shake');
@@ -1344,9 +1404,9 @@ cycle x = 0 : 5 {
                 }
 
                 finished = true;
-                virtualFiles[filename] = "";
+                virtualFiles[fullPath] = "";
                 tempItem.remove();
-                selectFile(filename);
+                selectFile(fullPath);
             }
 
             // Bind keydown events (Enter to submit, Escape to cancel)
@@ -1363,10 +1423,12 @@ cycle x = 0 : 5 {
             // Dynamically sanitize input & change icon/styles based on validity and file extension
             const iconWrapper = tempItem.querySelector('.icon-wrapper');
             input.addEventListener('input', () => {
-                input.value = input.value.replace(/[<>:"\/\\|?*]/g, '');
-                const name = input.value.trim();
+                input.value = input.value.replace(/[<>:"\\|?*]/g, ''); // Allow / for nested paths
+                input.value = input.value.replace(/\\/g, '/');
+                const name = input.value.trim().replace(/^\/+|\/+$/g, '');
+                const fullPath = folderPath ? (folderPath + '/' + name) : name;
                 const isSad = name.endsWith('.sad');
-                const isDuplicate = (virtualFiles[name] !== undefined);
+                const isDuplicate = (virtualFiles[fullPath] !== undefined);
 
                 if (isDuplicate) {
                     tempItem.className = 'p-2.5 rounded-lg border bg-rose-950/20 border-rose-500/40 flex items-center text-xs transition-all';
@@ -1381,6 +1443,170 @@ cycle x = 0 : 5 {
             });
 
             // On blur, cancel the creation (delay slightly so click/keydown events process first)
+            input.addEventListener('blur', () => {
+                setTimeout(() => {
+                    if (finished) return;
+                    if (!document.getElementById('new-file-inline-input')) return;
+                    handleCancel();
+                }, 150);
+            });
+        }
+
+        // Download a folder as a ZIP file (including all subfolders recursively)
+        function downloadFolder(folderPath, event) {
+            if (event) event.stopPropagation();
+
+            if (typeof JSZip === 'undefined') {
+                writeToTerminal("[Error] JSZip library is not loaded. Cannot download folder.", true);
+                return;
+            }
+
+            const zip = new JSZip();
+            const prefix = folderPath + '/';
+            let filesAddedCount = 0;
+
+            // Find all files that are inside this folder
+            Object.keys(virtualFiles).forEach(filepath => {
+                if (filepath.startsWith(prefix)) {
+                    // Get the relative path inside the zip
+                    const relativePath = filepath.substring(prefix.length);
+                    zip.file(relativePath, virtualFiles[filepath]);
+                    filesAddedCount++;
+                }
+            });
+
+            // Also search for any subfolders that are empty and should be represented in the zip
+            virtualFolders.forEach(subfolderPath => {
+                if (subfolderPath === folderPath) return;
+                if (subfolderPath.startsWith(prefix)) {
+                    const relativePath = subfolderPath.substring(prefix.length);
+                    zip.folder(relativePath);
+                    filesAddedCount++;
+                }
+            });
+
+            if (filesAddedCount === 0) {
+                // Keep the folder itself if it's completely empty
+                zip.folder("");
+            }
+
+            // Get folder name for the zip filename
+            const folderParts = folderPath.split('/');
+            const folderName = folderParts[folderParts.length - 1] || 'folder';
+
+            zip.generateAsync({ type: 'blob' }).then(content => {
+                const url = URL.createObjectURL(content);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${folderName}.zip`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }).catch(err => {
+                writeToTerminal("[Error] Failed to generate zip file: " + err.message, true);
+            });
+        }
+
+        // Prompt user to create a new folder
+        function createNewFolderPrompt(isEdu = false) {
+            const existingInput = document.getElementById('new-file-inline-input');
+            if (existingInput) {
+                existingInput.focus();
+                return;
+            }
+
+            const container = document.getElementById(isEdu ? 'edu-virtual-files-list' : 'virtual-files-list');
+
+            const emptyState = container.querySelector('.text-slate-600') || container.querySelector('.text-slate-500') || container.querySelector('.italic');
+            if (emptyState && Object.keys(virtualFiles).length === 0 && virtualFolders.length === 0) {
+                container.innerHTML = "";
+            }
+
+            const tempItem = document.createElement('div');
+            tempItem.id = 'new-file-temp-item';
+            tempItem.className = 'p-2.5 rounded-lg border bg-indigo-600/10 border-indigo-500/30 flex items-center text-xs transition-all';
+
+            tempItem.innerHTML = `
+                <div class="flex items-center space-x-2 w-full">
+                    <div class="icon-wrapper shrink-0">
+                        <i data-lucide="folder-plus" class="h-3.5 w-3.5 text-indigo-400 shrink-0"></i>
+                    </div>
+                    <input type="text" id="new-file-inline-input"
+                        class="bg-transparent border-none outline-none font-mono text-xs text-slate-200 flex-1 p-0 focus:ring-0 focus:outline-none placeholder-slate-500"
+                        placeholder="folder_name"
+                    />
+                </div>
+            `;
+
+            container.appendChild(tempItem);
+            lucide.createIcons();
+
+            const input = document.getElementById('new-file-inline-input');
+            input.focus();
+            container.scrollTop = container.scrollHeight;
+
+            let finished = false;
+
+            function handleCancel() {
+                if (finished) return;
+                finished = true;
+                tempItem.remove();
+                if (Object.keys(virtualFiles).length === 0 && virtualFolders.length === 0) {
+                    updateVirtualFilesUI();
+                }
+            }
+
+            function handleSubmit() {
+                if (finished) return;
+                let foldername = input.value.trim();
+                foldername = foldername.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+                if (!foldername) {
+                    handleCancel();
+                    return;
+                }
+
+                if (virtualFolders.includes(foldername)) {
+                    tempItem.classList.remove('animate-shake');
+                    void tempItem.offsetWidth;
+                    tempItem.classList.add('animate-shake');
+                    input.focus();
+                    return;
+                }
+
+                finished = true;
+                virtualFolders.push(foldername);
+                tempItem.remove();
+                updateVirtualFilesUI();
+            }
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSubmit();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    handleCancel();
+                }
+            });
+
+            const iconWrapper = tempItem.querySelector('.icon-wrapper');
+            input.addEventListener('input', () => {
+                input.value = input.value.replace(/[<>:"\\|?*]/g, '');
+                input.value = input.value.replace(/\\/g, '/');
+                const name = input.value.trim().replace(/^\/+|\/+$/g, '');
+                const isDuplicate = virtualFolders.includes(name);
+
+                if (isDuplicate) {
+                    tempItem.className = 'p-2.5 rounded-lg border bg-rose-950/20 border-rose-500/40 flex items-center text-xs transition-all';
+                    iconWrapper.innerHTML = `<i data-lucide="alert-circle" class="h-3.5 w-3.5 text-rose-400 shrink-0"></i>`;
+                } else {
+                    tempItem.className = 'p-2.5 rounded-lg border bg-indigo-600/10 border-indigo-500/30 flex items-center text-xs transition-all';
+                    iconWrapper.innerHTML = `<i data-lucide="folder-plus" class="h-3.5 w-3.5 text-indigo-400 shrink-0"></i>`;
+                }
+                lucide.createIcons();
+            });
+
             input.addEventListener('blur', () => {
                 setTimeout(() => {
                     if (finished) return;
@@ -1415,10 +1641,26 @@ cycle x = 0 : 5 {
 
         function confirmDeleteFile() {
             if (!fileToDelete) return;
-            const filename = fileToDelete;
-            delete virtualFiles[filename];
+            const name = fileToDelete;
 
-            if (activeFilename === filename) {
+            // Check if it's a folder
+            const isFolder = virtualFolders.includes(name);
+            if (isFolder) {
+                // Delete this folder and all subfolders from virtualFolders list
+                virtualFolders = virtualFolders.filter(f => f !== name && !f.startsWith(name + '/'));
+
+                // Delete all files inside this folder from virtualFiles
+                const prefix = name + '/';
+                Object.keys(virtualFiles).forEach(file => {
+                    if (file.startsWith(prefix)) {
+                        delete virtualFiles[file];
+                    }
+                });
+            } else {
+                delete virtualFiles[name];
+            }
+
+            if (activeFilename && (activeFilename === name || activeFilename.startsWith(name + '/'))) {
                 const keys = Object.keys(virtualFiles);
                 selectFile(keys.length > 0 ? keys[0] : null);
             } else {
@@ -1431,13 +1673,16 @@ cycle x = 0 : 5 {
         // Download an individual file
         function downloadFile(filename, event) {
             if (event) event.stopPropagation(); // Prevent choosing the file
+            if (virtualFolders.includes(filename)) return; // Folders cannot be downloaded directly
             if (virtualFiles[filename] === undefined) return;
 
             const blob = new Blob([virtualFiles[filename]], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = filename;
+            const parts = filename.split('/');
+            const basename = parts[parts.length - 1];
+            a.download = basename;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -1449,11 +1694,225 @@ cycle x = 0 : 5 {
                 document.getElementById('virtual-files-list'),
                 document.getElementById('edu-virtual-files-list')
             ];
-            const fileKeys = Object.keys(virtualFiles);
+
+            // 1. Build directory tree from virtualFiles and virtualFolders list
+            function buildTree() {
+                let root = { files: [], folders: {} };
+
+                // Add empty folders from virtualFolders
+                virtualFolders.forEach(folderPath => {
+                    let parts = folderPath.split('/').filter(p => p);
+                    let current = root;
+                    let currentPath = "";
+                    parts.forEach(part => {
+                        currentPath = currentPath ? (currentPath + '/' + part) : part;
+                        if (!current.folders[part]) {
+                            current.folders[part] = { name: part, path: currentPath, files: [], folders: {} };
+                        }
+                        current = current.folders[part];
+                    });
+                });
+
+                // Add files from virtualFiles
+                Object.keys(virtualFiles).forEach(filepath => {
+                    let parts = filepath.split('/');
+                    let current = root;
+                    let currentPath = "";
+                    for (let i = 0; i < parts.length - 1; i++) {
+                        let part = parts[i];
+                        currentPath = currentPath ? (currentPath + '/' + part) : part;
+                        if (!current.folders[part]) {
+                            current.folders[part] = { name: part, path: currentPath, files: [], folders: {} };
+                        }
+                        current = current.folders[part];
+                    }
+                    current.files.push({
+                        name: parts[parts.length - 1],
+                        path: filepath
+                    });
+                });
+
+                return root;
+            }
+
+            const treeRoot = buildTree();
+
+            // Helpers for rendering tree nodes recursively
+            function renderFileItem(parentEl, displayName, path, depth, isSystemFile) {
+                const isSad = displayName.endsWith('.sad');
+                const isActive = (path === activeFilename);
+                const item = document.createElement('div');
+
+                const activeClass = 'bg-gradient-to-r from-indigo-500/15 via-purple-500/10 to-indigo-500/5 border-indigo-500/50 border-l-4 border-l-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.15)] translate-x-1';
+                const inactiveClass = 'bg-slate-900/40 border-slate-800/80 hover:border-indigo-500/40 hover:bg-slate-950/60 hover:translate-x-1';
+
+                item.className = `p-2.5 rounded-xl border flex items-center justify-between text-xs cursor-pointer transition-all duration-300 group ${isActive ? activeClass : inactiveClass}`;
+                item.setAttribute('onclick', `selectFile("${path}")`);
+
+                const iconName = isSad ? 'file-code' : 'file-text';
+                const iconColor = isSad ? 'text-indigo-400' : 'text-slate-400';
+                const nameColor = isActive ? 'text-white font-bold' : 'text-slate-400 group-hover:text-slate-200';
+                const btnOpacityClass = isActive ? 'opacity-80 hover:opacity-100' : 'opacity-0 group-hover:opacity-100';
+
+                const statusDot = isActive
+                    ? `
+                    <span class="flex h-2 w-2 relative shrink-0">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                    </span>
+                    `
+                    : '';
+
+                const badge = isActive
+                    ? `<span class="text-[8px] font-black uppercase text-indigo-400 bg-indigo-950/80 px-1.5 py-0.5 rounded border border-indigo-500/30 font-sans tracking-wide leading-none select-none shrink-0">EQUIPPED</span>`
+                    : '';
+
+                let actionButtons = '';
+                if (!isSystemFile) {
+                    actionButtons = `
+                        <div class="flex items-center space-x-1 ${btnOpacityClass} transition-opacity duration-200">
+                            <button onclick="downloadFile('${path}', event)" class="p-1 text-slate-400 hover:text-indigo-400 hover:bg-slate-850 rounded" title="Download">
+                                <i data-lucide="download" class="h-3.5 w-3.5"></i>
+                            </button>
+                            <button onclick="deleteFile('${path}', event)" class="p-1 text-slate-400 hover:text-rose-400 hover:bg-slate-850 rounded" title="Delete">
+                                <i data-lucide="trash-2" class="h-3.5 w-3.5"></i>
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    actionButtons = `
+                        <div class="flex items-center space-x-1">
+                            <span class="text-[7px] font-bold text-slate-500 uppercase tracking-wider select-none shrink-0 border border-slate-800 bg-slate-950 px-1 py-0.5 rounded">READ ONLY</span>
+                        </div>
+                    `;
+                }
+
+                item.innerHTML = `
+                    <div class="flex items-center space-x-2 truncate flex-1 mr-2">
+                        ${statusDot}
+                        <i data-lucide="${iconName}" class="h-3.5 w-3.5 ${iconColor} shrink-0"></i>
+                        <span class="font-mono ${nameColor} truncate">${displayName}</span>
+                        ${badge}
+                    </div>
+                    ${actionButtons}
+                `;
+                parentEl.appendChild(item);
+            }
+
+            function renderUserFolder(parentEl, folderNode, depth) {
+                const folderItem = document.createElement('div');
+                const isExpanded = expandedFolders.has(folderNode.path);
+                const inactiveClass = 'bg-slate-900/40 border-slate-800/80 hover:border-indigo-500/40 hover:bg-slate-950/60';
+
+                folderItem.className = `p-2.5 rounded-xl border flex items-center justify-between text-xs cursor-pointer transition-all duration-300 group ${inactiveClass}`;
+
+                folderItem.onclick = (e) => {
+                    e.stopPropagation();
+                    if (isExpanded) {
+                        expandedFolders.delete(folderNode.path);
+                    } else {
+                        expandedFolders.add(folderNode.path);
+                    }
+                    updateVirtualFilesUI();
+                };
+
+                const chevronIcon = isExpanded ? 'chevron-down' : 'chevron-right';
+                const isEdu = !!(parentEl.id === 'edu-virtual-files-list' || parentEl.closest('#edu-virtual-files-list'));
+
+                folderItem.innerHTML = `
+                    <div class="flex items-center space-x-2 truncate flex-1 mr-2">
+                        <i data-lucide="${chevronIcon}" class="h-3.5 w-3.5 text-indigo-400 shrink-0"></i>
+                        <i data-lucide="folder" class="h-3.5 w-3.5 text-indigo-400 shrink-0"></i>
+                        <span class="font-mono text-slate-400 group-hover:text-slate-200 truncate font-semibold">${folderNode.name}</span>
+                    </div>
+                    <div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <button onclick="createNewFilePrompt(${isEdu}, '${folderNode.path}', event)" class="p-1 text-slate-400 hover:text-indigo-400 hover:bg-slate-850 rounded" title="New File in Folder">
+                            <i data-lucide="plus" class="h-3.5 w-3.5"></i>
+                        </button>
+                        <button onclick="downloadFolder('${folderNode.path}', event)" class="p-1 text-slate-400 hover:text-indigo-400 hover:bg-slate-850 rounded" title="Download Folder">
+                            <i data-lucide="download" class="h-3.5 w-3.5"></i>
+                        </button>
+                        <button onclick="deleteFile('${folderNode.path}', event)" class="p-1 text-slate-400 hover:text-rose-400 hover:bg-slate-850 rounded" title="Delete Folder">
+                            <i data-lucide="trash-2" class="h-3.5 w-3.5"></i>
+                        </button>
+                    </div>
+                `;
+                parentEl.appendChild(folderItem);
+
+                if (isExpanded) {
+                    const childContainer = document.createElement('div');
+                    childContainer.dataset.folderPath = folderNode.path;
+                    childContainer.className = "flex flex-col space-y-1.5 mt-1.5 ml-2 border-l border-slate-800/80 pl-2";
+                    renderNode(childContainer, folderNode, depth + 1);
+                    parentEl.appendChild(childContainer);
+                }
+            }
+
+            function renderSystemFolder(parentEl, name, path, isExpanded, onToggle, onRenderChildren) {
+                const folderItem = document.createElement('div');
+                const inactiveClass = 'bg-slate-900/40 border-slate-800/80 hover:border-indigo-500/40 hover:bg-slate-950/60';
+                folderItem.className = `p-2.5 rounded-xl border flex items-center justify-between text-xs cursor-pointer transition-all duration-300 group ${inactiveClass}`;
+
+                folderItem.onclick = (e) => {
+                    e.stopPropagation();
+                    onToggle(!isExpanded);
+                };
+
+                const chevronIcon = isExpanded ? 'chevron-down' : 'chevron-right';
+
+                folderItem.innerHTML = `
+                    <div class="flex items-center space-x-2 truncate flex-1 mr-2">
+                        <i data-lucide="${chevronIcon}" class="h-3.5 w-3.5 text-indigo-400 shrink-0"></i>
+                        <i data-lucide="folder-git" class="h-3.5 w-3.5 text-indigo-400 shrink-0"></i>
+                        <span class="font-mono text-slate-400 group-hover:text-slate-200 truncate font-semibold uppercase tracking-wider text-[10px]">${name}</span>
+                    </div>
+                    <div>
+                        <span class="text-[8px] font-black uppercase text-indigo-400 bg-indigo-950/80 px-1.5 py-0.5 rounded border border-indigo-500/30 font-sans tracking-wide leading-none select-none shrink-0">SYSTEM</span>
+                    </div>
+                `;
+                parentEl.appendChild(folderItem);
+
+                if (isExpanded) {
+                    const childContainer = document.createElement('div');
+                    childContainer.className = "flex flex-col space-y-1.5 mt-1.5 ml-2 border-l border-slate-800/80 pl-2";
+                    onRenderChildren(childContainer);
+                    parentEl.appendChild(childContainer);
+                }
+            }
+
+            function renderNode(parentEl, node, depth) {
+                // 1. Render subfolders
+                Object.keys(node.folders).sort().forEach(key => {
+                    renderUserFolder(parentEl, node.folders[key], depth);
+                });
+
+                // 2. Render files
+                node.files.sort((a, b) => a.name.localeCompare(b.name)).forEach(file => {
+                    renderFileItem(parentEl, file.name, file.path, depth, false);
+                });
+            }
 
             containers.forEach(container => {
                 if (!container) return;
-                if (fileKeys.length === 0) {
+                container.innerHTML = "";
+
+                // 2. Render /stdlib System Folder
+                const stdlibKeys = Object.keys(stdlibFiles);
+                if (stdlibKeys.length > 0) {
+                    renderSystemFolder(container, "stdlib", "stdlib", isStdlibExpanded, (expand) => {
+                        isStdlibExpanded = expand;
+                        updateVirtualFilesUI();
+                    }, (childContainer) => {
+                        stdlibKeys.sort().forEach(name => {
+                            renderFileItem(childContainer, name, "stdlib/" + name, 1, true);
+                        });
+                    });
+                }
+
+                // 3. Render user directories
+                renderNode(container, treeRoot, 0);
+
+                if (container.children.length === 0) {
                     container.innerHTML = `
                         <div class="text-slate-500 italic p-6 text-center border border-dashed border-slate-800/60 rounded-xl flex flex-col items-center justify-center space-y-2 bg-slate-950/20 backdrop-blur-sm">
                             <i data-lucide="archive" class="h-6 w-6 text-slate-600 animate-pulse"></i>
@@ -1463,65 +1922,14 @@ cycle x = 0 : 5 {
                             </div>
                         </div>
                     `;
-                    return;
                 }
-
-                container.innerHTML = "";
-                fileKeys.forEach(name => {
-                    const isSad = name.endsWith('.sad');
-                    const isActive = (name === activeFilename);
-                    const item = document.createElement('div');
-
-                    const activeClass = 'bg-gradient-to-r from-indigo-500/15 via-purple-500/10 to-indigo-500/5 border-indigo-500/50 border-l-4 border-l-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.15)] translate-x-1';
-                    const inactiveClass = 'bg-slate-900/40 border-slate-800/80 hover:border-indigo-500/40 hover:bg-slate-950/60 hover:translate-x-1';
-
-                    item.className = `p-2.5 rounded-xl border flex items-center justify-between text-xs cursor-pointer transition-all duration-300 group ${isActive ? activeClass : inactiveClass}`;
-                    item.setAttribute('onclick', `selectFile("${name}")`);
-
-                    // Set icon depending on whether it is a .sad file
-                    const iconName = isSad ? 'file-code' : 'file-text';
-                    const iconColor = isSad ? 'text-indigo-400' : 'text-slate-400';
-                    const nameColor = isActive ? 'text-white font-bold' : 'text-slate-400 group-hover:text-slate-200';
-                    const btnOpacityClass = isActive ? 'opacity-80 hover:opacity-100' : 'opacity-0 group-hover:opacity-100';
-
-                    // Equipped status element
-                    const statusDot = isActive
-                        ? `
-                        <span class="flex h-2 w-2 relative shrink-0">
-                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-                        </span>
-                        `
-                        : '';
-
-                    const badge = isActive
-                        ? `<span class="text-[8px] font-black uppercase text-indigo-400 bg-indigo-950/80 px-1.5 py-0.5 rounded border border-indigo-500/30 font-sans tracking-wide leading-none select-none shrink-0">EQUIPPED</span>`
-                        : '';
-
-                    item.innerHTML = `
-                        <div class="flex items-center space-x-2 truncate flex-1 mr-2">
-                            ${statusDot}
-                            <i data-lucide="${iconName}" class="h-3.5 w-3.5 ${iconColor} shrink-0"></i>
-                            <span class="font-mono ${nameColor} truncate">${name}</span>
-                            ${badge}
-                        </div>
-                        <div class="flex items-center space-x-1 ${btnOpacityClass} transition-opacity duration-200">
-                            <button onclick="downloadFile('${name}', event)" class="p-1 text-slate-400 hover:text-indigo-400 hover:bg-slate-850 rounded" title="Download">
-                                <i data-lucide="download" class="h-3.5 w-3.5"></i>
-                            </button>
-                            <button onclick="deleteFile('${name}', event)" class="p-1 text-slate-400 hover:text-rose-400 hover:bg-slate-850 rounded" title="Delete">
-                                <i data-lucide="trash-2" class="h-3.5 w-3.5"></i>
-                            </button>
-                        </div>
-                    `;
-                    container.appendChild(item);
-                });
             });
             lucide.createIcons();
         }
 
         function clearVirtualFiles() {
             virtualFiles = {};
+            virtualFolders = [];
             selectFile(null);
             writeToTerminal("// Sandbox filesystem cleared.");
         }
@@ -2507,7 +2915,7 @@ cycle x = 0 : 5 {
             }
             
             window.executionTrace = trace;
-            window.currentExecutionStep = 0;
+            window.currentExecutionStep = -1; // Start at -1 (inactive state) to keep AST clean initially
             window.previousStepVars = {};
             
             // Switch to AST tab to visualize
@@ -2538,8 +2946,31 @@ cycle x = 0 : 5 {
             }
             lucide.createIcons();
             
-            // Render first step
-            renderExecutionStep(0);
+            // Reset status counter label
+            const statusLabel = document.getElementById('edu-stepper-status');
+            if (statusLabel) {
+                statusLabel.innerText = `Step 0 / ${window.executionTrace.length}`;
+            }
+            
+            // Reset active node label
+            const activeNodeLabel = document.getElementById('edu-stepper-active-node');
+            if (activeNodeLabel) {
+                activeNodeLabel.innerText = "None";
+            }
+            
+            // Clear scopes panel
+            const scopesContainer = document.getElementById('edu-stepper-scopes');
+            if (scopesContainer) {
+                scopesContainer.innerHTML = '<div class="text-slate-500 italic text-[11px] text-center py-4">// Press Step or Play to start code execution trace.</div>';
+            }
+            
+            // Clear Monaco execution decorations
+            if (eduEditorInstance && window.eduExecutionDecorations) {
+                window.eduExecutionDecorations = eduEditorInstance.deltaDecorations(window.eduExecutionDecorations, []);
+            }
+            
+            // Re-apply standard layout / reset traversal highlights (Exploration Mode)
+            resetTraversal();
         }
 
         function stopExecutionStepper() {
@@ -3322,6 +3753,14 @@ cycle x = 0 : 5 {
             // Register Sardine syntax highlight profile
             monaco.languages.register({ id: 'sardine' });
 
+            // Set language configuration for comments so Ctrl+/ toggles comments
+            monaco.languages.setLanguageConfiguration('sardine', {
+                comments: {
+                    lineComment: '#',
+                    blockComment: ['#*', '*#']
+                }
+            });
+
             monaco.languages.setMonarchTokensProvider('sardine', {
                 keywords: [
                     'model', 'init', 'method', 'attr', 'open', 'guarded', 'secret',
@@ -3433,13 +3872,13 @@ cycle x = 0 : 5 {
 
             // Auto-save changes back to our virtual files registry
             editorInstance.onDidChangeModelContent(() => {
-                if (activeFilename) {
+                if (activeFilename && !activeFilename.startsWith('stdlib/')) {
                     virtualFiles[activeFilename] = editorInstance.getValue();
                 }
             });
 
             eduEditorInstance.onDidChangeModelContent(() => {
-                if (activeFilename) {
+                if (activeFilename && !activeFilename.startsWith('stdlib/')) {
                     virtualFiles[activeFilename] = eduEditorInstance.getValue();
                 }
             });

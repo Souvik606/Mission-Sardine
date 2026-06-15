@@ -39,7 +39,25 @@ var Module = {
     postMessage({ type: "stderr", data: text });
   },
   onRuntimeInitialized: function () {
-    postMessage({ type: "ready" });
+    let stdlibFiles = {};
+    try {
+      let fsObj = (typeof FS !== 'undefined') ? FS : Module.FS;
+      if (fsObj && fsObj.readdir) {
+        let files = fsObj.readdir('/stdlib');
+        files.forEach(name => {
+          if (name !== '.' && name !== '..') {
+            try {
+              stdlibFiles[name] = fsObj.readFile('/stdlib/' + name, { encoding: 'utf8' });
+            } catch(readErr) {
+              console.error("Worker failed to read stdlib file:", name, readErr);
+            }
+          }
+        });
+      }
+    } catch(e) {
+      console.error("Worker failed to scan /stdlib directory:", e);
+    }
+    postMessage({ type: "ready", stdlib: stdlibFiles });
   },
   locateFile: function (path, prefix) {
     if (path.endsWith(".wasm")) {
@@ -153,6 +171,15 @@ onmessage = function (e) {
           // Write fresh files
           for (let filename in e.data.files) {
             try {
+              let parts = filename.split('/');
+              if (parts.length > 1) {
+                let dirPath = '/' + parts.slice(0, -1).join('/');
+                try {
+                  Module.FS.mkdirTree(dirPath);
+                } catch(dirErr) {
+                  // Ignore if directory exists
+                }
+              }
               Module.FS.writeFile('/' + filename, e.data.files[filename]);
             } catch (writeErr) {
               console.error("Failed to write to MEMFS:", filename, writeErr);
