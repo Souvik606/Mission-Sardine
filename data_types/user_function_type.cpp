@@ -25,12 +25,11 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>> &pos_args, co
 {
     RunTimeResult res;
 
+    shared_ptr<Context> traceback_parent = call_context ? call_context : (instance ? instance->context : this->context);
     shared_ptr<Context> exec_context;
-    shared_ptr<Context> traceback_parent = call_context ? call_context : this->context;
 
     if (instance)
     {
-        traceback_parent = instance->context;
         exec_context = make_shared<Context>("method " + this->name, traceback_parent, this->pos_start);
 
         auto inst_sym = interpreter.get_instance_symbol_table(instance);
@@ -136,17 +135,23 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>> &pos_args, co
     if (res.error)
         return res;
 
-    if (res.func_return_value)
-        return res.success(res.func_return_value);
-
-    if (this->return_null)
-    {
-        auto val = make_shared<Null>();
-        val->set_context(exec_context).set_pos(this->pos_start, this->pos_end);
-        return res.success(std::static_pointer_cast<DataType>(val));
+    shared_ptr<DataType> return_val = res.func_return_value;
+    if (!return_val) {
+        if (this->return_null) {
+            auto val = make_shared<Null>();
+            val->set_context(exec_context).set_pos(this->pos_start, this->pos_end);
+            return_val = std::static_pointer_cast<DataType>(val);
+        } else {
+            return_val = value;
+        }
     }
 
-    return res.success(value);
+    if (EDUCATIONAL_MODE) {
+        exec_context->symbol_table->set("<return>", return_val);
+        interpreter.log_execution_step(this->body_node, exec_context, "FunctionReturn");
+    }
+
+    return res.success(return_val);
 }
 
 shared_ptr<DataType> Function::copy() const

@@ -162,6 +162,68 @@ public:
         };
     }
 
+    ExecutionTraceVar build_trace_var(const string& name, const shared_ptr<DataType>& val, int depth, const string& accessed_name, const string& accessed_obj, bool is_attr_op, bool& found_var, const string& parent_var_name = "")
+    {
+        ExecutionTraceVar var;
+        var.name = name;
+        if (!val) {
+            var.type = "None";
+            var.value = "null";
+            var.is_accessed = false;
+            return var;
+        }
+
+        var.type = val->get_type_name();
+        string val_str = val->to_string();
+        if (val_str.length() > 500) {
+            val_str = val_str.substr(0, 497) + "...";
+        }
+        var.value = val_str;
+        var.is_accessed = false;
+
+        if (!accessed_name.empty()) {
+            if (is_attr_op) {
+                if (depth == 1 && name == accessed_name) {
+                    if (accessed_obj.empty() || parent_var_name == accessed_obj ||
+                        ((parent_var_name == "this" || parent_var_name == "self") && (accessed_obj == "this" || accessed_obj == "self"))) {
+                        var.is_accessed = true;
+                    }
+                }
+            } else {
+                if (!accessed_obj.empty()) {
+                    if (depth == 1 && name == accessed_name && 
+                        (parent_var_name == accessed_obj || ((parent_var_name == "this" || parent_var_name == "self") && (accessed_obj == "this" || accessed_obj == "self"))) && 
+                        !found_var) {
+                        var.is_accessed = true;
+                        found_var = true;
+                    }
+                } else {
+                    if (depth == 0 && name == accessed_name && !found_var) {
+                        var.is_accessed = true;
+                        found_var = true;
+                    }
+                }
+            }
+        }
+
+        if (depth < 3) {
+            if (auto inst = dynamic_pointer_cast<ModelInstance>(val)) {
+                if (inst->symbol_table) {
+                    for (const auto& [attr_name, attr_val] : inst->symbol_table->get_symbols()) {
+                        if (!attr_val) continue;
+                        string attr_type = attr_val->get_type_name();
+                        if (attr_type == "BuiltInFunction" || attr_type == "Function") {
+                            continue;
+                        }
+                        var.props.push_back(build_trace_var(attr_name, attr_val, depth + 1, accessed_name, accessed_obj, is_attr_op, found_var, name));
+                    }
+                }
+            }
+        }
+
+        return var;
+    }
+
     void log_execution_step(const shared_ptr<Node> &node, const shared_ptr<Context> &context, const string &override_node_type = "")
     {
         if (!EDUCATIONAL_MODE || EXECUTION_TRACE.size() >= 1000) return;
@@ -191,10 +253,74 @@ public:
             step.node_type = s;
         }
 
+        // Detect if active node accesses any variable or attribute
+        string accessed_var_name = "";
+        string accessed_obj_name = "";
+        bool is_attr_op = false;
+        
+        auto check_is_this_attr = [&](const string& name) -> bool {
+            if (context && context->symbol_table && context->symbol_table->get_symbols().count(name) > 0) {
+                return false;
+            }
+            auto this_val = context ? (context->symbol_table ? context->symbol_table->get("this") : nullptr) : nullptr;
+            if (this_val) {
+                if (auto inst = dynamic_pointer_cast<ModelInstance>(this_val)) {
+                    if (inst->symbol_table && inst->symbol_table->get(name)) {
+                        return true;
+                    }
+                    if (inst->model && inst->model->find_attribute(name) != nullptr) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
+
+        if (auto var_use = dynamic_pointer_cast<VariableUseNode>(node)) {
+            accessed_var_name = any_cast<string>(var_use->var_name_tok.value);
+            if (check_is_this_attr(accessed_var_name)) {
+                accessed_obj_name = "this";
+            }
+        } else if (auto attr_access = dynamic_pointer_cast<AttrAccessNode>(node)) {
+            accessed_var_name = any_cast<string>(attr_access->attr_name_tok.value);
+            is_attr_op = true;
+            if (auto obj_var = dynamic_pointer_cast<VariableUseNode>(attr_access->object_node)) {
+                accessed_obj_name = any_cast<string>(obj_var->var_name_tok.value);
+            }
+        } else if (auto attr_assign = dynamic_pointer_cast<AttrAssignNode>(node)) {
+            accessed_var_name = any_cast<string>(attr_assign->attr_name_tok.value);
+            is_attr_op = true;
+            if (auto obj_var = dynamic_pointer_cast<VariableUseNode>(attr_assign->object_node)) {
+                accessed_obj_name = any_cast<string>(obj_var->var_name_tok.value);
+            }
+        } else if (auto var_assign = dynamic_pointer_cast<VariableAssignNode>(node)) {
+            if (!var_assign->left_nodes.empty()) {
+                auto first_left = var_assign->left_nodes[0];
+                if (auto left_var_use = dynamic_pointer_cast<VariableUseNode>(first_left)) {
+                    accessed_var_name = any_cast<string>(left_var_use->var_name_tok.value);
+                    if (check_is_this_attr(accessed_var_name)) {
+                        accessed_obj_name = "this";
+                    }
+                } else if (auto left_attr_access = dynamic_pointer_cast<AttrAccessNode>(first_left)) {
+                    accessed_var_name = any_cast<string>(left_attr_access->attr_name_tok.value);
+                    is_attr_op = true;
+                    if (auto obj_var = dynamic_pointer_cast<VariableUseNode>(left_attr_access->object_node)) {
+                        accessed_obj_name = any_cast<string>(obj_var->var_name_tok.value);
+                    }
+                }
+            }
+        }
+
         shared_ptr<Context> curr_ctx = context;
+        bool found_var = false;
         while (curr_ctx) {
             ExecutionTraceScope scope;
             scope.name = curr_ctx->display_name;
+            if (curr_ctx->parent) {
+                scope.parent_name = curr_ctx->parent->display_name;
+            } else {
+                scope.parent_name = "None";
+            }
             
             shared_ptr<SymbolTable> table = curr_ctx->symbol_table;
             if (table) {
@@ -208,15 +334,7 @@ public:
                         continue;
                     }
                     
-                    ExecutionTraceVar var;
-                    var.name = name;
-                    var.type = type_name;
-                    string val_str = val->to_string();
-                    if (val_str.length() > 500) {
-                        val_str = val_str.substr(0, 497) + "...";
-                    }
-                    var.value = val_str;
-                    scope.variables.push_back(var);
+                    scope.variables.push_back(build_trace_var(name, val, 0, accessed_var_name, accessed_obj_name, is_attr_op, found_var));
                 }
             }
             

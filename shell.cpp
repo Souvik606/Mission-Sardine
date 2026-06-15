@@ -776,6 +776,22 @@ RunTimeResult builtin_fopen(const Position& pos_start, const Position& pos_end, 
     return RunTimeResult().success(file_obj);
 }
 
+inline string var_to_json(const ExecutionTraceVar& var) {
+    string out = "{";
+    out += "\"name\":\"" + escape_json_string(var.name) + "\",";
+    out += "\"type\":\"" + escape_json_string(var.type) + "\",";
+    out += "\"value\":\"" + escape_json_string(var.value) + "\",";
+    out += "\"is_accessed\":" + string(var.is_accessed ? "true" : "false") + ",";
+    out += "\"props\":[";
+    for (size_t i = 0; i < var.props.size(); ++i) {
+        if (i > 0) out += ",";
+        out += var_to_json(var.props[i]);
+    }
+    out += "]";
+    out += "}";
+    return out;
+}
+
 inline string trace_to_json() {
     string out = "[";
     for (size_t i = 0; i < EXECUTION_TRACE.size(); ++i) {
@@ -791,15 +807,11 @@ inline string trace_to_json() {
             const auto& scope = step.scopes[j];
             out += "{";
             out += "\"name\":\"" + escape_json_string(scope.name) + "\",";
+            out += "\"parent\":\"" + escape_json_string(scope.parent_name) + "\",";
             out += "\"variables\":[";
             for (size_t k = 0; k < scope.variables.size(); ++k) {
                 if (k > 0) out += ",";
-                const auto& var = scope.variables[k];
-                out += "{";
-                out += "\"name\":\"" + escape_json_string(var.name) + "\",";
-                out += "\"type\":\"" + escape_json_string(var.type) + "\",";
-                out += "\"value\":\"" + escape_json_string(var.value) + "\"";
-                out += "}";
+                out += var_to_json(scope.variables[k]);
             }
             out += "]";
             out += "}";

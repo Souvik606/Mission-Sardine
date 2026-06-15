@@ -74,10 +74,13 @@ struct ExecutionTraceVar {
     string name;
     string value;
     string type;
+    vector<ExecutionTraceVar> props;
+    bool is_accessed = false;
 };
 
 struct ExecutionTraceScope {
     string name;
+    string parent_name;
     vector<ExecutionTraceVar> variables;
 };
 

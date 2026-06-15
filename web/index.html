@@ -200,6 +200,12 @@
         .animate-var-update {
             animation: variable-update-glow 1.8s cubic-bezier(0.1, 0.8, 0.3, 1);
         }
+        .accessed-var-highlight {
+            background-color: rgba(245, 158, 11, 0.18) !important;
+            border-color: rgba(245, 158, 11, 0.5) !important;
+            color: #fbbf24 !important;
+            box-shadow: 0 0 8px rgba(245, 158, 11, 0.25);
+        }
     </style>
 </head>
 
@@ -639,7 +645,7 @@
                             </div>
                             
                             <!-- Active Scope Variable Environment Panel -->
-                            <div class="flex-1 overflow-y-auto p-3.5 font-sans space-y-3.5 select-text bg-[#09090f]" id="edu-stepper-scopes">
+                            <div class="flex-1 overflow-y-auto overflow-x-auto p-3.5 font-sans space-y-3.5 select-text bg-[#09090f]" id="edu-stepper-scopes">
                                 <div class="text-slate-500 italic text-[11px] text-center py-4">// No variables in scope.</div>
                             </div>
                         </div>
@@ -3186,6 +3192,8 @@ cycle x = 0 : 5 {
                 searchNodeType = "FunctionCallNode";
             } else if (searchNodeType === "ProgramEnd") {
                 searchNodeType = "ListNode";
+            } else if (searchNodeType === "FunctionReturn") {
+                searchNodeType = "ListNode";
             }
             
             const searchStableId = searchNodeType + (pos_start ? `_${pos_start.line}_${pos_start.col}` : '');
@@ -3253,6 +3261,55 @@ cycle x = 0 : 5 {
             }
         }
 
+        function renderVariableRow(v, scopeIdx, scopeName, parentPath = "") {
+            const varKey = `${scopeIdx}_${scopeName}_${parentPath}${v.name}`;
+            const prevVal = window.previousStepVars[varKey];
+            const isUpdated = (prevVal !== undefined && prevVal !== v.value);
+            const isNew = (prevVal === undefined && window.currentExecutionStep > 0);
+            
+            let highlightClass = "";
+            if (isUpdated || isNew) {
+                highlightClass = "animate-var-update";
+            }
+            if (v.is_accessed) {
+                highlightClass += " accessed-var-highlight";
+            }
+            
+            let valColor = "text-slate-200";
+            if (v.type === "Integer" || v.type === "Float") valColor = "text-amber-400 font-semibold";
+            else if (v.type === "String") valColor = "text-emerald-400 font-semibold";
+            else if (v.type === "List" || v.type === "Dictionary" || v.type === "Dict") valColor = "text-sky-400 font-bold";
+            else if (v.type === "Boolean") valColor = "text-pink-400 font-bold";
+            else if (v.type === "ModelInstance" || v.type === "Model") valColor = "text-purple-400 font-bold";
+            
+            let rowHtml = `
+                <div class="whitespace-nowrap text-indigo-200 font-semibold select-all py-0.5 px-1 rounded ${highlightClass}">${escapeHtml(v.name)}</div>
+                <div class="text-[9px] font-black uppercase text-slate-500 bg-slate-900 border border-slate-800 px-1.5 py-0.5 rounded self-center select-none tracking-wide">${v.type}</div>
+                <div class="whitespace-nowrap select-all py-0.5 px-1.5 rounded bg-slate-950/70 border border-slate-900/60 shadow-inner font-bold ${valColor} ${highlightClass}" title="${escapeHtml(v.value)}">${escapeHtml(v.value)}</div>
+            `;
+            
+            if (v.props && v.props.length > 0) {
+                rowHtml += `
+                    <div class="col-span-3 pl-3 ml-2 border-l-2 border-indigo-500/30 bg-indigo-950/5 p-2 rounded-r-lg space-y-1">
+                        <div class="text-[9px] font-bold text-indigo-400 select-none uppercase tracking-wider flex items-center space-x-1">
+                            <i data-lucide="layers" class="h-3 w-3 text-indigo-450 shrink-0"></i>
+                            <span>Attributes:</span>
+                        </div>
+                        <div class="grid grid-cols-[minmax(60px,auto)_auto_minmax(80px,auto)] gap-x-2 gap-y-1 font-mono min-w-[max-content]">
+                `;
+                v.props.forEach(prop => {
+                    rowHtml += renderVariableRow(prop, scopeIdx, scopeName, parentPath + v.name + ".");
+                });
+                rowHtml += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            window.nextStepVars[varKey] = v.value;
+            return rowHtml;
+        }
+
         function renderScopes(scopes) {
             const container = document.getElementById('edu-stepper-scopes');
             if (!container) return;
@@ -3263,7 +3320,7 @@ cycle x = 0 : 5 {
             }
             
             let html = "";
-            const currentVars = {};
+            window.nextStepVars = {};
             
             scopes.forEach((scope, scopeIdx) => {
                 let scopeTitle = scope.name;
@@ -3272,11 +3329,18 @@ cycle x = 0 : 5 {
                 else if (scopeIdx === 0) scopeTitle = `Local Scope (${scopeTitle})`;
                 else scopeTitle = `Enclosing Scope (${scopeTitle})`;
                 
+                let parentInfo = "";
+                if (scope.parent && scope.parent !== "None") {
+                    let parentDisp = scope.parent === "<program>" ? "Global Scope" : scope.parent;
+                    parentInfo = `<span class="text-[9px] text-slate-550 text-indigo-400 font-medium normal-case ml-auto flex items-center select-none"><i data-lucide="corner-down-right" class="h-3 w-3 mr-1 text-indigo-500/70"></i>Parent: ${parentDisp}</span>`;
+                }
+                
                 html += `
                     <div class="rounded-xl border border-slate-800/80 bg-slate-950/40 p-3 shadow-sm flex flex-col space-y-2">
-                        <div class="flex items-center space-x-1.5 text-xs font-bold text-slate-350 border-b border-slate-850/60 pb-1.5 uppercase select-none">
-                            <i data-lucide="${scopeIdx === 0 ? 'box' : 'database'}" class="h-3.5 w-3.5 text-indigo-400 shrink-0"></i>
+                        <div class="flex items-center text-xs font-bold text-slate-350 border-b border-slate-850/60 pb-1.5 uppercase select-none w-full">
+                            <i data-lucide="${scopeIdx === 0 ? 'box' : 'database'}" class="h-3.5 w-3.5 text-indigo-400 mr-1.5 shrink-0"></i>
                             <span>${scopeTitle}</span>
+                            ${parentInfo}
                         </div>
                 `;
                 
@@ -3286,33 +3350,11 @@ cycle x = 0 : 5 {
                     const scrollWrapperClass = isGlobalScope ? "max-h-48 overflow-y-auto pr-1" : "";
                     html += `
                         <div class="${scrollWrapperClass}">
-                            <div class="grid grid-cols-[1fr_auto_1.5fr] gap-x-3 gap-y-2 font-mono text-[11px] pl-1.5 pr-1 py-1">
+                            <div class="grid grid-cols-[minmax(80px,auto)_auto_minmax(100px,auto)] gap-x-3 gap-y-2 font-mono text-[11px] pl-1.5 pr-1 py-1 min-w-[max-content]">
                     `;
                     
                     scope.variables.forEach(v => {
-                        const varKey = `${scopeIdx}_${scope.name}_${v.name}`;
-                        currentVars[varKey] = v.value;
-                        
-                        const prevVal = window.previousStepVars[varKey];
-                        const isUpdated = (prevVal !== undefined && prevVal !== v.value);
-                        const isNew = (prevVal === undefined && window.currentExecutionStep > 0);
-                        
-                        let highlightClass = "";
-                        if (isUpdated || isNew) {
-                            highlightClass = "animate-var-update";
-                        }
-                        
-                        let valColor = "text-slate-200";
-                        if (v.type === "Integer" || v.type === "Float") valColor = "text-amber-400 font-semibold";
-                        else if (v.type === "String") valColor = "text-emerald-400 font-semibold";
-                        else if (v.type === "List" || v.type === "Dictionary") valColor = "text-sky-400 font-bold";
-                        else if (v.type === "Boolean") valColor = "text-pink-400 font-bold";
-                        
-                        html += `
-                            <div class="truncate text-indigo-200 font-semibold select-all py-0.5 px-1 rounded ${highlightClass}">${escapeHtml(v.name)}</div>
-                            <div class="text-[9px] font-black uppercase text-slate-500 bg-slate-900 border border-slate-800 px-1.5 py-0.5 rounded self-center select-none tracking-wide">${v.type}</div>
-                            <div class="truncate select-all py-0.5 px-1.5 rounded bg-slate-950/70 border border-slate-900/60 shadow-inner font-bold ${valColor} ${highlightClass}" title="${escapeHtml(v.value)}">${escapeHtml(v.value)}</div>
-                        `;
+                        html += renderVariableRow(v, scopeIdx, scope.name, "");
                     });
                     
                     html += `
@@ -3325,7 +3367,8 @@ cycle x = 0 : 5 {
             });
             
             container.innerHTML = html;
-            window.previousStepVars = currentVars;
+            window.previousStepVars = window.nextStepVars;
+            delete window.nextStepVars;
             lucide.createIcons();
         }
 
