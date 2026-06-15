@@ -855,6 +855,9 @@ RunResult run(const string& filename, const string& text) {
                 auto context = make_shared<Context>("<program>");
                 context->symbol_table = global_symbol_table;
                 RunTimeResult result = interpreter.visit(ast.node, context);
+                if (EDUCATIONAL_MODE && !result.error) {
+                    interpreter.log_execution_step(ast.node, context, "ProgramEnd");
+                }
 
                 string ast_json = node_to_json(ast.node);
                 string trace_json = trace_to_json();
@@ -906,6 +909,9 @@ RunResult run(const string& filename, const string& text) {
                 auto context = make_shared<Context>("<program>");
                 context->symbol_table = global_symbol_table;
                 RunTimeResult result = interpreter.visit(ast.node, context);
+                if (EDUCATIONAL_MODE && !result.error) {
+                    interpreter.log_execution_step(ast.node, context, "ProgramEnd");
+                }
 
                 out.value = result.value;
                 out.error = result.error;

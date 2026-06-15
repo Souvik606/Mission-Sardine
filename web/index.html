@@ -585,7 +585,7 @@
                             <div class="bg-slate-900/60 border-b border-slate-800/60 px-4 py-2.5 flex items-center justify-between shrink-0">
                                 <div class="flex items-center space-x-2 text-xs font-bold text-indigo-400 uppercase tracking-wider select-none">
                                     <i data-lucide="play-circle" class="h-4 w-4 text-indigo-400 shrink-0"></i>
-                                    <span>Visual Stepper</span>
+                                    <span>Execution Flow</span>
                                 </div>
                                 <div class="flex items-center space-x-2">
                                     <!-- Stepper Control Buttons -->
@@ -604,16 +604,14 @@
                                         title="Step Forward">
                                         <i data-lucide="chevron-right" class="h-3.5 w-3.5"></i>
                                     </button>
+                                    <button onclick="resetExecutionStepper()" id="btn-step-reset"
+                                        class="p-1 rounded bg-slate-950 border border-slate-800 hover:border-slate-750 text-slate-400 hover:text-white transition-colors cursor-pointer flex items-center justify-center animate-all"
+                                        title="Reset Stepper Code Highlights">
+                                        <i data-lucide="rotate-ccw" class="h-3.5 w-3.5"></i>
+                                    </button>
                                     
                                     <!-- Step Counter -->
                                     <span id="edu-stepper-status" class="text-[11px] font-mono text-slate-350 bg-slate-900 border border-slate-800/80 px-2 py-0.5 rounded font-bold select-none">Step 0 / 0</span>
-                                    
-                                    <!-- Stop / Close Stepper -->
-                                    <button onclick="stopExecutionStepper()"
-                                        class="p-1 rounded bg-slate-950 border border-slate-800 hover:border-rose-900/50 text-slate-400 hover:text-rose-400 hover:bg-rose-950/20 transition-all cursor-pointer flex items-center justify-center"
-                                        title="Exit Stepper Mode">
-                                        <i data-lucide="x-circle" class="h-3.5 w-3.5"></i>
-                                    </button>
                                 </div>
                             </div>
                             
@@ -2631,6 +2629,52 @@ cycle x = 0 : 5 {
             }
         }
 
+        window.resetExecutionStepper = function() {
+            if (window.stepperInterval) {
+                clearInterval(window.stepperInterval);
+                window.stepperInterval = null;
+            }
+            window.currentExecutionStep = -1;
+            window.previousStepVars = {};
+            
+            // Clear Monaco execution decorations
+            if (eduEditorInstance && window.eduExecutionDecorations) {
+                window.eduExecutionDecorations = eduEditorInstance.deltaDecorations(window.eduExecutionDecorations, []);
+            }
+            
+            // Reset play button state
+            const playIcon = document.getElementById('btn-step-play-icon');
+            if (playIcon) {
+                playIcon.setAttribute('data-lucide', 'play');
+            }
+            const playBtn = document.getElementById('btn-step-play');
+            if (playBtn) {
+                playBtn.className = "p-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white transition-all cursor-pointer flex items-center justify-center shadow-[0_0_10px_rgba(99,102,241,0.25)] active:scale-95";
+            }
+            lucide.createIcons();
+            
+            // Reset status counter label
+            const statusLabel = document.getElementById('edu-stepper-status');
+            if (statusLabel) {
+                statusLabel.innerText = `Step 0 / ${window.executionTrace.length}`;
+            }
+            
+            // Reset active node label
+            const activeNodeLabel = document.getElementById('edu-stepper-active-node');
+            if (activeNodeLabel) {
+                activeNodeLabel.innerText = "None";
+            }
+            
+            // Clear scopes panel
+            const scopesContainer = document.getElementById('edu-stepper-scopes');
+            if (scopesContainer) {
+                scopesContainer.innerHTML = '<div class="text-slate-500 italic text-[11px] text-center py-4">// Code highlights stopped. Press Step or Play to resume.</div>';
+            }
+            
+            // Re-apply standard layout / reset traversal highlights
+            resetTraversal();
+        };
+
         // Stepper control wrappers
         window.prevExecutionStep = function() {
             if (!window.executionTrace || window.executionTrace.length === 0) return;
@@ -2705,11 +2749,20 @@ cycle x = 0 : 5 {
         function highlightExecutionNode(activeStableId, pos_start, pos_end) {
             if (!d3Svg) return;
             
+            // Map virtual node types like FunctionCallReturn and ProgramEnd to their physical equivalents for SVG node matching
+            let searchNodeType = activeStableId.split('_')[0];
+            if (searchNodeType === "FunctionCallReturn") {
+                searchNodeType = "FunctionCallNode";
+            } else if (searchNodeType === "ProgramEnd") {
+                searchNodeType = "ListNode";
+            }
+            
+            const searchStableId = searchNodeType + (pos_start ? `_${pos_start.line}_${pos_start.col}` : '');
             let activeId = null;
             
             // Find the active node's SVG ID based on its stableId
             d3Svg.selectAll(".ast-node").each(function (d) {
-                if (d.data.stableId === activeStableId) {
+                if (d.data.stableId === searchStableId) {
                     activeId = d.data.id;
                 }
             });
@@ -2717,7 +2770,7 @@ cycle x = 0 : 5 {
             // If not found by stableId, try finding by matching line and column position
             if (!activeId && pos_start) {
                 d3Svg.selectAll(".ast-node").each(function (d) {
-                    if (d.data.pos_start && d.data.pos_start.line === pos_start.line && d.data.pos_start.col === pos_start.col && d.data.nodeType === activeStableId.split('_')[0]) {
+                    if (d.data.pos_start && d.data.pos_start.line === pos_start.line && d.data.pos_start.col === pos_start.col && d.data.nodeType === searchNodeType) {
                         activeId = d.data.id;
                     }
                 });

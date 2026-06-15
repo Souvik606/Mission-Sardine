@@ -162,6 +162,73 @@ public:
         };
     }
 
+    void log_execution_step(const shared_ptr<Node> &node, const shared_ptr<Context> &context, const string &override_node_type = "")
+    {
+        if (!EDUCATIONAL_MODE || EXECUTION_TRACE.size() >= 1000) return;
+        if (!node) return;
+        if (!node->pos_start.has_value() || !node->pos_end.has_value()) return;
+
+        ExecutionTraceStep step;
+        step.pos_start = node->pos_start.value();
+        step.pos_end = node->pos_end.value();
+        
+        if (!override_node_type.empty()) {
+            step.node_type = override_node_type;
+        } else {
+            const Node &node_ref = *node;
+            string raw = typeid(node_ref).name();
+            size_t start = 0;
+            while (start < raw.length() && isdigit(raw[start])) {
+                start++;
+            }
+            string s = raw.substr(start);
+            if (s.rfind("class ", 0) == 0) {
+                s = s.substr(6);
+            }
+            if (s.rfind("struct ", 0) == 0) {
+                s = s.substr(7);
+            }
+            step.node_type = s;
+        }
+
+        shared_ptr<Context> curr_ctx = context;
+        while (curr_ctx) {
+            ExecutionTraceScope scope;
+            scope.name = curr_ctx->display_name;
+            
+            shared_ptr<SymbolTable> table = curr_ctx->symbol_table;
+            if (table) {
+                for (const auto& [name, val] : table->get_symbols()) {
+                    if (!val) continue;
+                    string type_name = val->get_type_name();
+                    if (type_name == "BuiltInFunction") {
+                        continue;
+                    }
+                    if (curr_ctx->display_name == "<program>" && (name == "Null" || name == "None" || name == "null" || name == "True" || name == "False")) {
+                        continue;
+                    }
+                    
+                    ExecutionTraceVar var;
+                    var.name = name;
+                    var.type = type_name;
+                    string val_str = val->to_string();
+                    if (val_str.length() > 500) {
+                        val_str = val_str.substr(0, 497) + "...";
+                    }
+                    var.value = val_str;
+                    scope.variables.push_back(var);
+                }
+            }
+            
+            if (!scope.variables.empty() || curr_ctx == context) {
+                step.scopes.push_back(scope);
+            }
+            curr_ctx = curr_ctx->parent;
+        }
+
+        EXECUTION_TRACE.push_back(step);
+    }
+
     RunTimeResult visit(const shared_ptr<Node> &node, const shared_ptr<Context> &context)
     {
         if (!node)
@@ -169,66 +236,9 @@ public:
             return RunTimeResult().failure(RunTimeError({}, {}, "Internal error: Cannot visit null node", context));
         }
 
-        if (EDUCATIONAL_MODE && EXECUTION_TRACE.size() < 1000)
+        if (EDUCATIONAL_MODE)
         {
-            if (node->pos_start.has_value() && node->pos_end.has_value())
-            {
-                ExecutionTraceStep step;
-                step.pos_start = node->pos_start.value();
-                step.pos_end = node->pos_end.value();
-                
-                const Node &node_ref = *node;
-                string raw = typeid(node_ref).name();
-                size_t start = 0;
-                while (start < raw.length() && isdigit(raw[start])) {
-                    start++;
-                }
-                string s = raw.substr(start);
-                if (s.rfind("class ", 0) == 0) {
-                    s = s.substr(6);
-                }
-                if (s.rfind("struct ", 0) == 0) {
-                    s = s.substr(7);
-                }
-                step.node_type = s;
-
-                shared_ptr<Context> curr_ctx = context;
-                while (curr_ctx) {
-                    ExecutionTraceScope scope;
-                    scope.name = curr_ctx->display_name;
-                    
-                    shared_ptr<SymbolTable> table = curr_ctx->symbol_table;
-                    if (table) {
-                        for (const auto& [name, val] : table->get_symbols()) {
-                            if (!val) continue;
-                            string type_name = val->get_type_name();
-                            if (type_name == "BuiltInFunction") {
-                                continue;
-                            }
-                            if (curr_ctx->display_name == "<program>" && (name == "Null" || name == "None" || name == "null" || name == "True" || name == "False")) {
-                                continue;
-                            }
-                            
-                            ExecutionTraceVar var;
-                            var.name = name;
-                            var.type = type_name;
-                            string val_str = val->to_string();
-                            if (val_str.length() > 500) {
-                                val_str = val_str.substr(0, 497) + "...";
-                            }
-                            var.value = val_str;
-                            scope.variables.push_back(var);
-                        }
-                    }
-                    
-                    if (!scope.variables.empty() || curr_ctx == context) {
-                        step.scopes.push_back(scope);
-                    }
-                    curr_ctx = curr_ctx->parent;
-                }
-
-                EXECUTION_TRACE.push_back(step);
-            }
+            log_execution_step(node, context);
         }
 
         try
@@ -380,6 +390,9 @@ private:
         if (auto func_to_call = dynamic_pointer_cast<Function>(call_value))
         {
             return_value = res.register_result(func_to_call->execute(pos_args, kw_args, *this, context));
+            if (EDUCATIONAL_MODE && !res.error) {
+                log_execution_step(node, context, "FunctionCallReturn");
+            }
         }
         else if (auto builtin_to_call = dynamic_pointer_cast<BuiltInFunction>(call_value))
         {
