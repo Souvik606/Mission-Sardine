@@ -1,5 +1,5 @@
 // Global App State
-var defaultCode = `# Welcome to the Sardine Language Playground!
+var defaultCode = `# Welcome to Sardine!
 show("--- Standard control flow demo ---")
 
 cycle x = 0 : 5 {
@@ -607,27 +607,14 @@ function updateVirtualFilesUI() {
         const nameColor = isActive ? 'text-white font-bold' : 'text-slate-400 group-hover:text-slate-200';
         const btnOpacityClass = isActive ? 'opacity-80 hover:opacity-100' : 'opacity-0 group-hover:opacity-100';
 
-        const statusDot = isActive
-            ? `
-            <span class="flex h-2 w-2 relative shrink-0">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-            </span>
-            `
-            : '';
-
-        const badge = isActive
-            ? `<span class="text-[8px] font-black uppercase text-indigo-400 bg-indigo-950/80 px-1.5 py-0.5 rounded border border-indigo-500/30 font-sans tracking-wide leading-none select-none shrink-0">EQUIPPED</span>`
-            : '';
-
         let actionButtons = '';
         if (!isSystemFile) {
             actionButtons = `
                 <div class="flex items-center space-x-1 ${btnOpacityClass} transition-opacity duration-200">
-                    <button onclick="downloadFile('${path}', event)" class="p-1 text-slate-400 hover:text-indigo-400 hover:bg-slate-855 rounded hover:bg-slate-850" title="Download">
+                    <button onclick="downloadFile('${path}', event)" class="p-1 text-slate-400 hover:text-sky-400 hover:drop-shadow-[0_0_4px_rgba(56,189,248,0.65)]" title="Download">
                         <i data-lucide="download" class="h-3.5 w-3.5"></i>
                     </button>
-                    <button onclick="deleteFile('${path}', event)" class="p-1 text-slate-400 hover:text-rose-400 hover:bg-slate-855 rounded hover:bg-slate-850" title="Delete">
+                    <button onclick="deleteFile('${path}', event)" class="p-1 text-slate-400 hover:text-rose-400 hover:bg-slate-850 rounded" title="Delete">
                         <i data-lucide="trash-2" class="h-3.5 w-3.5"></i>
                     </button>
                 </div>
@@ -642,10 +629,8 @@ function updateVirtualFilesUI() {
 
         item.innerHTML = `
             <div class="flex items-center space-x-2 truncate flex-1 mr-2">
-                ${statusDot}
                 <i data-lucide="${iconName}" class="h-3.5 w-3.5 ${iconColor} shrink-0"></i>
                 <span class="font-mono ${nameColor} truncate">${displayName}</span>
-                ${badge}
             </div>
             ${actionButtons}
         `;
@@ -679,13 +664,13 @@ function updateVirtualFilesUI() {
                 <span class="font-mono text-slate-400 group-hover:text-slate-200 truncate font-semibold">${folderNode.name}</span>
             </div>
             <div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                <button onclick="createNewFilePrompt(${isEdu}, '${folderNode.path}', event)" class="p-1 text-slate-400 hover:text-indigo-400 hover:bg-slate-850 rounded" title="New File in Folder">
+                <button onclick="createNewFilePrompt(${isEdu}, '${folderNode.path}', event)" class="p-1 text-slate-400 hover:text-emerald-400 hover:bg-slate-850 rounded hover:shadow-[0_0_8px_rgba(52,211,153,0.35)]" title="New File in Folder">
                     <i data-lucide="plus" class="h-3.5 w-3.5"></i>
                 </button>
-                <button onclick="downloadFolder('${folderNode.path}', event)" class="p-1 text-slate-400 hover:text-indigo-400 hover:bg-slate-850 rounded" title="Download Folder">
+                <button onclick="downloadFolder('${folderNode.path}', event)" class="p-1 text-slate-400 hover:text-sky-400 hover:drop-shadow-[0_0_4px_rgba(56,189,248,0.65)]" title="Download Folder">
                     <i data-lucide="download" class="h-3.5 w-3.5"></i>
                 </button>
-                <button onclick="deleteFile('${folderNode.path}', event)" class="p-1 text-slate-400 hover:text-rose-400 hover:bg-slate-855 rounded hover:bg-slate-850" title="Delete Folder">
+                <button onclick="deleteFile('${folderNode.path}', event)" class="p-1 text-slate-400 hover:text-rose-400 hover:bg-slate-850 rounded" title="Delete Folder">
                     <i data-lucide="trash-2" class="h-3.5 w-3.5"></i>
                 </button>
             </div>
@@ -909,6 +894,57 @@ function toggleTerminal(isEdu = false) {
         setTimeout(() => currentEditor.layout(), 50);
     }
 }
+
+function collapseSidebar(isEdu = false) {
+    const sidebar = document.getElementById(isEdu ? 'edu-sidebar' : 'editor-sidebar');
+    const expanded = document.getElementById(isEdu ? 'edu-sidebar-expanded-content' : 'sidebar-expanded-content');
+    const collapsed = document.getElementById(isEdu ? 'edu-sidebar-collapsed-content' : 'sidebar-collapsed-content');
+
+    if (!sidebar || !expanded || !collapsed) return;
+
+    if (sidebar.classList.contains('w-72')) {
+        sidebar.classList.remove('w-72');
+        sidebar.classList.add('w-14');
+        expanded.classList.add('hidden');
+        collapsed.classList.remove('hidden');
+
+        const currentEditor = isEdu ? eduEditorInstance : editorInstance;
+        if (currentEditor) {
+            setTimeout(() => currentEditor.layout(), 350);
+        }
+    }
+}
+
+function collapseTerminal(isEdu = false) {
+    const key = isEdu ? 'edu' : 'regular';
+    const terminal = document.getElementById(isEdu ? 'edu-terminal-section' : 'terminal-section');
+    const consoleEl = document.getElementById(isEdu ? 'edu-terminal-console' : 'terminal-console');
+    const inputRow = document.getElementById(isEdu ? 'edu-terminal-input-row' : 'terminal-input-row');
+    const resizeHandle = document.getElementById(isEdu ? 'edu-terminal-resize-handle' : 'terminal-resize-handle');
+    const toggleBtn = document.getElementById(isEdu ? 'edu-terminal-toggle-btn' : 'terminal-toggle-btn');
+
+    if (!terminal) return;
+
+    if (!terminalCollapsed[key]) {
+        terminalHeights[key] = terminal.offsetHeight;
+        terminal.style.height = '44px'; // Header height only
+        if (consoleEl) consoleEl.classList.add('hidden');
+        if (inputRow) inputRow.classList.add('hidden');
+        if (resizeHandle) resizeHandle.style.display = 'none';
+        terminalCollapsed[key] = true;
+
+        if (toggleBtn) {
+            toggleBtn.innerHTML = `<i data-lucide="chevron-up" class="h-4 w-4"></i>`;
+            lucide.createIcons();
+        }
+
+        const currentEditor = isEdu ? eduEditorInstance : editorInstance;
+        if (currentEditor) {
+            setTimeout(() => currentEditor.layout(), 50);
+        }
+    }
+}
+
 
 // Adjustable Terminal Height
 function initTerminalResizer() {

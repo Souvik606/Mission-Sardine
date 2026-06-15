@@ -25,7 +25,7 @@ function initExecutionStepper(trace) {
     if (sidebar && stepperPanel) {
         if (stepperPanel.classList.contains('hidden')) {
             const currentWidth = sidebar.offsetWidth || 384;
-            sidebar.style.width = `${currentWidth + 320}px`;
+            sidebar.style.width = `${currentWidth + 350}px`;
             stepperPanel.classList.remove('hidden');
         }
         if (eduEditorInstance) {
@@ -85,7 +85,7 @@ function stopExecutionStepper() {
     if (sidebar && stepperPanel) {
         if (!stepperPanel.classList.contains('hidden')) {
             const currentWidth = sidebar.offsetWidth || 704;
-            const newWidth = Math.max(200, currentWidth - 320);
+            const newWidth = Math.max(200, currentWidth - 350);
             sidebar.style.width = `${newWidth}px`;
             stepperPanel.classList.add('hidden');
         }

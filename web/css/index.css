@@ -171,3 +171,21 @@ body {
     color: #fbbf24 !important;
     box-shadow: 0 0 8px rgba(245, 158, 11, 0.25);
 }
+
+.btn-run-active {
+    background: linear-gradient(to right, #65feb9, #009166) !important;
+    border: 1px solid rgba(0, 145, 102, 0.3) !important;
+    color: #022c22 !important;
+    box-shadow: 0 0 15px rgba(101, 254, 185, 0.25) !important;
+}
+
+.btn-run-active:hover {
+    background: linear-gradient(to right, #80ffd2, #00a877) !important;
+    border-color: rgba(0, 168, 119, 0.4) !important;
+    transform: scale(1.03) !important;
+}
+
+.btn-run-active:active {
+    transform: scale(0.95) !important;
+}
+

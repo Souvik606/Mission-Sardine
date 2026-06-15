@@ -53,27 +53,28 @@
         <div class="flex items-center space-x-3">
             <a href="#/" class="flex items-center space-x-3 group">
                 <img src="media/v0.3d-cropped.png" alt="Sardine Logo"
-                    class="h-9 w-auto transition-transform group-hover:rotate-6">
-                <div class="flex flex-col">
-                    <span
-                        class="text-lg font-black tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 font-sans leading-none select-none">SARDINE</span>
-                    <span class="text-[9px] text-indigo-400/80 font-mono tracking-widest mt-0.5 select-none">PLAYGROUND
-                        v0.3d</span>
-                </div>
+                    class="h-9 w-auto transition-transform duration-200 group-hover:scale-105">
             </a>
         </div>
 
-        <nav class="flex items-center space-x-1.5 bg-slate-900/60 p-1 rounded-xl border border-slate-800/80">
-            <a href="#/" id="nav-home"
-                class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all hover:text-indigo-400 text-slate-400">Home</a>
-            <a href="#/docs" id="nav-docs"
-                class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all hover:text-indigo-400 text-slate-400">Documentation</a>
-            <a href="#/editor" id="nav-editor"
-                class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all hover:text-indigo-400 text-slate-400">Editor</a>
-            <a href="#/educational" id="nav-educational"
-                class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all hover:text-indigo-400 text-slate-400">Educational
-                Mode</a>
-        </nav>
+        <div class="flex items-center space-x-3">
+            <nav class="flex items-center space-x-1.5 bg-slate-900/60 p-1 rounded-xl border border-slate-800/80">
+                <a href="#/" id="nav-home"
+                    class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all hover:text-indigo-400 text-slate-400">Home</a>
+                <a href="#/docs" id="nav-docs"
+                    class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all hover:text-indigo-400 text-slate-400">Documentation</a>
+                <a href="#/editor" id="nav-editor"
+                    class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all hover:text-indigo-400 text-slate-400">Editor</a>
+                <a href="#/educational" id="nav-educational"
+                    class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all hover:text-indigo-400 text-slate-400">Educational
+                    Mode</a>
+            </nav>
+            <a href="https://github.com/souvik606/Mission-Sardine/" target="_blank" rel="noopener noreferrer"
+                class="h-9 w-9 bg-slate-900/60 hover:bg-slate-800/80 border border-white/20 hover:border-white/40 rounded-full transition-all flex items-center justify-center shadow-[0_0_8px_rgba(255,255,255,0.1)] hover:shadow-[0_0_12px_rgba(255,255,255,0.25)] active:scale-95 shrink-0 overflow-hidden"
+                title="View the project on GitHub!">
+                <img src="media/github_logo_icon_229278.png" alt="GitHub Logo" class="h-full w-full object-cover">
+            </a>
+        </div>
     </header>
 
     <!-- Dynamic SPA View Containers -->
@@ -81,23 +82,25 @@
 
         <!-- HOME PAGE VIEW -->
         <div id="view-home"
-            class="view-pane hidden absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
+            class="view-pane hidden absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-10">
+            <!-- Background Image with Blue Filter and Blur -->
+            <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+                <div class="absolute inset-0 bg-cover bg-center filter blur-[6px] scale-105"
+                    style="background-image: url('media/wp3845489.jpg');"></div>
+                <div class="absolute inset-0 bg-blue-950/40 mix-blend-multiply"></div>
+                <div class="absolute inset-0 bg-gradient-to-b from-slate-950/60 via-slate-950/50 to-slate-950/80"></div>
+            </div>
             <div
-                class="max-w-2xl bg-gradient-to-br from-indigo-950/20 via-slate-900/40 to-purple-950/20 border-2 border-indigo-500/30 p-10 rounded-3xl backdrop-blur-lg shadow-[0_0_50px_rgba(99,102,241,0.15)] flex flex-col items-center text-center relative overflow-hidden">
-                <span
-                    class="absolute top-0 px-6 py-1 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-[9px] font-black tracking-widest uppercase rounded-b-xl shadow-md shadow-indigo-500/10 select-none">SYSTEM
-                    ACCESS</span>
+                class="max-w-2xl bg-gradient-to-br from-indigo-950/20 via-slate-900/40 to-purple-950/20 border-2 border-indigo-500/30 p-10 rounded-3xl backdrop-blur-lg shadow-xl flex flex-col items-center text-center relative overflow-hidden z-10">
 
                 <div class="relative mt-2 mb-6">
-                    <div class="absolute inset-0 bg-indigo-500/10 rounded-full blur-xl animate-pulse"></div>
-                    <img src="media/v0.3d-cropped.png"
-                        class="h-28 mx-auto relative z-10 filter drop-shadow-[0_0_15px_rgba(99,102,241,0.25)] transition-transform hover:rotate-3 hover:scale-105"
-                        alt="Logo">
+                    <img src="media/v0.3d-cropped.png" class="h-28 mx-auto relative z-10" alt="Logo">
                 </div>
 
-                <h2 class="text-4xl font-black tracking-tight text-white mb-3 leading-none select-none font-sans">
+                <h2 class="text-4xl font-normal tracking-tight text-white mb-3 leading-none select-none"
+                    style="font-family: Tahoma, sans-serif;">
                     Welcome to <span
-                        class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">SARDINE</span>
+                        style="background: linear-gradient(to right, #43c2fd, #aee3fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Sardine</span>
                 </h2>
                 <p class="text-slate-400 mb-8 leading-relaxed text-sm max-w-lg font-sans">
                     Sardine is a dynamic programming language built in C++17 and compiled to WebAssembly. Explore
@@ -105,12 +108,13 @@
                 </p>
                 <div class="flex justify-center space-x-4">
                     <a href="#/editor"
-                        class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 border border-indigo-500/30 text-white px-8 py-3.5 rounded-xl text-xs font-black tracking-wider transition-all shadow-[0_0_15px_rgba(99,102,241,0.25)] hover:scale-[1.03] active:scale-95 cursor-pointer">
-                        OPEN PLAYGROUND
+                        class="hover:opacity-90 border border-sky-500/30 text-white px-8 py-3.5 rounded-xl text-xs font-black tracking-wider transition-all shadow-[0_0_15px_rgba(2,132,199,0.25)] hover:scale-[1.03] active:scale-95 cursor-pointer"
+                        style="background: linear-gradient(to right, #0284c7, #38bdf8);">
+                        Open Editor
                     </a>
                     <a href="#/docs"
                         class="bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 px-8 py-3.5 rounded-xl text-xs font-black tracking-wider transition-all hover:scale-[1.03] active:scale-95 cursor-pointer">
-                        USER GUIDE
+                        User Guide
                     </a>
                 </div>
             </div>
@@ -121,7 +125,7 @@
             <div class="text-center text-slate-400">
                 <i data-lucide="book-open" class="h-12 w-12 mx-auto text-indigo-500 mb-3 animate-pulse"></i>
                 <h2 class="text-xl font-bold text-white mb-1">Documentation</h2>
-                <p class="text-sm">User Guide & Reference manual loading shortly...</p>
+                <p class="text-sm">User Guide & Reference under construction...</p>
             </div>
         </div>
 
@@ -144,18 +148,18 @@
                     <div
                         class="p-4 border-b border-slate-800/60 flex items-center justify-between shrink-0 bg-slate-950/40">
                         <span
-                            class="text-[10px] font-black text-indigo-450 text-indigo-400 uppercase tracking-widest flex items-center space-x-1.5 select-none font-sans">
+                            class="text-[10px] font-black text-indigo-450 text-indigo-400 tracking-widest flex items-center space-x-1.5 select-none font-sans">
                             <i data-lucide="folder" class="h-4 w-4 text-indigo-400"></i>
-                            <span>FILE INVENTORY</span>
+                            <span>File Inventory</span>
                         </span>
                         <div class="flex items-center space-x-0.5">
                             <button onclick="createNewFilePrompt()"
-                                class="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-900 rounded transition-all cursor-pointer active:scale-90"
+                                class="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-900 rounded transition-all cursor-pointer active:scale-90 hover:shadow-[0_0_8px_rgba(52,211,153,0.35)]"
                                 title="New File">
                                 <i data-lucide="plus" class="h-4 w-4"></i>
                             </button>
                             <button onclick="createNewFolderPrompt()"
-                                class="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-900 rounded transition-all cursor-pointer active:scale-90"
+                                class="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-900 rounded transition-all cursor-pointer active:scale-90 hover:shadow-[0_0_8px_rgba(52,211,153,0.35)]"
                                 title="New Folder">
                                 <i data-lucide="folder-plus" class="h-4 w-4"></i>
                             </button>
@@ -316,18 +320,18 @@
                     <div
                         class="p-4 border-b border-slate-800/60 flex items-center justify-between shrink-0 bg-slate-950/40">
                         <span
-                            class="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center space-x-1.5 select-none font-sans">
+                            class="text-[10px] font-black text-indigo-400 tracking-widest flex items-center space-x-1.5 select-none font-sans">
                             <i data-lucide="folder" class="h-4 w-4 text-indigo-400"></i>
-                            <span>FILE INVENTORY</span>
+                            <span>File Inventory</span>
                         </span>
                         <div class="flex items-center space-x-0.5">
                             <button onclick="createNewFilePrompt(true)"
-                                class="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-900 rounded transition-all cursor-pointer active:scale-90"
+                                class="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-900 rounded transition-all cursor-pointer active:scale-90 hover:shadow-[0_0_8px_rgba(52,211,153,0.35)]"
                                 title="New File">
                                 <i data-lucide="plus" class="h-4 w-4"></i>
                             </button>
                             <button onclick="createNewFolderPrompt(true)"
-                                class="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-900 rounded transition-all cursor-pointer active:scale-90"
+                                class="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-900 rounded transition-all cursor-pointer active:scale-90 hover:shadow-[0_0_8px_rgba(52,211,153,0.35)]"
                                 title="New Folder">
                                 <i data-lucide="folder-plus" class="h-4 w-4"></i>
                             </button>
@@ -418,10 +422,13 @@
                         class="w-96 min-w-[200px] shrink-0 bg-slate-950 flex flex-row border-l border-slate-850/80 h-full">
 
                         <!-- Visual Stepper Panel (Placed side-by-side with D3 Tree) -->
-                        <div id="edu-stepper-panel" class="hidden w-80 shrink-0 border-r border-slate-800 bg-slate-950 flex flex-col font-sans h-full">
+                        <div id="edu-stepper-panel"
+                            class="hidden w-[350px] shrink-0 border border-slate-800 bg-slate-950 flex flex-col font-sans h-[96%] my-auto rounded-2xl shadow-2xl mr-2">
                             <!-- Stepper Header & Controls -->
-                            <div class="bg-slate-900/60 border-b border-slate-800/60 px-4 py-2.5 flex items-center justify-between shrink-0">
-                                <div class="flex items-center space-x-2 text-xs font-bold text-indigo-400 uppercase tracking-wider select-none">
+                            <div
+                                class="bg-slate-900/60 border-b border-slate-800/60 px-4 py-2.5 flex items-center justify-between shrink-0">
+                                <div
+                                    class="flex items-center space-x-2 text-xs font-bold text-indigo-400 uppercase tracking-wider select-none">
                                     <i data-lucide="play-circle" class="h-4 w-4 text-indigo-400 shrink-0"></i>
                                     <span>Execution Flow</span>
                                 </div>
@@ -447,28 +454,37 @@
                                         title="Reset Stepper Code Highlights">
                                         <i data-lucide="rotate-ccw" class="h-3.5 w-3.5"></i>
                                     </button>
-                                    
+
                                     <!-- Step Counter -->
-                                    <span id="edu-stepper-status" class="text-[11px] font-mono text-slate-350 bg-slate-900 border border-slate-800/80 px-2 py-0.5 rounded font-bold select-none">Step 0 / 0</span>
+                                    <span id="edu-stepper-status"
+                                        class="text-[11px] font-mono text-slate-350 bg-slate-900 border border-slate-800/80 px-2 py-0.5 rounded font-bold select-none whitespace-nowrap">Step
+                                        0 / 0</span>
                                 </div>
                             </div>
-                            
+
                             <!-- Speed Control Slider & Info Row -->
-                            <div class="bg-slate-900/20 px-4 py-1.5 border-b border-slate-900/40 flex items-center justify-between text-[11px] shrink-0 text-slate-400 select-none">
+                            <div
+                                class="bg-slate-900/20 px-4 py-1.5 border-b border-slate-900/40 flex items-center justify-between text-[11px] shrink-0 text-slate-400 select-none">
                                 <div class="flex items-center space-x-2">
                                     <span>Speed:</span>
-                                    <input type="range" id="edu-stepper-speed" min="100" max="2000" step="100" value="600" oninput="updateStepperSpeed(this.value)" class="w-16 accent-indigo-500 h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer">
-                                    <span id="edu-stepper-speed-val" class="font-mono text-[10px] text-indigo-400 font-bold">600ms</span>
+                                    <input type="range" id="edu-stepper-speed" min="100" max="2000" step="100"
+                                        value="600" oninput="updateStepperSpeed(this.value)"
+                                        class="w-16 accent-indigo-500 h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                                    <span id="edu-stepper-speed-val"
+                                        class="font-mono text-[10px] text-indigo-400 font-bold">600ms</span>
                                 </div>
                                 <div class="truncate max-w-[120px] flex items-center space-x-1">
                                     <span class="font-bold text-slate-400">Node:</span>
-                                    <span id="edu-stepper-active-node" class="font-mono text-indigo-300 bg-indigo-950/40 px-1 rounded border border-indigo-900/30 text-[10px] font-bold">None</span>
+                                    <span id="edu-stepper-active-node"
+                                        class="font-mono text-indigo-300 bg-indigo-950/40 px-1 rounded border border-indigo-900/30 text-[10px] font-bold">None</span>
                                 </div>
                             </div>
-                            
+
                             <!-- Active Scope Variable Environment Panel -->
-                            <div class="flex-1 overflow-y-auto overflow-x-auto p-3.5 font-sans space-y-3.5 select-text bg-[#09090f]" id="edu-stepper-scopes">
-                                <div class="text-slate-500 italic text-[11px] text-center py-4">// No variables in scope.</div>
+                            <div class="flex-1 overflow-y-auto overflow-x-auto p-3.5 font-sans space-y-3.5 select-text bg-[#09090f]"
+                                id="edu-stepper-scopes">
+                                <div class="text-slate-500 italic text-[11px] text-center py-4">// No variables in
+                                    scope.</div>
                             </div>
                         </div>
 
@@ -490,64 +506,64 @@
                                 </div>
                             </div>
 
-                        <!-- Tokens View Tab -->
-                        <div id="edu-tokens-panel" class="flex-1 overflow-y-auto p-4 select-text">
-                            <table class="w-full text-left border-collapse font-sans">
-                                <thead>
-                                    <tr
-                                        class="border-b border-slate-800/80 text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
-                                        <th class="pb-2 px-2">Type</th>
-                                        <th class="pb-2 px-2">Value</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="edu-tokens-table-body"
-                                    class="divide-y divide-slate-900 font-mono text-[10px]">
-                                    <tr>
-                                        <td colspan="2" class="p-4 text-center text-slate-500 italic">// Run code in
-                                            Educational Mode to populate.</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                            <!-- Tokens View Tab -->
+                            <div id="edu-tokens-panel" class="flex-1 overflow-y-auto p-4 select-text">
+                                <table class="w-full text-left border-collapse font-sans">
+                                    <thead>
+                                        <tr
+                                            class="border-b border-slate-800/80 text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
+                                            <th class="pb-2 px-2">Type</th>
+                                            <th class="pb-2 px-2">Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="edu-tokens-table-body"
+                                        class="divide-y divide-slate-900 font-mono text-[10px]">
+                                        <tr>
+                                            <td colspan="2" class="p-4 text-center text-slate-500 italic">// Run code in
+                                                Educational Mode to populate.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
 
-                        <!-- AST View Tab -->
-                        <div id="edu-ast-panel"
-                            class="flex-1 overflow-hidden relative hidden select-none flex flex-col">
-                            <!-- AST Graph Canvas Container -->
-                            <div id="edu-ast-tree-container" class="flex-1 relative bg-slate-950 overflow-hidden">
-                                <div class="absolute inset-0 flex items-center justify-center text-slate-500 italic p-4 text-center"
-                                    id="edu-ast-placeholder">// Run code in Educational Mode to populate.</div>
-                            </div>
-                            <!-- Traversal controls bar (Floating overlay at bottom) -->
-                            <div id="edu-ast-traversal-bar"
-                                class="absolute bottom-4 left-4 right-4 bg-slate-900/90 border border-slate-800 rounded-xl p-3 shadow-2xl backdrop-blur-md hidden flex items-center justify-between z-30 shrink-0 font-sans">
-                                <div class="flex items-center space-x-2 text-xs font-semibold text-indigo-400">
-                                    <i data-lucide="git-merge" class="h-4 w-4"></i>
-                                    <span id="edu-traversal-mode-label">Exploration Mode</span>
+                            <!-- AST View Tab -->
+                            <div id="edu-ast-panel"
+                                class="flex-1 overflow-hidden relative hidden select-none flex flex-col">
+                                <!-- AST Graph Canvas Container -->
+                                <div id="edu-ast-tree-container" class="flex-1 relative bg-slate-950 overflow-hidden">
+                                    <div class="absolute inset-0 flex items-center justify-center text-slate-500 italic p-4 text-center"
+                                        id="edu-ast-placeholder">// Run code in Educational Mode to populate.</div>
                                 </div>
-                                <div class="flex items-center space-x-3">
-                                    <button onclick="stepTraversal(-1)" id="btn-traverse-prev"
-                                        class="p-1.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
-                                        title="Previous Node (Arrow Left)">
-                                        <i data-lucide="chevron-left" class="h-4 w-4"></i>
-                                    </button>
-                                    <span id="edu-traversal-status"
-                                        class="text-xs font-mono text-slate-300 select-all font-semibold">Node 0 /
-                                        0</span>
-                                    <button onclick="stepTraversal(1)" id="btn-traverse-next"
-                                        class="p-1.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
-                                        title="Next Node (Arrow Right)">
-                                        <i data-lucide="chevron-right" class="h-4 w-4"></i>
+                                <!-- Traversal controls bar (Floating overlay at bottom) -->
+                                <div id="edu-ast-traversal-bar"
+                                    class="absolute bottom-4 left-4 right-4 bg-slate-900/90 border border-slate-800 rounded-xl p-3 shadow-2xl backdrop-blur-md hidden flex items-center justify-between z-30 shrink-0 font-sans">
+                                    <div class="flex items-center space-x-2 text-xs font-semibold text-indigo-400">
+                                        <i data-lucide="git-merge" class="h-4 w-4"></i>
+                                        <span id="edu-traversal-mode-label">Exploration Mode</span>
+                                    </div>
+                                    <div class="flex items-center space-x-3">
+                                        <button onclick="stepTraversal(-1)" id="btn-traverse-prev"
+                                            class="p-1.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                                            title="Previous Node (Arrow Left)">
+                                            <i data-lucide="chevron-left" class="h-4 w-4"></i>
+                                        </button>
+                                        <span id="edu-traversal-status"
+                                            class="text-xs font-mono text-slate-300 select-all font-semibold">Node 0 /
+                                            0</span>
+                                        <button onclick="stepTraversal(1)" id="btn-traverse-next"
+                                            class="p-1.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                                            title="Next Node (Arrow Right)">
+                                            <i data-lucide="chevron-right" class="h-4 w-4"></i>
+                                        </button>
+                                    </div>
+                                    <button onclick="resetTraversal()"
+                                        class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold px-2.5 py-1.5 rounded bg-slate-950 border border-slate-800/80 hover:border-slate-700 transition-all cursor-pointer">
+                                        Reset View
                                     </button>
                                 </div>
-                                <button onclick="resetTraversal()"
-                                    class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold px-2.5 py-1.5 rounded bg-slate-950 border border-slate-800/80 hover:border-slate-700 transition-all cursor-pointer">
-                                    Reset View
-                                </button>
                             </div>
                         </div>
-                    </div>
-                </aside>
+                    </aside>
                 </div>
 
                 <!-- Terminal Output Panel -->

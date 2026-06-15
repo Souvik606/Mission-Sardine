@@ -90,7 +90,7 @@ function updateRunButtonState() {
         if (!btn) return;
         if (wasmReady && !isRunning && isSad) {
             btn.disabled = false;
-            btn.className = "flex items-center space-x-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 border border-indigo-500/30 hover:border-indigo-400 text-white px-6 py-2.5 rounded-xl text-xs font-black tracking-wider transition-all shadow-[0_0_15px_rgba(99,102,241,0.25)] hover:scale-[1.03] active:scale-95 cursor-pointer";
+            btn.className = "flex items-center space-x-1.5 btn-run-active px-6 py-2.5 rounded-xl text-xs font-black tracking-wider transition-all cursor-pointer";
         } else {
             btn.disabled = true;
             if (isRunning) {
@@ -192,6 +192,9 @@ function runCode(educationalMode = false) {
         if (typeof stopExecutionStepper === 'function') {
             stopExecutionStepper();
         }
+        if (typeof collapseSidebar === 'function') collapseSidebar(true);
+        if (typeof collapseTerminal === 'function') collapseTerminal(true);
+
         const tokensTbody = document.getElementById('edu-tokens-table-body');
         const astContainer = document.getElementById('edu-ast-tree-container');
         if (tokensTbody) {
