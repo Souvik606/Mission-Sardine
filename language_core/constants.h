@@ -69,6 +69,7 @@ const int MAX_RECURSION_DEPTH = 100;
 inline bool UNBOUNDED_MODE = false;
 inline bool EDUCATIONAL_MODE = false;
 inline bool JSON_OUTPUT = false;
+inline string MAIN_PROGRAM_FILENAME = "";
 
 struct ExecutionTraceVar {
     string name;

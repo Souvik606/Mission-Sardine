@@ -92,10 +92,14 @@ global.Module = {
             global.Module.ccall("run_interpreter", null, ["string", "string", "number", "number"], [testCode, relativeTestPath, 0, 0]);
         } catch (e) {
             console.error("Runtime error:", e);
-            setTimeout(() => { process.exit(1); }, 10);
+            const t = setTimeout(() => { process.exit(1); }, 100);
+            if (t.unref) t.unref();
             return;
         }
-        setTimeout(() => { process.exit(0); }, 10);
+        // 100ms gives WASM time to flush stdout/stderr before exiting;
+        // unref() ensures the timer doesn't block Node from GC-ing event loop handles
+        const t = setTimeout(() => { process.exit(0); }, 100);
+        if (t.unref) t.unref();
     }
 };
 

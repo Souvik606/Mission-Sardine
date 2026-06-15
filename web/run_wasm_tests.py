@@ -29,7 +29,8 @@ def run_tests():
                         cwd=os.path.dirname(run_test_js),
                         capture_output=True,
                         text=True,
-                        check=True
+                        check=True,
+                        timeout=60
                     )
                     actual_output = result.stdout.rstrip().replace('\r\n', '\n')
                     with open(output_path, 'r') as f:
@@ -37,7 +38,7 @@ def run_tests():
 
                     import re
                     def normalize_output(text):
-                        # Remove "Error in ...:" header lines (only print by native launcher)
+                        # Remove "Error in ...:") header lines (only print by native launcher)
                         lines = [line for line in text.split('\n') if not line.startswith('Error in ') and not line.strip().startswith('Error in ')]
                         text = '\n'.join(lines)
                         # Normalize File "...", line X traceback headers to File <stdin>, line X
@@ -61,6 +62,9 @@ def run_tests():
                         print("Got:")
                         print(actual_norm)
                         failed_count += 1
+                except subprocess.TimeoutExpired:
+                    print(f"WASM TIMEOUT: {os.path.relpath(test_path, tests_dir)} timed out after 60 seconds.")
+                    failed_count += 1
                 except subprocess.CalledProcessError as e:
                     print(f"WASM ERROR: {os.path.relpath(test_path, tests_dir)} failed to run.")
                     print(e.stderr)

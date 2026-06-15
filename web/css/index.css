@@ -1,0 +1,173 @@
+body {
+    font-family: 'Outfit', sans-serif;
+}
+
+.font-mono {
+    font-family: 'JetBrains Mono', Consolas, "Courier New", Courier, monospace;
+}
+
+/* Custom glassmorphism scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.3);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.2);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.4);
+}
+
+@keyframes shake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    25% {
+        transform: translateX(-4px);
+    }
+    75% {
+        transform: translateX(4px);
+    }
+}
+
+.animate-shake {
+    animation: shake 0.2s ease-in-out 0s 2;
+}
+
+/* AST Graph and SVG Styles */
+.ast-link {
+    fill: none;
+    stroke: rgba(99, 102, 241, 0.25);
+    stroke-width: 2px;
+    transition: all 0.3s ease, opacity 0.3s;
+}
+
+.ast-link.highlighted {
+    stroke: #818cf8;
+    /* indigo-400 */
+    stroke-width: 3.5px;
+    filter: drop-shadow(0 0 6px rgba(129, 140, 248, 0.7));
+}
+
+.ast-link.muted {
+    stroke: #1e293b;
+    opacity: 0.1;
+}
+
+.ast-node {
+    cursor: pointer;
+    transition: all 0.3s ease, opacity 0.3s;
+}
+
+.ast-node foreignObject {
+    overflow: visible;
+}
+
+.ast-node-card {
+    width: 325px;
+    height: 125px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: center;
+    background: rgba(20, 20, 31, 0.96);
+    border: 2px solid rgba(137, 180, 250, 0.35);
+    backdrop-filter: blur(12px);
+    border-radius: 14px;
+}
+
+.ast-node-card:focus {
+    outline: none;
+}
+
+.ast-node:hover .ast-node-card {
+    transform: scale(1.04);
+    border-color: rgba(137, 180, 250, 0.7);
+    box-shadow: 0 10px 25px -5px rgba(137, 180, 250, 0.55), 0 0 15px rgba(137, 180, 250, 0.3);
+}
+
+.ast-node.highlighted .ast-node-card {
+    width: 440px;
+    height: 280px;
+    border-color: #cba6f7 !important;
+    border-width: 3px !important;
+    box-shadow: 0 0 35px rgba(203, 166, 247, 0.65), 0 0 15px rgba(203, 166, 247, 0.35);
+    background: rgba(12, 12, 18, 0.99) !important;
+    transform: scale(1.02);
+}
+
+.ast-node.muted {
+    opacity: 0.15;
+}
+
+.ast-node.muted .ast-node-card {
+    transform: scale(0.92);
+    filter: grayscale(40%);
+}
+
+.ast-node-val {
+    max-height: 28px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.ast-node.highlighted .ast-node-val {
+    max-height: 90px;
+    white-space: normal;
+    text-overflow: clip;
+    overflow-y: auto;
+}
+
+.ast-node-details {
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.ast-node.highlighted .ast-node-details {
+    display: block;
+    opacity: 1;
+}
+
+/* Monaco Highlight Decoration */
+.monaco-ast-node-highlight {
+    background-color: rgba(99, 102, 241, 0.2);
+    border-bottom: 2px solid #818cf8;
+    border-radius: 2px;
+}
+
+.monaco-ast-node-line-highlight {
+    background-color: rgba(99, 102, 241, 0.05);
+}
+
+/* Monaco Debug Execution Step Highlight */
+.monaco-execution-highlight {
+    background-color: rgba(16, 185, 129, 0.22) !important;
+    border-bottom: 2px solid #10b981 !important;
+    border-radius: 2px;
+}
+
+.monaco-execution-line-highlight {
+    background-color: rgba(16, 185, 129, 0.04) !important;
+}
+
+@keyframes variable-update-glow {
+    0% { background-color: rgba(16, 185, 129, 0.35); }
+    100% { background-color: transparent; }
+}
+.animate-var-update {
+    animation: variable-update-glow 1.8s cubic-bezier(0.1, 0.8, 0.3, 1);
+}
+.accessed-var-highlight {
+    background-color: rgba(245, 158, 11, 0.18) !important;
+    border-color: rgba(245, 158, 11, 0.5) !important;
+    color: #fbbf24 !important;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.25);
+}

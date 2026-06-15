@@ -230,6 +230,20 @@ public:
         if (!node) return;
         if (!node->pos_start.has_value() || !node->pos_end.has_value()) return;
 
+        // Skip logging if the node's file name is different from the main executed program
+        if (node->pos_start->file_name && *node->pos_start->file_name != MAIN_PROGRAM_FILENAME) {
+            return;
+        }
+
+        // Walk context chain to check if we are inside a module
+        shared_ptr<Context> check_ctx = context;
+        while (check_ctx) {
+            if (check_ctx->display_name.rfind("<module '", 0) == 0) {
+                return;
+            }
+            check_ctx = check_ctx->parent;
+        }
+
         ExecutionTraceStep step;
         step.pos_start = node->pos_start.value();
         step.pos_end = node->pos_end.value();

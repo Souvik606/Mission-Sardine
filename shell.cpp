@@ -829,6 +829,7 @@ struct RunResult {
 };
 
 RunResult run(const string& filename, const string& text) {
+    MAIN_PROGRAM_FILENAME = filename;
     RunResult out;
     EXECUTION_TRACE.clear();
     try {
