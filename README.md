@@ -6,6 +6,13 @@
   [![Sardine Tests](https://github.com/Souvik606/Mission-Sardine/actions/workflows/tests.yml/badge.svg)](https://github.com/Souvik606/Mission-Sardine/actions/workflows/tests.yml)
   [![C++ Standard](https://img.shields.io/badge/C%2B%2B-23-blue.svg)](https://en.cppreference.com/w/cpp/23)
   [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+  <p align="center">
+    <b>Developed by:</b><br>
+    <a href="https://github.com/Souvik606">Souvik Mukherjee</a> &nbsp;&bull;&nbsp;
+    <a href="https://github.com/neel-d9">Diptoneel De</a> &nbsp;&bull;&nbsp;
+    <a href="https://github.com/InvinQueste">Arkopravo Saha</a>
+  </p>
 </div>
 
 ---
