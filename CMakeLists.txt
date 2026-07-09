@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.23)
-project(MissionSardine)
+project(sardine)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -8,7 +8,7 @@ if(WIN32 AND NOT MSVC)
     add_compile_options(-Wa,-mbig-obj)
 endif()
 
-add_executable(MissionSardine
+add_executable(sardine
         shell.cpp
         data_types/data_type.cpp
         data_types/user_function_type.cpp

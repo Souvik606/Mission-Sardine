@@ -78,12 +78,15 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>> &pos_args, co
 {
     RunTimeResult res;
 
-    shared_ptr<Context> exec_context;
     shared_ptr<Context> traceback_parent = call_context ? call_context : this->closure_context;
+    shared_ptr<Context> exec_context;
 
     if (instance)
     {
-        traceback_parent = instance->context;
+        if (!call_context)
+        {
+            traceback_parent = instance->context;
+        }
         exec_context = ContextPool::get().acquire("method " + this->name, traceback_parent, this->pos_start);
 
         auto inst_sym = interpreter.get_instance_symbol_table(instance);
@@ -218,6 +221,12 @@ RunTimeResult Function::execute(const vector<shared_ptr<DataType>> &pos_args, co
     if (ret_val)
     {
         ret_val->set_context(traceback_parent);
+    }
+
+    if (EDUCATIONAL_MODE && !res.error)
+    {
+        exec_context->symbol_table->set("<return>", ret_val);
+        interpreter.log_execution_step(this->body_node, exec_context, "FunctionReturn");
     }
 
     ContextPool::get().release(std::move(exec_context));

@@ -63,11 +63,12 @@ public:
     explicit FunctionCallNode(
         shared_ptr<Node> to_call,
         vector<shared_ptr<Node>> pos_args,
-        vector<pair<Token, shared_ptr<Node>>> kw_args = {}
+        vector<pair<Token, shared_ptr<Node>>> kw_args = {},
+        optional<Position> custom_pos_end = nullopt
     )
         : Node(
             to_call->pos_start,
-            [&]() {
+            custom_pos_end.has_value() ? custom_pos_end : [&]() {
                 if (!kw_args.empty()) return kw_args.back().second->pos_end;
                 if (!pos_args.empty()) return pos_args.back()->pos_end;
                 return to_call->pos_end;

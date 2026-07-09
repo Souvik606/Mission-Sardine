@@ -79,12 +79,217 @@ public:
         type_index_to_id[typeid(IndexAccessNode)] = NODE_INDEX_ACCESS;
     }
 
+    ExecutionTraceVar build_trace_var(const string& name, const shared_ptr<DataType>& val, int depth, const string& accessed_name, const string& accessed_obj, bool is_attr_op, bool& found_var, const string& parent_var_name = "")
+    {
+        ExecutionTraceVar var;
+        var.name = name;
+        if (!val) {
+            var.type = "None";
+            var.value = "null";
+            var.is_accessed = false;
+            return var;
+        }
+
+        var.type = val->get_type_name();
+        string val_str = val->to_string();
+        if (val_str.length() > 500) {
+            val_str = val_str.substr(0, 497) + "...";
+        }
+        var.value = val_str;
+        var.is_accessed = false;
+
+        if (!accessed_name.empty()) {
+            if (is_attr_op) {
+                if (depth == 1 && name == accessed_name) {
+                    if (accessed_obj.empty() || parent_var_name == accessed_obj ||
+                        ((parent_var_name == "this" || parent_var_name == "self") && (accessed_obj == "this" || accessed_obj == "self"))) {
+                        var.is_accessed = true;
+                    }
+                }
+            } else {
+                if (!accessed_obj.empty()) {
+                    if (depth == 1 && name == accessed_name && 
+                        (parent_var_name == accessed_obj || ((parent_var_name == "this" || parent_var_name == "self") && (accessed_obj == "this" || accessed_obj == "self"))) && 
+                        !found_var) {
+                        var.is_accessed = true;
+                        found_var = true;
+                    }
+                } else {
+                    if (depth == 0 && name == accessed_name && !found_var) {
+                        var.is_accessed = true;
+                        found_var = true;
+                    }
+                }
+            }
+        }
+
+        if (depth < 3) {
+            if (auto inst = dynamic_pointer_cast<ModelInstance>(val)) {
+                if (inst->symbol_table) {
+                    for (const auto& [attr_name, attr_val] : inst->symbol_table->get_symbols()) {
+                        if (!attr_val) continue;
+                        string attr_type = attr_val->get_type_name();
+                        if (attr_type == "BuiltInFunction" || attr_type == "Function") {
+                            continue;
+                        }
+                        var.props.push_back(build_trace_var(*attr_name, attr_val, depth + 1, accessed_name, accessed_obj, is_attr_op, found_var, name));
+                    }
+                }
+            }
+        }
+
+        return var;
+    }
+
+    void log_execution_step(const shared_ptr<Node> &node, const shared_ptr<Context> &context, const string &override_node_type = "")
+    {
+        if (!EDUCATIONAL_MODE || EXECUTION_TRACE.size() >= 1000) return;
+        if (!node) return;
+        if (!node->pos_start.has_value() || !node->pos_end.has_value()) return;
+
+        // Skip logging if the node's file name is different from the main executed program
+        if (node->pos_start->file_name && *node->pos_start->file_name != MAIN_PROGRAM_FILENAME) {
+            return;
+        }
+
+        // Walk context chain to check if we are inside a module
+        shared_ptr<Context> check_ctx = context;
+        while (check_ctx) {
+            if (check_ctx->display_name.rfind("<module '", 0) == 0) {
+                return;
+            }
+            check_ctx = check_ctx->parent;
+        }
+
+        ExecutionTraceStep step;
+        step.pos_start = node->pos_start.value();
+        step.pos_end = node->pos_end.value();
+        
+        if (!override_node_type.empty()) {
+            step.node_type = override_node_type;
+        } else {
+            const Node &node_ref = *node;
+            string raw = typeid(node_ref).name();
+            size_t start = 0;
+            while (start < raw.length() && isdigit(raw[start])) {
+                start++;
+            }
+            string s = raw.substr(start);
+            if (s.rfind("class ", 0) == 0) {
+                s = s.substr(6);
+            }
+            if (s.rfind("struct ", 0) == 0) {
+                s = s.substr(7);
+            }
+            step.node_type = s;
+        }
+
+        // Detect if active node accesses any variable or attribute
+        string accessed_var_name = "";
+        string accessed_obj_name = "";
+        bool is_attr_op = false;
+        
+        auto check_is_this_attr = [&](const string& name) -> bool {
+            if (context && context->symbol_table && context->symbol_table->get_symbols().count(StringInterner::intern(name)) > 0) {
+                return false;
+            }
+            auto this_val = context ? (context->symbol_table ? context->symbol_table->get("this") : nullptr) : nullptr;
+            if (this_val) {
+                if (auto inst = dynamic_pointer_cast<ModelInstance>(this_val)) {
+                    if (inst->symbol_table && inst->symbol_table->get(name)) {
+                        return true;
+                    }
+                    if (inst->model && inst->model->find_attribute(name) != nullptr) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
+
+        if (auto var_use = dynamic_pointer_cast<VariableUseNode>(node)) {
+            accessed_var_name = any_cast<string>(var_use->var_name_tok.value);
+            if (check_is_this_attr(accessed_var_name)) {
+                accessed_obj_name = "this";
+            }
+        } else if (auto attr_access = dynamic_pointer_cast<AttrAccessNode>(node)) {
+            accessed_var_name = any_cast<string>(attr_access->attr_name_tok.value);
+            is_attr_op = true;
+            if (auto obj_var = dynamic_pointer_cast<VariableUseNode>(attr_access->object_node)) {
+                accessed_obj_name = any_cast<string>(obj_var->var_name_tok.value);
+            }
+        } else if (auto attr_assign = dynamic_pointer_cast<AttrAssignNode>(node)) {
+            accessed_var_name = any_cast<string>(attr_assign->attr_name_tok.value);
+            is_attr_op = true;
+            if (auto obj_var = dynamic_pointer_cast<VariableUseNode>(attr_assign->object_node)) {
+                accessed_obj_name = any_cast<string>(obj_var->var_name_tok.value);
+            }
+        } else if (auto var_assign = dynamic_pointer_cast<VariableAssignNode>(node)) {
+            if (!var_assign->left_nodes.empty()) {
+                auto first_left = var_assign->left_nodes[0];
+                if (auto left_var_use = dynamic_pointer_cast<VariableUseNode>(first_left)) {
+                    accessed_var_name = any_cast<string>(left_var_use->var_name_tok.value);
+                    if (check_is_this_attr(accessed_var_name)) {
+                        accessed_obj_name = "this";
+                    }
+                } else if (auto left_attr_access = dynamic_pointer_cast<AttrAccessNode>(first_left)) {
+                    accessed_var_name = any_cast<string>(left_attr_access->attr_name_tok.value);
+                    is_attr_op = true;
+                    if (auto obj_var = dynamic_pointer_cast<VariableUseNode>(left_attr_access->object_node)) {
+                        accessed_obj_name = any_cast<string>(obj_var->var_name_tok.value);
+                    }
+                }
+            }
+        }
+
+        shared_ptr<Context> curr_ctx = context;
+        bool found_var = false;
+        while (curr_ctx) {
+            ExecutionTraceScope scope;
+            scope.name = curr_ctx->display_name;
+            if (curr_ctx->parent) {
+                scope.parent_name = curr_ctx->parent->display_name;
+            } else {
+                scope.parent_name = "None";
+            }
+            
+            shared_ptr<SymbolTable> table = curr_ctx->symbol_table;
+            if (table) {
+                for (const auto& [name, val] : table->get_symbols()) {
+                    if (!val) continue;
+                    string type_name = val->get_type_name();
+                    if (type_name == "BuiltInFunction") {
+                        continue;
+                    }
+                    if (curr_ctx->display_name == "<program>" && (*name == "Null" || *name == "None" || *name == "null" || *name == "True" || *name == "False")) {
+                        continue;
+                    }
+                    
+                    scope.variables.push_back(build_trace_var(*name, val, 0, accessed_var_name, accessed_obj_name, is_attr_op, found_var));
+                }
+            }
+            
+            if (!scope.variables.empty() || curr_ctx == context) {
+                step.scopes.push_back(scope);
+            }
+            curr_ctx = curr_ctx->parent;
+        }
+
+        EXECUTION_TRACE.push_back(step);
+    }
+
     RunTimeResult visit(const shared_ptr<Node> &node, const shared_ptr<Context> &context)
     {
         if (!node)
         {
             return RunTimeResult().failure(RunTimeError({}, {}, "Internal error: Cannot visit null node", context));
         }
+
+        if (EDUCATIONAL_MODE)
+        {
+            log_execution_step(node, context);
+        }
+
         try
         {
             if (node->node_type_id == -1)
@@ -301,6 +506,9 @@ private:
         {
             auto func_to_call = static_pointer_cast<Function>(call_value);
             return_value = res.register_result(func_to_call->execute(pos_args, kw_args, *this, context));
+            if (EDUCATIONAL_MODE && !res.error) {
+                log_execution_step(node, context, "FunctionCallReturn");
+            }
         }
         else if (call_value->is_builtin_function())
         {
@@ -2191,6 +2399,7 @@ private:
             stringstream buffer;
             buffer << file.rdbuf();
             string source = buffer.str();
+            source.erase(std::remove(source.begin(), source.end(), '\r'), source.end());
 
             Lexer lexer(resolved_path, source);
             auto [tokens, lex_error] = lexer.enumerate_tokens();

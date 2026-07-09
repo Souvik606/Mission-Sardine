@@ -2,7 +2,7 @@ Error in tests/errors/classes_and_functions/throw_non_instance.sad:
 [E6001] Traceback (most recent call last):
   File tests/errors/classes_and_functions/throw_non_instance.sad, line 1, in <program>
     throw("not a model instance")
-    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   File tests/errors/classes_and_functions/throw_non_instance.sad, line 1, in throw
     throw("not a model instance")
     ^

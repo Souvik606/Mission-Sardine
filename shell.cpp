@@ -920,24 +920,73 @@ struct ProfileGuard {
     }
 };
 
+inline string var_to_json(const ExecutionTraceVar& var) {
+    string out = "{";
+    out += "\"name\":\"" + escape_json_string(var.name) + "\",";
+    out += "\"type\":\"" + escape_json_string(var.type) + "\",";
+    out += "\"value\":\"" + escape_json_string(var.value) + "\",";
+    out += "\"is_accessed\":" + string(var.is_accessed ? "true" : "false") + ",";
+    out += "\"props\":[";
+    for (size_t i = 0; i < var.props.size(); ++i) {
+        if (i > 0) out += ",";
+        out += var_to_json(var.props[i]);
+    }
+    out += "]";
+    out += "}";
+    return out;
+}
+
+inline string trace_to_json() {
+    string out = "[";
+    for (size_t i = 0; i < EXECUTION_TRACE.size(); ++i) {
+        if (i > 0) out += ",";
+        const auto& step = EXECUTION_TRACE[i];
+        out += "{";
+        out += "\"pos_start\":" + position_to_json(step.pos_start) + ",";
+        out += "\"pos_end\":" + position_to_json(step.pos_end) + ",";
+        out += "\"node_type\":\"" + escape_json_string(step.node_type) + "\",";
+        out += "\"scopes\":[";
+        for (size_t j = 0; j < step.scopes.size(); ++j) {
+            if (j > 0) out += ",";
+            const auto& scope = step.scopes[j];
+            out += "{";
+            out += "\"name\":\"" + escape_json_string(scope.name) + "\",";
+            out += "\"parent\":\"" + escape_json_string(scope.parent_name) + "\",";
+            out += "\"variables\":[";
+            for (size_t k = 0; k < scope.variables.size(); ++k) {
+                if (k > 0) out += ",";
+                out += var_to_json(scope.variables[k]);
+            }
+            out += "]";
+            out += "}";
+        }
+        out += "]";
+        out += "}";
+    }
+    out += "]";
+    return out;
+}
+
 struct RunResult {
     shared_ptr<DataType> value = nullptr;
     shared_ptr<Error> error = nullptr;
 };
 
 RunResult run(const string& filename, const string& text) {
+    MAIN_PROGRAM_FILENAME = filename;
     RunResult out;
     ProfileGuard profile_guard;
+    EXECUTION_TRACE.clear();
     try {
         Lexer lexer(filename, text);
         auto [tokens, lexer_error] = lexer.enumerate_tokens();
         profile_guard.mark_lex_end();
 
         if (EDUCATIONAL_MODE) {
-            cout << "--- EDUCATIONAL_MODE_OUTPUT_START ---" << endl;
             if (JSON_OUTPUT) {
                 if (lexer_error) {
-                    cout << "{\"tokens\":null,\"ast\":null,\"error\":" << error_to_json(lexer_error) << "}" << endl;
+                    cout << "--- EDUCATIONAL_MODE_OUTPUT_START ---" << endl;
+                    cout << "{\"tokens\":null,\"ast\":null,\"error\":" << error_to_json(lexer_error) << ",\"trace\":[]}" << endl;
                     cout << "--- EDUCATIONAL_MODE_OUTPUT_END ---" << endl;
                     out.error = lexer_error;
                     return out;
@@ -949,20 +998,14 @@ RunResult run(const string& filename, const string& text) {
                 ParseResult ast = parser.parse();
                 profile_guard.mark_parse_end();
 
-                string ast_json = "null";
-                string err_json = "null";
                 if (ast.error) {
-                    err_json = error_to_json(ast.error);
-                } else if (ast.node) {
-                    ast_json = node_to_json(ast.node);
-                }
-
-                cout << "{\"tokens\":" << token_vector_to_json(tokens_copy)
-                     << ",\"ast\":" << ast_json
-                     << ",\"error\":" << err_json << "}" << endl;
-                cout << "--- EDUCATIONAL_MODE_OUTPUT_END ---" << endl;
-
-                if (ast.error) {
+                    string err_json = error_to_json(ast.error);
+                    cout << "--- EDUCATIONAL_MODE_OUTPUT_START ---" << endl;
+                    cout << "{\"tokens\":" << token_vector_to_json(tokens_copy)
+                         << ",\"ast\":null"
+                         << ",\"error\":" << err_json
+                         << ",\"trace\":[]}" << endl;
+                    cout << "--- EDUCATIONAL_MODE_OUTPUT_END ---" << endl;
                     out.error = ast.error;
                     return out;
                 }
@@ -972,7 +1015,20 @@ RunResult run(const string& filename, const string& text) {
                 auto context = make_shared<Context>("<program>");
                 context->symbol_table = global_symbol_table;
                 RunTimeResult result = interpreter.visit(ast.node, context);
+                if (EDUCATIONAL_MODE && !result.error) {
+                    interpreter.log_execution_step(ast.node, context, "ProgramEnd");
+                }
                 profile_guard.mark_interpret_end();
+
+                string ast_json = node_to_json(ast.node);
+                string trace_json = trace_to_json();
+
+                cout << "--- EDUCATIONAL_MODE_OUTPUT_START ---" << endl;
+                cout << "{\"tokens\":" << token_vector_to_json(tokens_copy)
+                     << ",\"ast\":" << ast_json
+                     << ",\"error\":" << (result.error ? error_to_json(result.error) : "null")
+                     << ",\"trace\":" << trace_json << "}" << endl;
+                cout << "--- EDUCATIONAL_MODE_OUTPUT_END ---" << endl;
 
                 out.value = result.value;
                 out.error = result.error;
@@ -1123,6 +1179,7 @@ void run_file(const string& filepath) {
     stringstream buffer;
     buffer << file.rdbuf();
     string file_content = buffer.str();
+    file_content.erase(std::remove(file_content.begin(), file_content.end(), '\r'), file_content.end());
 
     RunResult r = run(filepath, file_content);
 
@@ -1132,6 +1189,11 @@ void run_file(const string& filepath) {
     }
 }
 
+#ifdef __EMSCRIPTEN__
+int main() {
+    return 0;
+}
+#else
 int main(int argc, char* argv[]) {
     auto null_val = make_shared<Null>();
     global_symbol_table->set("Null", null_val);
@@ -1254,3 +1316,49 @@ int main(int argc, char* argv[]) {
     global_symbol_table->reset();
     return 0;
 }
+#endif
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+
+extern "C" {
+    EMSCRIPTEN_KEEPALIVE
+    void run_interpreter(const char* raw_code, const char* filename, int unbounded, int json_output) {
+        UNBOUNDED_MODE = (unbounded != 0);
+        JSON_OUTPUT = (json_output != 0);
+        EDUCATIONAL_MODE = (json_output != 0);
+        EXECUTION_TRACE.clear();
+
+        // Reset and rebuild the global symbol table for a fresh execution context
+        global_symbol_table = make_shared<SymbolTable>();
+        auto null_val = make_shared<Null>();
+        global_symbol_table->set("Null", null_val);
+        global_symbol_table->set("None", null_val);
+        global_symbol_table->set("null", null_val);
+        global_symbol_table->set("True", Number::make_bool(true));
+        global_symbol_table->set("False", Number::make_bool(false));
+
+        global_symbol_table->set("show", make_shared<BuiltInFunction>("show", builtin_show));
+        global_symbol_table->set("listen", make_shared<BuiltInFunction>("listen", builtin_listen));
+        global_symbol_table->set("type", make_shared<BuiltInFunction>("type", builtin_type));
+        global_symbol_table->set("Integer", make_shared<BuiltInFunction>("Integer", builtin_integer));
+        global_symbol_table->set("Float", make_shared<BuiltInFunction>("Float", builtin_float));
+        global_symbol_table->set("Boolean", make_shared<BuiltInFunction>("Boolean", builtin_boolean));
+        global_symbol_table->set("String", make_shared<BuiltInFunction>("String", builtin_string));
+        global_symbol_table->set("super", make_shared<BuiltInFunction>("super", builtin_super));
+        global_symbol_table->set("is_a", make_shared<BuiltInFunction>("is_a", builtin_is_a));
+        global_symbol_table->set("error", make_shared<BuiltInFunction>("error", builtin_error));
+        global_symbol_table->set("throw", make_shared<BuiltInFunction>("throw", builtin_throw));
+        global_symbol_table->set("len", make_shared<BuiltInFunction>("len", builtin_len));
+        global_symbol_table->set("range", make_shared<BuiltInFunction>("range", builtin_range));
+        global_symbol_table->set("exit", make_shared<BuiltInFunction>("exit", builtin_exit));
+        global_symbol_table->set("fopen", make_shared<BuiltInFunction>("fopen", builtin_fopen));
+
+        string code(raw_code);
+        RunResult r = run(filename ? filename : "<stdin>", code);
+        if (r.error) {
+            cout << r.error->to_string() << "\n";
+        }
+    }
+}
+#endif

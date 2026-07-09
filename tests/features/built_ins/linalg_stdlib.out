@@ -79,9 +79,12 @@ Caught expected error: [E5001] Traceback (most recent call last):
                           ^
 IllegalOperationError: mat * vec: column count must match vector size
 Caught expected error: [E5001] Traceback (most recent call last):
-  File sards/stdlib/linalg.sad, line 808, in <program>
+  File sards/stdlib/linalg.sad, line 807, in <program>
+        method __not__() {
+               ^^^^^^^^^^^
+  File sards/stdlib/linalg.sad, line 808, in method __not__
             yield inverse()
-                  ^^^^^^^^^
+                  ^
   File sards/stdlib/linalg.sad, line 586, in method inverse
                 yield error("inverse: requires a square matrix")
                       ^

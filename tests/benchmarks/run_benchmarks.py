@@ -81,12 +81,12 @@ def main():
     project_root = os.path.abspath(os.path.join(benchmarks_dir, "..", ".."))
     
     # Find the Sardine executable
-    sards_exec = os.path.join(project_root, "build", "MissionSardine.exe")
+    sards_exec = os.path.join(project_root, "build", "sardine.exe")
     if not os.path.exists(sards_exec):
-        sards_exec = os.path.join(project_root, "build", "MissionSardine")
+        sards_exec = os.path.join(project_root, "build", "sardine")
         
     if not os.path.exists(sards_exec):
-        print(f"Error: Could not find MissionSardine executable at {sards_exec}.")
+        print(f"Error: Could not find sardine executable at {sards_exec}.")
         print("Please compile the project first.")
         sys.exit(1)
         
@@ -251,7 +251,7 @@ def main():
     # Save results to markdown file in the benchmarks directory
     results_file = os.path.join(benchmarks_dir, "benchmark_results.md")
     with open(results_file, "w") as f:
-        f.write("# Mission Sardine Benchmark Results\n\n")
+        f.write("# Sardine Benchmark Results\n\n")
         f.write("\n".join(markdown_lines))
         f.write("\n")
         

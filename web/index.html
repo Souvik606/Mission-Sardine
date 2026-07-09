@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sardine</title>
+    <!-- Favicon configurations -->
+    <link rel="apple-touch-icon" sizes="180x180" href="media/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="media/icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="media/icons/favicon-16x16.png">
+    <link rel="manifest" href="media/icons/site.webmanifest">
+    <link rel="shortcut icon" href="media/icons/favicon.ico">
+    <!-- Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Load COI Service Worker to enable SharedArrayBuffer -->
+    <script src="coi-serviceworker.js"></script>
+    <!-- D3.js library for interactive AST graphs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <!-- JSZip library for folder downloads -->
+    <script src="jszip.min.js"></script>
+    <!-- Monaco Editor Loader -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs/loader.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet" crossorigin>
+    <link rel="stylesheet" href="css/index.css">
+</head>
+
+<body
+    class="h-full flex flex-col overflow-hidden font-sans select-none bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900">
+
+    <!-- Full Screen Loading Overlay -->
+    <div id="page-loading-overlay"
+        class="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center transition-opacity duration-500 ease-out">
+        <div class="relative flex flex-col items-center text-center">
+            <!-- Rotating gradient border circle -->
+            <div class="w-16 h-16 rounded-full border-4 border-slate-800 border-t-indigo-500 animate-spin mb-6"></div>
+            <!-- Muted Logo -->
+            <img src="media/v0.3d-cropped.png" alt="Sardine Logo" class="h-10 w-auto opacity-80 mb-2 animate-pulse">
+            <p class="text-xs text-slate-400 font-mono tracking-widest uppercase animate-pulse">Initializing
+                Environment...</p>
+        </div>
+    </div>
+
+    <!-- Global Header Navigation -->
+    <header
+        class="border-b border-slate-850 bg-slate-950 px-6 py-3.5 flex items-center justify-between z-30 shrink-0 shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+        <div class="flex items-center space-x-3">
+            <a href="#/" class="flex items-center space-x-3 group">
+                <img src="media/v0.3d-cropped.png" alt="Sardine Logo"
+                    class="h-9 w-auto transition-transform duration-200 group-hover:scale-105">
+            </a>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <nav class="flex items-center space-x-1.5 bg-slate-900/60 p-1 rounded-xl border border-slate-800/80">
+                <a href="#/" id="nav-home"
+                    class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all hover:text-indigo-400 text-slate-400">Home</a>
+                <a href="#/docs" id="nav-docs"
+                    class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all hover:text-indigo-400 text-slate-400">Documentation</a>
+                <a href="#/editor" id="nav-editor"
+                    class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all hover:text-indigo-400 text-slate-400">Editor</a>
+                <a href="#/educational" id="nav-educational"
+                    class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all hover:text-indigo-400 text-slate-400">Educational
+                    Mode</a>
+            </nav>
+            <a href="https://github.com/sadsardines/sardine/" target="_blank" rel="noopener noreferrer"
+                class="h-9 w-9 bg-slate-900/60 hover:bg-slate-800/80 border border-white/20 hover:border-white/40 rounded-full transition-all flex items-center justify-center shadow-[0_0_8px_rgba(255,255,255,0.1)] hover:shadow-[0_0_12px_rgba(255,255,255,0.25)] active:scale-95 shrink-0 overflow-hidden"
+                title="View the project on GitHub!">
+                <img src="media/github_logo_icon_229278.png" alt="GitHub Logo" class="h-full w-full object-cover">
+            </a>
+        </div>
+    </header>
+
+    <!-- Dynamic SPA View Containers -->
+    <div id="spa-container" class="flex-1 flex overflow-hidden relative">
+
+        <!-- HOME PAGE VIEW -->
+        <div id="view-home"
+            class="view-pane hidden absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-10">
+            <!-- Background Image with Blue Filter and Blur -->
+            <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+                <div class="absolute inset-0 bg-cover bg-center filter blur-[6px] scale-105"
+                    style="background-image: url('media/wp3845489.jpg');"></div>
+                <div class="absolute inset-0 bg-blue-950/40 mix-blend-multiply"></div>
+                <div class="absolute inset-0 bg-gradient-to-b from-slate-950/60 via-slate-950/50 to-slate-950/80"></div>
+            </div>
+            <div
+                class="max-w-2xl bg-gradient-to-br from-indigo-950/20 via-slate-900/40 to-purple-950/20 border-2 border-indigo-500/30 p-10 rounded-3xl backdrop-blur-lg shadow-xl flex flex-col items-center text-center relative overflow-hidden z-10">
+
+                <div class="relative mt-2 mb-6">
+                    <img src="media/v0.3d-cropped.png" class="h-28 mx-auto relative z-10" alt="Logo">
+                </div>
+
+                <h2 class="text-4xl font-normal tracking-tight text-white mb-3 leading-none select-none"
+                    style="font-family: Tahoma, sans-serif;">
+                    Welcome to <span
+                        style="background: linear-gradient(to right, #43c2fd, #aee3fc); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Sardine</span>
+                </h2>
+                <p class="text-slate-400 mb-8 leading-relaxed text-sm max-w-lg font-sans">
+                    Sardine is a dynamic programming language built in C++23 and compiled to WebAssembly. Explore
+                    syntax, access advanced debugging tools, and run sandboxed code directly in your browser.
+                </p>
+                <div class="flex justify-center space-x-4">
+                    <a href="#/editor"
+                        class="hover:opacity-90 border border-sky-500/30 text-white px-8 py-3.5 rounded-xl text-xs font-black tracking-wider transition-all shadow-[0_0_15px_rgba(2,132,199,0.25)] hover:scale-[1.03] active:scale-95 cursor-pointer"
+                        style="background: linear-gradient(to right, #0284c7, #38bdf8);">
+                        Open Editor
+                    </a>
+                    <a href="#/docs"
+                        class="bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 px-8 py-3.5 rounded-xl text-xs font-black tracking-wider transition-all hover:scale-[1.03] active:scale-95 cursor-pointer">
+                        User Guide
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- DOCUMENTATION VIEW -->
+        <div id="view-docs" class="view-pane hidden absolute inset-0 flex items-center justify-center p-6">
+            <div class="text-center text-slate-400">
+                <i data-lucide="book-open" class="h-12 w-12 mx-auto text-indigo-500 mb-3 animate-pulse"></i>
+                <h2 class="text-xl font-bold text-white mb-1">Documentation</h2>
+                <p class="text-sm">User Guide & Reference under construction...</p>
+            </div>
+        </div>
+
+        <!-- REGULAR PLAYGROUND EDITOR VIEW -->
+        <div id="view-editor" class="view-pane hidden absolute inset-0 flex overflow-hidden bg-stone-900">
+            <!-- Sandbox Virtual Files Sidebar -->
+            <aside id="editor-sidebar"
+                class="w-72 border-r border-slate-800/80 bg-zinc-950/45 backdrop-blur-md flex flex-col shrink-0 transition-all duration-300">
+                <!-- COLLAPSED CONTENT STATE -->
+                <div id="sidebar-collapsed-content" class="hidden flex-1 flex flex-col items-center py-4 space-y-4">
+                    <button onclick="toggleSidebar()"
+                        class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-900 transition-colors"
+                        title="Expand Files Sidebar">
+                        <i data-lucide="folder" class="h-6 w-6"></i>
+                    </button>
+                </div>
+
+                <!-- EXPANDED CONTENT STATE -->
+                <div id="sidebar-expanded-content" class="flex-1 flex flex-col min-h-0">
+                    <div
+                        class="p-4 border-b border-slate-800/60 flex items-center justify-between shrink-0 bg-slate-950/40">
+                        <span
+                            class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center space-x-1.5 select-none font-sans">
+                            <i data-lucide="folder" class="h-4 w-4 text-indigo-400"></i>
+                            <span>Files</span>
+                        </span>
+                        <div class="flex items-center space-x-0.5">
+                            <button onclick="createNewFilePrompt()"
+                                class="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-900 rounded transition-all cursor-pointer active:scale-90 hover:shadow-[0_0_8px_rgba(52,211,153,0.35)]"
+                                title="New File">
+                                <i data-lucide="plus" class="h-4 w-4"></i>
+                            </button>
+                            <button onclick="createNewFolderPrompt()"
+                                class="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-900 rounded transition-all cursor-pointer active:scale-90 hover:shadow-[0_0_8px_rgba(52,211,153,0.35)]"
+                                title="New Folder">
+                                <i data-lucide="folder-plus" class="h-4 w-4"></i>
+                            </button>
+                            <button onclick="clearVirtualFiles()"
+                                class="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-900 rounded transition-all cursor-pointer active:scale-90"
+                                title="Delete All Files">
+                                <i data-lucide="trash-2" class="h-4 w-4"></i>
+                            </button>
+                            <button onclick="toggleFileSorting()" id="btn-sort-toggle"
+                                class="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-900 rounded transition-all cursor-pointer active:scale-90"
+                                title="Sort: Alphabetical Order">
+                                <i data-lucide="arrow-up-down" class="h-4 w-4"></i>
+                            </button>
+                            <button onclick="toggleSidebar()"
+                                class="p-1.5 text-slate-400 hover:text-white rounded hover:bg-slate-900 transition-all cursor-pointer ml-0.5"
+                                title="Collapse Sidebar">
+                                <i data-lucide="chevron-left" class="h-4 w-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-3 text-[11px] text-slate-500 border-b border-slate-800/30">
+                        User-created files and files generated by the interpreter. Click a file to open in the editor.
+                    </div>
+                    <div id="virtual-files-list" class="flex-1 overflow-y-auto p-4 space-y-2">
+                        <div class="text-m text-slate-600 italic p-4 text-center rounded-xl">
+                            No files created yet.
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Center Workspace split vertically (Editor + Console Terminal) -->
+            <main class="flex-1 flex flex-col min-w-0 bg-slate-950/20">
+                <!-- Action Bar -->
+                <div
+                    class="h-14 border-b border-slate-800/80 bg-slate-950/50 backdrop-blur-md px-6 flex items-center justify-between shrink-0">
+                    <div class="flex items-center space-x-2">
+                        <span id="editor-active-filename"
+                            class="bg-slate-900 px-2.5 py-1 rounded text-[11px] font-mono text-indigo-300 border border-slate-800">No
+                            file open</span>
+                    </div>
+                    <div class="flex items-center space-x-5">
+
+
+                        <!-- Font Size Settings -->
+                        <div
+                            class="flex items-center space-x-2 bg-slate-900/80 border border-slate-800/80 rounded-lg px-2.5 py-1 text-xs">
+                            <i data-lucide="settings" class="h-3.5 w-3.5 text-slate-400"></i>
+                            <span class="text-slate-400 font-medium font-sans">Font:</span>
+                            <select id="editor-font-size-select" onchange="changeFontSize(this.value)"
+                                class="bg-slate-950 border border-slate-800 rounded px-1.5 py-0.5 text-xs text-indigo-400 font-bold focus:outline-none focus:ring-0">
+                                <option value="12">12px</option>
+                                <option value="14" selected>14px</option>
+                                <option value="16">16px</option>
+                                <option value="18">18px</option>
+                                <option value="20">20px</option>
+                            </select>
+                        </div>
+
+                        <label
+                            class="flex items-center space-x-2 cursor-pointer select-none text-slate-400 hover:text-slate-200 transition-colors">
+                            <input type="checkbox" id="editor-toggle-unbounded"
+                                class="rounded border-slate-800 bg-slate-950 text-indigo-600 focus:ring-indigo-500/50 focus:ring-offset-slate-950 h-4 w-4">
+                            <span class="text-xs font-medium">Unbounded Mode</span>
+                        </label>
+
+                        <div class="flex items-center space-x-2">
+                            <button id="editor-btn-run" onclick="runCode(false)" disabled
+                                class="flex items-center space-x-1.5 bg-slate-900 border border-slate-800 text-slate-500 px-6 py-2.5 rounded-lg text-xs font-semibold cursor-not-allowed transition-all">
+                                <i data-lucide="play" class="h-3.5 w-3.5"></i>
+                                <span>Run Code</span>
+                            </button>
+                            <button id="editor-btn-stop" onclick="terminateExecution()" disabled
+                                class="flex items-center space-x-1.5 bg-rose-950/30 border border-rose-900/20 text-rose-500/40 px-6 py-2.5 rounded-lg text-xs font-semibold cursor-not-allowed transition-all">
+                                <i data-lucide="square" class="h-3.5 w-3.5"></i>
+                                <span>Stop</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Monaco Editor Workspace Container -->
+                <div class="flex-1 min-h-0 relative bg-slate-950">
+                    <!-- Editor container -->
+                    <div id="monaco-editor-container" class="absolute inset-0 font-mono"></div>
+                    <!-- Empty state overlay placeholder -->
+                    <div id="editor-empty-state"
+                        class="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0a0a] text-slate-500 z-10">
+                        <i data-lucide="file-code" class="h-12 w-12 text-slate-700 mb-3"></i>
+                        <p class="text-sm font-semibold text-slate-400">Select a file to get started!</p>
+                        <p class="text-xs text-slate-600 mt-1">Create or open a file from the sidebar.</p>
+                    </div>
+                </div>
+
+                <!-- Terminal Output Panel -->
+                <section id="terminal-section"
+                    class="h-72 border-t border-slate-800/80 bg-slate-950 flex flex-col shrink-0 shadow-2xl bg-black relative">
+                    <!-- Resize Handle -->
+                    <div id="terminal-resize-handle"
+                        class="absolute top-0 left-0 right-0 h-1.5 cursor-ns-resize hover:bg-indigo-500/50 transition-colors z-20"
+                        title="Drag to resize terminal"></div>
+                    <div
+                        class="h-11 bg-slate-900/60 backdrop-blur-md px-6 flex items-center justify-between border-b border-slate-800/60 shrink-0">
+                        <div class="flex items-center space-x-2">
+                            <button id="terminal-toggle-btn" onclick="toggleTerminal(false)"
+                                class="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors"
+                                title="Toggle Terminal">
+                                <i data-lucide="chevron-down" class="h-4 w-4"></i>
+                            </button>
+                            <span
+                                class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-2">
+                                <i data-lucide="terminal" class="h-4 w-4 text-indigo-400"></i>
+                                <span>IO Window</span>
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <label
+                                class="flex items-center space-x-2 cursor-pointer select-none text-slate-400 hover:text-slate-200 transition-colors">
+                                <input type="checkbox" id="editor-toggle-clear-terminal"
+                                    class="rounded border-slate-800 bg-slate-950 text-indigo-600 focus:ring-indigo-500/50 focus:ring-offset-slate-950 h-3.5 w-3.5">
+                                <span class="text-[11px] font-medium">Clear window upon execution</span>
+                            </label>
+                            <button onclick="clearTerminal()"
+                                class="text-xs text-slate-400 hover:text-slate-200 transition-colors flex items-center space-x-1">
+                                <i data-lucide="trash-2" class="h-3 w-3"></i>
+                                <span>Clear</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="terminal-console"
+                        class="flex-1 overflow-y-auto p-5 font-mono text-[12px] space-y-1.5 select-text bg-black text-slate-300">
+                        <div class="text-slate-500">// Welcome to Sardine!</div>
+                    </div>
+                    <!-- Writable terminal input prompt -->
+                    <div id="terminal-input-row"
+                        class="h-10 border-t border-slate-900/40 bg-black flex items-center px-6 shrink-0 hidden">
+                        <span class="text-indigo-400 font-mono text-xs mr-2 font-bold">&gt;</span>
+                        <input type="text" id="terminal-stdin"
+                            class="flex-1 bg-transparent border-none outline-none font-mono text-xs text-slate-200"
+                            placeholder="Type input here and press Enter..."
+                            onkeydown="if(event.key === 'Enter') submitTerminalStdin()">
+                    </div>
+                </section>
+            </main>
+        </div>
+
+        <!-- EDUCATIONAL PLAYGROUND VIEW -->
+        <div id="view-educational" class="view-pane hidden absolute inset-0 flex overflow-hidden bg-stone-900">
+            <!-- Sandbox Virtual Files Sidebar -->
+            <aside id="edu-sidebar"
+                class="w-72 border-r border-slate-800/80 bg-zinc-950/45 backdrop-blur-md flex flex-col shrink-0 transition-all duration-300">
+                <!-- COLLAPSED CONTENT STATE -->
+                <div id="edu-sidebar-collapsed-content" class="hidden flex-1 flex flex-col items-center py-4 space-y-4">
+                    <button onclick="toggleSidebar(true)"
+                        class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-900 transition-colors"
+                        title="Expand Files Sidebar">
+                        <i data-lucide="folder" class="h-6 w-6"></i>
+                    </button>
+                </div>
+
+                <!-- EXPANDED CONTENT STATE -->
+                <div id="edu-sidebar-expanded-content" class="flex-1 flex flex-col min-h-0">
+                    <div
+                        class="p-4 border-b border-slate-800/60 flex items-center justify-between shrink-0 bg-slate-950/40">
+                        <span
+                            class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center space-x-1.5 select-none font-sans">
+                            <i data-lucide="folder" class="h-4 w-4 text-indigo-400"></i>
+                            <span>Files</span>
+                        </span>
+                        <div class="flex items-center space-x-0.5">
+                            <button onclick="createNewFilePrompt(true)"
+                                class="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-900 rounded transition-all cursor-pointer active:scale-90 hover:shadow-[0_0_8px_rgba(52,211,153,0.35)]"
+                                title="New File">
+                                <i data-lucide="plus" class="h-4 w-4"></i>
+                            </button>
+                            <button onclick="createNewFolderPrompt(true)"
+                                class="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-900 rounded transition-all cursor-pointer active:scale-90 hover:shadow-[0_0_8px_rgba(52,211,153,0.35)]"
+                                title="New Folder">
+                                <i data-lucide="folder-plus" class="h-4 w-4"></i>
+                            </button>
+                            <button onclick="clearVirtualFiles()"
+                                class="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-900 rounded transition-all cursor-pointer active:scale-90"
+                                title="Delete All Files">
+                                <i data-lucide="trash-2" class="h-4 w-4"></i>
+                            </button>
+                            <button onclick="toggleFileSorting()" id="edu-btn-sort-toggle"
+                                class="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-900 rounded transition-all cursor-pointer active:scale-90"
+                                title="Sort: Alphabetical Order">
+                                <i data-lucide="arrow-up-down" class="h-4 w-4"></i>
+                            </button>
+                            <button onclick="toggleSidebar(true)"
+                                class="p-1.5 text-slate-400 hover:text-white rounded hover:bg-slate-900 transition-all cursor-pointer ml-0.5"
+                                title="Collapse Sidebar">
+                                <i data-lucide="chevron-left" class="h-4 w-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-3 text-[11px] text-slate-500 border-b border-slate-800/30">
+                        User-created files and files generated by the interpreter. Click a file to open in the editor.
+                    </div>
+                    <div id="edu-virtual-files-list" class="flex-1 overflow-y-auto p-4 space-y-2">
+                        <div class="text-m text-slate-600 italic p-4 text-center rounded-xl">
+                            No files created yet.
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Center Workspace split vertically (Upper Workspace + Console Terminal) -->
+            <main class="flex-1 flex flex-col min-w-0 bg-slate-950/20">
+                <!-- Action Bar -->
+                <div
+                    class="h-14 border-b border-slate-800/80 bg-slate-950/50 backdrop-blur-md px-6 flex items-center justify-between shrink-0">
+                    <div class="flex items-center space-x-2">
+                        <span id="edu-active-filename"
+                            class="bg-slate-900 px-2.5 py-1 rounded text-[11px] font-mono text-indigo-300 border border-slate-800">No
+                            file open</span>
+                    </div>
+                    <div class="flex items-center space-x-5">
+                        <!-- Font Size Settings -->
+                        <div
+                            class="flex items-center space-x-2 bg-slate-900/80 border border-slate-800/80 rounded-lg px-2.5 py-1 text-xs">
+                            <i data-lucide="settings" class="h-3.5 w-3.5 text-slate-400"></i>
+                            <span class="text-slate-400 font-medium font-sans">Font:</span>
+                            <select id="edu-editor-font-size-select" onchange="changeFontSize(this.value)"
+                                class="bg-slate-950 border border-slate-800 rounded px-1.5 py-0.5 text-xs text-indigo-400 font-bold focus:outline-none focus:ring-0">
+                                <option value="12">12px</option>
+                                <option value="14" selected>14px</option>
+                                <option value="16">16px</option>
+                                <option value="18">18px</option>
+                                <option value="20">20px</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button id="edu-btn-run" onclick="runCode(true)" disabled
+                                class="flex items-center space-x-1.5 bg-slate-900 border border-slate-800 text-slate-500 px-6 py-2.5 rounded-lg text-xs font-semibold cursor-not-allowed transition-all">
+                                <i data-lucide="play" class="h-3.5 w-3.5"></i>
+                                <span>Run Code</span>
+                            </button>
+                            <button id="edu-btn-stop" onclick="terminateExecution()" disabled
+                                class="flex items-center space-x-1.5 bg-rose-950/30 border border-rose-900/20 text-rose-500/40 px-6 py-2.5 rounded-lg text-xs font-semibold cursor-not-allowed transition-all">
+                                <i data-lucide="square" class="h-3.5 w-3.5"></i>
+                                <span>Stop</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upper Split: Monaco Editor (Left) & Educational Sidebar (Right) -->
+                <div id="edu-workspace" class="flex-1 flex min-h-0 relative bg-slate-950">
+                    <!-- Editor container -->
+                    <div class="flex-1 min-w-0 relative h-full">
+                        <div id="edu-monaco-editor-container" class="absolute inset-0 font-mono"></div>
+                        <!-- Empty state overlay placeholder -->
+                        <div id="edu-editor-empty-state"
+                            class="absolute inset-0 flex flex-col items-center justify-center bg-[#0a0a0a] text-slate-500 z-10">
+                            <i data-lucide="file-code" class="h-12 w-12 text-slate-700 mb-3"></i>
+                            <p class="text-sm font-semibold text-slate-400">Select a file to get started!</p>
+                            <p class="text-xs text-slate-600 mt-1">Create or open a file from the sidebar.</p>
+                        </div>
+                    </div>
+
+                    <!-- Vertical Resize Handle -->
+                    <div id="edu-right-sidebar-resize-handle"
+                        class="w-1.5 cursor-col-resize hover:bg-indigo-500/50 transition-colors z-20 shrink-0 border-l border-slate-850"
+                        title="Drag to resize info panel"></div>
+
+                    <!-- Right Info Sidebar (Stepper + Tokens / AST View) -->
+                    <aside id="edu-info-sidebar"
+                        class="w-96 min-w-[200px] shrink-0 bg-slate-950 flex flex-row border-l border-slate-850/80 h-full">
+
+                        <!-- Visual Stepper Panel (Placed side-by-side with D3 Tree) -->
+                        <div id="edu-stepper-panel"
+                            class="hidden w-[350px] shrink-0 border border-slate-800 bg-slate-950 flex flex-col font-sans h-[96%] my-auto rounded-2xl shadow-2xl mr-2">
+                            <!-- Stepper Header & Controls -->
+                            <div
+                                class="bg-slate-900/60 border-b border-slate-800/60 px-4 py-2.5 flex items-center justify-between shrink-0">
+                                <div
+                                    class="flex items-center space-x-2 text-xs font-bold text-indigo-400 uppercase tracking-wider select-none">
+                                    <i data-lucide="play-circle" class="h-4 w-4 text-indigo-400 shrink-0"></i>
+                                    <span>Execution Flow</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <!-- Stepper Control Buttons -->
+                                    <button onclick="prevExecutionStep()" id="btn-step-prev"
+                                        class="p-1 rounded bg-slate-950 border border-slate-800 hover:border-slate-750 text-slate-400 hover:text-white transition-colors cursor-pointer flex items-center justify-center animate-all"
+                                        title="Step Backward">
+                                        <i data-lucide="chevron-left" class="h-3.5 w-3.5"></i>
+                                    </button>
+                                    <button onclick="toggleExecutionPlay()" id="btn-step-play"
+                                        class="p-1.5 rounded bg-indigo-600 hover:bg-indigo-50 text-white transition-all cursor-pointer flex items-center justify-center shadow-[0_0_10px_rgba(99,102,241,0.25)] active:scale-95"
+                                        title="Auto Play / Pause">
+                                        <i id="btn-step-play-icon" data-lucide="play" class="h-3.5 w-3.5 shrink-0"></i>
+                                    </button>
+                                    <button onclick="nextExecutionStep()" id="btn-step-next"
+                                        class="p-1 rounded bg-slate-950 border border-slate-800 hover:border-slate-750 text-slate-400 hover:text-white transition-colors cursor-pointer flex items-center justify-center animate-all"
+                                        title="Step Forward">
+                                        <i data-lucide="chevron-right" class="h-3.5 w-3.5"></i>
+                                    </button>
+                                    <button onclick="resetExecutionStepper()" id="btn-step-reset"
+                                        class="p-1 rounded bg-slate-950 border border-slate-800 hover:border-slate-750 text-slate-400 hover:text-white transition-colors cursor-pointer flex items-center justify-center animate-all"
+                                        title="Reset Stepper Code Highlights">
+                                        <i data-lucide="rotate-ccw" class="h-3.5 w-3.5"></i>
+                                    </button>
+
+                                    <!-- Step Counter -->
+                                    <span id="edu-stepper-status"
+                                        class="text-[11px] font-mono text-slate-350 bg-slate-900 border border-slate-800/80 px-2 py-0.5 rounded font-bold select-none whitespace-nowrap">Step
+                                        0 / 0</span>
+                                </div>
+                            </div>
+
+                            <!-- Speed Control Slider & Info Row -->
+                            <div
+                                class="bg-slate-900/20 px-4 py-1.5 border-b border-slate-900/40 flex items-center justify-between text-[11px] shrink-0 text-slate-400 select-none">
+                                <div class="flex items-center space-x-2">
+                                    <span>Speed:</span>
+                                    <input type="range" id="edu-stepper-speed" min="100" max="2000" step="100"
+                                        value="600" oninput="updateStepperSpeed(this.value)"
+                                        class="w-16 accent-indigo-500 h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                                    <span id="edu-stepper-speed-val"
+                                        class="font-mono text-[10px] text-indigo-400 font-bold">600ms</span>
+                                </div>
+                                <div class="truncate max-w-[120px] flex items-center space-x-1">
+                                    <span class="font-bold text-slate-400">Node:</span>
+                                    <span id="edu-stepper-active-node"
+                                        class="font-mono text-indigo-300 bg-indigo-950/40 px-1 rounded border border-indigo-900/30 text-[10px] font-bold">None</span>
+                                </div>
+                            </div>
+
+                            <!-- Active Scope Variable Environment Panel -->
+                            <div class="flex-1 overflow-y-auto overflow-x-auto p-3.5 font-sans space-y-3.5 select-text bg-[#09090f]"
+                                id="edu-stepper-scopes">
+                                <div class="text-slate-500 italic text-[11px] text-center py-4">// No variables in
+                                    scope.</div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column inside sidebar: Tokens / AST Tree -->
+                        <div class="flex-1 flex flex-col min-w-0 h-full">
+                            <!-- Glassmorphic Tab Selector -->
+                            <div
+                                class="h-14 bg-slate-900/60 backdrop-blur-md px-4 flex items-center justify-between border-b border-slate-800/60 shrink-0">
+                                <div
+                                    class="flex bg-slate-950/80 p-0.5 rounded-lg border border-slate-800/80 w-full font-sans">
+                                    <button id="edu-tab-tokens" onclick="switchEduTab('tokens')"
+                                        class="flex-1 py-1.5 text-xs font-semibold rounded-md transition-all text-white bg-indigo-600/20 text-indigo-400 border border-indigo-500/10">
+                                        Tokens
+                                    </button>
+                                    <button id="edu-tab-ast" onclick="switchEduTab('ast')"
+                                        class="flex-1 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-400 hover:text-slate-200">
+                                        AST Tree
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Tokens View Tab -->
+                            <div id="edu-tokens-panel" class="flex-1 overflow-y-auto p-4 select-text">
+                                <table class="w-full text-left border-collapse font-sans">
+                                    <thead>
+                                        <tr
+                                            class="border-b border-slate-800/80 text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
+                                            <th class="pb-2 px-2">Type</th>
+                                            <th class="pb-2 px-2">Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="edu-tokens-table-body"
+                                        class="divide-y divide-slate-900 font-mono text-[10px]">
+                                        <tr>
+                                            <td colspan="2" class="p-4 text-center text-slate-500 italic">// Run code in
+                                                Educational Mode to populate.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- AST View Tab -->
+                            <div id="edu-ast-panel"
+                                class="flex-1 overflow-hidden relative hidden select-none flex flex-col">
+                                <!-- AST Graph Canvas Container -->
+                                <div id="edu-ast-tree-container" class="flex-1 relative bg-slate-950 overflow-hidden">
+                                    <div class="absolute inset-0 flex items-center justify-center text-slate-500 italic p-4 text-center"
+                                        id="edu-ast-placeholder">// Run code in Educational Mode to populate.</div>
+                                </div>
+                                <!-- Traversal controls bar (Floating overlay at bottom) -->
+                                <div id="edu-ast-traversal-bar"
+                                    class="absolute bottom-4 left-4 right-4 bg-slate-900/90 border border-slate-800 rounded-xl p-3 shadow-2xl backdrop-blur-md hidden flex items-center justify-between z-30 shrink-0 font-sans">
+                                    <div class="flex items-center space-x-2 text-xs font-semibold text-indigo-400">
+                                        <i data-lucide="git-merge" class="h-4 w-4"></i>
+                                        <span id="edu-traversal-mode-label">Exploration Mode</span>
+                                    </div>
+                                    <div class="flex items-center space-x-3">
+                                        <button onclick="stepTraversal(-1)" id="btn-traverse-prev"
+                                            class="p-1.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                                            title="Previous Node (Arrow Left)">
+                                            <i data-lucide="chevron-left" class="h-4 w-4"></i>
+                                        </button>
+                                        <span id="edu-traversal-status"
+                                            class="text-xs font-mono text-slate-300 select-all font-semibold">Node 0 /
+                                            0</span>
+                                        <button onclick="stepTraversal(1)" id="btn-traverse-next"
+                                            class="p-1.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                                            title="Next Node (Arrow Right)">
+                                            <i data-lucide="chevron-right" class="h-4 w-4"></i>
+                                        </button>
+                                    </div>
+                                    <button onclick="resetTraversal()"
+                                        class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold px-2.5 py-1.5 rounded bg-slate-950 border border-slate-800/80 hover:border-slate-700 transition-all cursor-pointer">
+                                        Reset View
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+
+                <!-- Terminal Output Panel -->
+                <section id="edu-terminal-section"
+                    class="h-72 border-t border-slate-800/80 bg-slate-950 flex flex-col shrink-0 shadow-2xl bg-black relative">
+                    <!-- Resize Handle -->
+                    <div id="edu-terminal-resize-handle"
+                        class="absolute top-0 left-0 right-0 h-1.5 cursor-ns-resize hover:bg-indigo-500/50 transition-colors z-20"
+                        title="Drag to resize terminal"></div>
+                    <div
+                        class="h-11 bg-slate-900/60 backdrop-blur-md px-6 flex items-center justify-between border-b border-slate-800/60 shrink-0">
+                        <div class="flex items-center space-x-2">
+                            <button id="edu-terminal-toggle-btn" onclick="toggleTerminal(true)"
+                                class="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors"
+                                title="Toggle Terminal">
+                                <i data-lucide="chevron-down" class="h-4 w-4"></i>
+                            </button>
+                            <span
+                                class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-2">
+                                <i data-lucide="terminal" class="h-4 w-4 text-indigo-400"></i>
+                                <span>IO Window</span>
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <button onclick="clearTerminal()"
+                                class="text-xs text-slate-400 hover:text-slate-200 transition-colors flex items-center space-x-1">
+                                <i data-lucide="trash-2" class="h-3 w-3"></i>
+                                <span>Clear</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="edu-terminal-console"
+                        class="flex-1 overflow-y-auto p-5 font-mono text-[12px] space-y-1.5 select-text bg-black text-slate-300">
+                        <div class="text-slate-500">// Welcome to Sardine!</div>
+                    </div>
+                    <!-- Writable terminal input prompt -->
+                    <div id="edu-terminal-input-row"
+                        class="h-10 border-t border-slate-900/40 bg-black flex items-center px-6 shrink-0 hidden">
+                        <span class="text-indigo-400 font-mono text-xs mr-2 font-bold">&gt;</span>
+                        <input type="text" id="edu-terminal-stdin"
+                            class="flex-1 bg-transparent border-none outline-none font-mono text-xs text-slate-200"
+                            placeholder="Type input here and press Enter..."
+                            onkeydown="if(event.key === 'Enter') submitTerminalStdin(true)">
+                    </div>
+                </section>
+            </main>
+        </div>
+
+    </div>
+
+    <!-- File Viewer Detail Modal Overlay -->
+    <div id="file-viewer-modal"
+        class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl flex flex-col h-[70vh]">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4 shrink-0">
+                <h3 class="text-md font-bold text-slate-100 flex items-center space-x-2 font-mono">
+                    <i data-lucide="file-text" class="h-5 w-5 text-indigo-400"></i>
+                    <span id="modal-file-name">file.txt</span>
+                </h3>
+                <button onclick="closeFileViewer()"
+                    class="text-slate-400 hover:text-slate-100 p-1 rounded-lg hover:bg-slate-800 transition-colors">
+                    <i data-lucide="x" class="h-5 w-5"></i>
+                </button>
+            </div>
+            <div class="flex-1 min-h-0 bg-slate-950 rounded-xl overflow-hidden relative border border-slate-800/60">
+                <div id="file-monaco-container" class="absolute inset-0 font-mono"></div>
+            </div>
+            <div class="mt-4 flex justify-end shrink-0">
+                <button onclick="closeFileViewer()"
+                    class="border border-slate-700 bg-slate-850 hover:bg-slate-800 text-slate-300 px-5 py-2 rounded-lg text-xs font-bold transition-all">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal Overlay -->
+    <div id="delete-confirm-modal"
+        class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl flex flex-col space-y-4">
+            <div class="flex items-center space-x-3 text-rose-500">
+                <i data-lucide="alert-triangle" class="h-6 w-6 shrink-0"></i>
+                <h3 class="text-md font-bold text-slate-100">Delete File</h3>
+            </div>
+            <p class="text-sm text-slate-400">
+                Are you sure you want to delete <span id="delete-modal-filename"
+                    class="font-mono text-indigo-300 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800"></span>?
+                This action cannot be undone.
+            </p>
+            <div class="flex justify-end space-x-3 pt-2">
+                <button id="delete-modal-btn-cancel"
+                    class="border border-slate-700 bg-slate-800/40 hover:bg-slate-800 text-slate-300 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer">
+                    Cancel
+                </button>
+                <button id="delete-modal-btn-confirm"
+                    class="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-md shadow-rose-600/10 transition-all cursor-pointer">
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- App Scripts -->
+    <script src="js/app.js"></script>
+    <script src="js/runner.js"></script>
+    <script src="js/editor.js"></script>
+    <script src="js/d3-ast.js"></script>
+    <script src="js/stepper.js"></script>
+</body>
+
+</html>
