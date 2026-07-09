@@ -1,18 +1,18 @@
 # Sardine Benchmark Results
 
-| Benchmark | Language | Time (s) | Memory (MB) | Lex (ms) | Parse (ms) | Interpret (ms) | Sardine/Python Ratio |
-|---|---|---|---|---|---|---|---|
-| Recursive Fibonacci | Sardine | 1.4406s | 5.96 MB | 0.25 ms | 0.23 ms | 1431.88 ms | 25.42x slower |
-|  | Python | 0.0567s | 10.62 MB | - | - | - | - |
-| Prime Sieve | Sardine | 4.0537s | 66.38 MB | 0.30 ms | 0.34 ms | 4045.36 ms | 39.52x slower |
-|  | Python | 0.1026s | 18.28 MB | - | - | - | - |
-| Mandelbrot Fractal | Sardine | 0.0483s | 5.90 MB | 0.22 ms | 0.31 ms | 40.87 ms | 2.08x slower |
-|  | Python | 0.0232s | 10.63 MB | - | - | - | - |
-| Fannkuch Permutations | Sardine | 9.5499s | 5.95 MB | 0.35 ms | 0.44 ms | 9541.04 ms | 25.66x slower |
-|  | Python | 0.3722s | 10.77 MB | - | - | - | - |
-| Matrix Multiplication | Sardine | 0.3580s | 8.68 MB | 0.23 ms | 0.35 ms | 348.86 ms | 11.20x slower |
-|  | Python | 0.0320s | 11.19 MB | - | - | - | - |
-| Binary Search Tree | Sardine | 0.2545s | 7.83 MB | 0.35 ms | 0.50 ms | 245.18 ms | 8.42x slower |
-|  | Python | 0.0302s | 10.86 MB | - | - | - | - |
-| Run-Length Encoding | Sardine | 0.0740s | 5.89 MB | 0.22 ms | 0.30 ms | 66.32 ms | 3.06x slower |
-|  | Python | 0.0242s | 10.68 MB | - | - | - | - |
+| Benchmark             | Language | Time (s) | Memory (MB) | Lex (ms) | Parse (ms) | Interpret (ms) | Sardine/Python Ratio |
+| -----------------------| ----------| ----------| -------------| ----------| ------------| ----------------| ----------------------|
+| Recursive Fibonacci   | Sardine  | 2.4136s  | 6.10 MB     | 0.57 ms  | 1.02 ms    | 2355.59 ms     | 13.67x slower        |
+|                       | Python   | 0.1766s  | 9.40 MB     | -        | -          | -              | -                    |
+| Prime Sieve           | Sardine  | 3.9253s  | 66.37 MB    | 0.61 ms  | 0.64 ms    | 3902.04 ms     | 21.23x slower        |
+|                       | Python   | 0.1849s  | 17.06 MB    | -        | -          | -              | -                    |
+| Mandelbrot Fractal    | Sardine  | 0.0658s  | 5.91 MB     | 0.45 ms  | 0.53 ms    | 49.06 ms       | 1.44x slower         |
+|                       | Python   | 0.0458s  | 9.47 MB     | -        | -          | -              | -                    |
+| Fannkuch Permutations | Sardine  | 10.5751s | 5.95 MB     | 0.50 ms  | 0.67 ms    | 10557.63 ms    | 15.51x slower        |
+|                       | Python   | 0.6817s  | 9.53 MB     | -        | -          | -              | -                    |
+| Matrix Multiplication | Sardine  | 0.4047s  | 8.68 MB     | 0.50 ms  | 0.67 ms    | 384.33 ms      | 5.74x slower         |
+|                       | Python   | 0.0705s  | 9.95 MB     | -        | -          | -              | -                    |
+| Binary Search Tree    | Sardine  | 0.3248s  | 7.85 MB     | 0.74 ms  | 1.00 ms    | 302.44 ms      | 5.20x slower         |
+|                       | Python   | 0.0625s  | 9.74 MB     | -        | -          | -              | -                    |
+| Run-Length Encoding   | Sardine  | 0.0905s  | 5.87 MB     | 0.64 ms  | 0.68 ms    | 69.14 ms       | 1.73x slower         |
+|                       | Python   | 0.0523s  | 9.50 MB     | -        | -          | -              | -                    |
