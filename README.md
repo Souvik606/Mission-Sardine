@@ -3,7 +3,7 @@
   <h1>Sardine Programming Language</h1>
   <p><strong>A modern, object-oriented, dynamically-typed scripting language with a high-performance C++23 native execution backend and WebAssembly runtime.</strong></p>
 
-  [![Sardine Tests](https://github.com/Souvik606/Mission-Sardine/actions/workflows/tests.yml/badge.svg)](https://github.com/Souvik606/Mission-Sardine/actions/workflows/tests.yml)
+  [![Sardine Tests](https://github.com/sadsardines/sardine/actions/workflows/tests.yml/badge.svg)](https://github.com/sadsardines/sardine/actions/workflows/tests.yml)
   [![C++ Standard](https://img.shields.io/badge/C%2B%2B-23-blue.svg)](https://en.cppreference.com/w/cpp/23)
   [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
@@ -124,11 +124,11 @@ cmake --build build -j 12
 
 1.  **Launch Interactive Shell (REPL)**:
     ```bash
-    ./build/MissionSardine
+    ./build/sardine
     ```
 2.  **Run a Script File**:
     ```bash
-    ./build/MissionSardine samples/main.sad
+    ./build/sardine samples/main.sad
     ```
 
 ---

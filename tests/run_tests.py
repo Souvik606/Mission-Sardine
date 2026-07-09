@@ -5,9 +5,9 @@ import sys
 
 def run_tests():
     tests_dir = os.path.dirname(__file__)
-    sards_executable = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'build', 'MissionSardine.exe'))
+    sards_executable = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'build', 'sardine.exe'))
     if not os.path.exists(sards_executable):
-        sards_executable = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'build', 'MissionSardine'))
+        sards_executable = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'build', 'sardine'))
     
     passed_count = 0
     failed_count = 0
